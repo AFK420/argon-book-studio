@@ -1,99 +1,140 @@
-# ARGON BOOK STUDIO
+# ARGON BOOK STUDIO PRO
 ### Drag-and-Drop Illustrated Novel Typesetting & Publishing Engine
 
-**Argon Book Studio** is a local, desktop publishing application engineered with **Python FastAPI** and a modern **HTML5 Drag-and-Drop Live 2-Page Spread Preview** frontend. It transforms manuscripts into print-ready 6x9" illustrated editions, styled editable Microsoft Word (`.docx`) files, and reflowable EPUB 3 publications.
+**Argon Book Studio Pro** is an advanced, local desktop publishing application engineered with **Python FastAPI**, **WeasyPrint / Chromium CSS Paged Media**, **python-docx**, and **ebooklib**, featuring a real-time **HTML5 Drag-and-Drop Live 2-Page Spread Preview** frontend.
+
+It provides complete control over book geometry, margins, typography, vector callouts, print texture filters, and front/back matter to generate print-ready collector's editions, styled Microsoft Word (`.docx`) manuscripts, and reflowable EPUB 3 publications.
 
 ---
 
-## 1. Universal Publishing Engine (Hardcoded Production Rules)
-All books conform to standard physical book production rules:
-- **Trim Size:** 6.0 in x 9.0 in (with optional `+0.125 in` bleed toggle for full-bleed illustration plates).
-- **Mirrored Print Margins:**
-  - **Inside Gutter:** `0.875 in` (toward book spine).
-  - **Outside Margin:** `0.625 in`.
-  - **Top Margin:** `0.75 in`.
-  - **Bottom Margin:** `0.875 in`.
-- **Grid & Pagination Rules:**
-  - Strict widow and orphan suppression (`orphans: 3; widows: 3;`).
-  - First paragraph after chapter openings, subheaders, scene breaks, or inline illustrations has `text-indent: 0`; all subsequent body paragraphs have `text-indent: 0.25 in; margin-bottom: 0;`.
-  - Optical margin alignment (`hanging-punctuation: first last`).
-  - **Running Headers:** Verso (even pages) displays the Book Title in tracked small-caps (`8.5pt`); Recto (odd pages) displays the Chapter Number & Title in tracked small-caps (`8.5pt`).
-  - **Automatic Header/Footer Suppression:** Running headers and page numbers are suppressed on `@page :first`, Front Matter pages, Part Dividers, Chapter Opening pages, Full-Page Illustration Plates, and trailing blank pages.
-  - **Chapter Openings:** Always break to a fresh page (`page-break-before: always`) with a `1.75 in` top sinkage.
+## 1. Core Architectural Pillars
+
+### I. Live Typesetting Geometry & Margin Inspector
+Adjust your publication's physical dimensions and margins on the fly with live mathematical recalculation of line capacities:
+* **Trim Size Presets:** `6.0 × 9.0"` (Standard US Trade), `5.5 × 8.5"` (Digest), `5.0 × 8.0"` (Pocket Fiction), `7.0 × 10.0"` (Executive Plate), or Custom.
+* **Mirrored Margin Sliders:**
+  * **Inside Gutter:** `0.50"` to `1.375"` (calibrated for spine binding fold).
+  * **Outside Margin:** `0.375"` to `1.125"`.
+  * **Top Margin:** `0.50"` to `1.25"`.
+  * **Bottom Margin:** `0.50"` to `1.25"`.
+* **Typography & Leading:**
+  * Body font selector with live size slider (`9.0pt` to `13.5pt`) and leading slider (`12.0pt` to `18.5pt`).
+  * Display font selector for chapter titles and drop caps.
+  * First-line indent slider (`0.0"` to `0.50"`).
+  * Chapter opening sinkage slider (`1.0"` to `2.75"`).
+* **Paper Tint Palette:** Antique Cream (`#FBF8F1`), Ochre Vellum (`#FAF6EE`), Slate Crisp (`#F5F6F8`), and Pure White (`#FFFFFF`).
+* **Running Headers:** Custom text overrides and tracked small-caps controls.
+
+---
+
+### II. Click-to-Edit Inline Manuscript Studio
+Never leave the spread preview to fix a typo or test line breaks:
+* **Direct Spread Editing:** Click any paragraph or container directly in the 2-page spread preview to edit text. As you type, line capacity and pagination recalculate live.
+* **In-Spread Element Toolbar:**
+  * **✓ Save Edit:** Persists changes directly into the manuscript session.
+  * **❖ Break:** Inserts a thematic SVG scene break divider after the selected element.
+  * **📦 Box:** Wraps the paragraph in in-world containers (`.inquest-writ`, `.welsh-slate`, `.audio-transcript`, `.pelham-journal`, `.cuneiform-tablet`).
+
+---
+
+### III. Visual "Click-to-Drop" Vector Callout Studio
+Eliminate AI text hallucinations inside illustrations and diagrams:
+* **Interactive Canvas:** Open any illustration plate in a high-resolution workspace.
+* **Click to Drop Pins:** Click anywhere on the plate to drop a precision vector callout pin.
+* **Drag to Reposition:** Drag pins with mouse precision to point at technical or epigraphic details.
+* **Pin Styles:** Badges, Technical Boxes, Crosshairs, Arrow Pointers (Up, Down, Left, Right).
+* **High-DPI Vector Rendering:** Renders vector callouts over images using Pillow at 300/600 DPI.
+
+---
+
+### IV. Image Print Lab with Interactive Split Before/After Slider
+Fine-tune illustrations to match the exact artistic medium of each book:
+* **Split Comparison Slider:** Drag a vertical divider across the image to see raw uploads vs print-processed plates side-by-side.
+* **Medium Presets:**
+  * *Cyanotype / 19th-Century Silver-Plate Etching*
+  * *Charcoal & Hebridean Lithograph Wash*
+  * *High-Contrast Oscilloscope & Architectural Blueprint Halftone*
+  * *1928 Sepia & Bioluminescent Amber Botanical Plate*
+  * *Desert Ochre & UV-Fluorescence Archaeometric Micro-Grain*
+* **Parameter Sliders:** Grain Intensity (0%–22%), Contrast & Shadow Depth (0.7x–2.2x), and Edge Vignette (0%–75%).
+* **Resolution Scaling:** Resamples and saves at 300 DPI or 600 DPI Ultra-Fine.
+
+---
+
+### V. Bird's-Eye Thumbnail Filmstrip
+* Collapsible horizontal filmstrip dock at the bottom of the canvas showing every 2-page spread in the book.
+* Click any thumbnail to jump to that spread.
+* Color-coded indicator chips:
+  * `Ch` — Chapter Opener page.
+  * `Pl` — Full-Page Illustration Plate.
+  * `⚠️` — Short Ending (< 18 lines).
+  * `Fm` — Front Matter.
+
+---
+
+### VI. Extended Front & Back Matter Customizer
+Comprehensive publishing structure configured via a dedicated panel:
+* **Front Matter:** Half-Title, Thematic Frontispiece, Full Title Page with custom imprint and city, Copyright & ISBN block, Dedication Page, Epigraph Page, and Auto-Calculated Table of Contents.
+* **Back Matter:** Acknowledgements, About the Author biographical note, and Typesetting Colophon.
+
+---
+
+### VII. Dynamic Multi-Format Export Sync
+Every adjustment made in the Geometry Inspector, Typography Sliders, Front/Back Matter Customizer, and Image Lab is synchronized into all export formats:
+* **[PDF] Print-Ready 6×9" (or Custom Trim) PDF:** Generated with CSS Paged Media `@page` mirrored margins, headers, and footers.
+* **[DOCX] Styled Word Manuscript:** Configured with custom page dimensions, section margins, paragraph indentation, and styled container tables.
+* **[EPUB] Reflowable EPUB 3:** Compliant publication with embedded CSS matching your typography.
+* **[ZIP] Release Bundle:** Compiles PDF, DOCX, and EPUB into a single package.
 
 ---
 
 ## 2. Five Selectable Book Theme Profiles
-Switchable via the UI dropdown or API, automatically swapping typography, ornaments, and containers:
 
-| Profile | Book Title & Genre | Typography (Body / Display) | Custom Containers | Scene Break & Tailpiece | Image Filter Preset (300 DPI) |
+| Profile | Title & Genre | Typography (Body / Display) | In-World Containers | Scene Break & Tailpiece | Image Filter Medium (300 DPI) |
 |---|---|---|---|---|---|
-| **01** | *Cormac Vane: The Alchemical Inquest* (Gaslamp Forensic) | EB Garamond / Cinzel | `.inquest-writ`, `.sensory-draw` | Brass Caliper & Gear Diamond | Cyanotype / 19th-Century Silver-Plate Etching |
-| **02** | *The Fourteen-Hour Barometer* (Chronometric Island Thriller) | Lora / Oswald Bold | `.welsh-slate`, `.telemetry-equation` | Split Piezoelectric Wave-Fault Line | Charcoal & Hebridean Lithograph Wash |
-| **03** | *Dead-Room Transcripts* (Acoustic Locked-Room) | Source Serif 4 / JetBrains Mono | `.audio-transcript`, `.fsk-payload` | 42.4 Hz Sine-Wave Dampening Pulse | High-Contrast Oscilloscope & Blueprint Halftone |
-| **04** | *The Salt Orchard of Saint Jude* (Ecological Southern Gothic) | Cormorant Garamond / Garamond Italic | `.pelham-journal`, `.oscilloscope-readout` | Intertwined Sea-Fig Root & Seahorse Vignette | 1928 Sepia & Bioluminescent Amber Botanical Plate |
-| **05** | *Provenance of Ashes* (Archaeometric Thriller) | Crimson Pro / Trajan Decorative | `.cuneiform-tablet`, `.cedar-sliver` | Triple Cuneiform Wedge Divider | Desert Ochre & UV-Fluorescence Micro-Grain |
+| **01** | *Cormac Vane: The Alchemical Inquest* (Gaslamp Forensic) | EB Garamond (11pt / 15pt) • Cinzel (`#1B365D`) | `.inquest-writ`, `.sensory-draw` | Brass Caliper & Gear Diamond | Cyanotype / 19th-C Silver Plate |
+| **02** | *The Fourteen-Hour Barometer* (Chronometric Thriller) | Lora (10.5pt / 14.5pt) • Oswald Bold (`#1E2229`) | `.welsh-slate`, `.telemetry-equation` | Split Piezoelectric Wave-Fault Line | Charcoal & Hebridean Lithograph |
+| **03** | *Dead-Room Transcripts* (Acoustic Locked-Room) | Source Serif 4 (10.5pt / 14.5pt) • JetBrains Mono | `.audio-transcript`, `.fsk-payload` | 42.4 Hz Sine-Wave Dampening Pulse | Oscilloscope & Blueprint Halftone |
+| **04** | *The Salt Orchard of Saint Jude* (Southern Gothic) | Cormorant Garamond (11.5pt / 15.2pt) • Garamond Italic | `.pelham-journal`, `.oscilloscope-readout` | Intertwined Sea-Fig Root & Seahorse | 1928 Sepia & Bioluminescent Amber |
+| **05** | *Provenance of Ashes* (Archaeometric Thriller) | Crimson Pro (10.5pt / 14.5pt) • Trajan Decorative | `.cuneiform-tablet`, `.cedar-sliver` | Triple Cuneiform Wedge Divider | Desert Ochre & UV-Fluorescence Micro-Grain |
 
 ---
 
-## 3. Visual Workspace & Drag-and-Drop Features
+## 3. Quick Start & Execution
 
-### Panel 1: Manuscript & Anchor Tree (Left)
-- Deconstructs `.docx` and `.md` manuscripts into structured Chapters and numbered Paragraphs (`ch01_p01`, `ch01_p02`, etc.).
-- Pre-populates planned illustration slots from `book_layout_manifest.json`.
-- Displays asset cards with Title, Placement Badge (`Full-Page Recto Plate`, `Half-Page Top`, `Inline Archival Insert`, `Chapter Opener Vignette`, `Chapter End Tailpiece`), Ready-to-Copy Image Prompt, and Vector Callout Chips.
-- Drag handle allows moving slots directly between paragraphs.
-
-### Panel 2: Live 2-Page Spread Preview & Drag-and-Drop Canvas (Center)
-- True 6x9" Verso (left/even) and Recto (right/odd) spread visualization with book fold gutter shadows.
-- Toggleable **Mirrored Margins & Gutter Overlay** and **0.125" Bleed Zone Guide**.
-- Live running headers, page numbers, and chapter opening sinkage with ornamental drop caps.
-- Users can drag illustration files from their desktop directly onto slots, or drag slots between paragraphs to dynamically re-paginate.
-- **Short Chapter Ending Detection:** Detects pages with `< 18` lines of text and shows a 1-click **"Auto-Insert Tailpiece Ornament"** banner to balance whitespace.
-
-### Panel 3: Post-Processing & One-Click Export Suite (Right)
-- **Apply Book Print Texture Filter:** Executes Python Pillow algorithms to match the book's artistic medium at 300 DPI.
-- **Vector Text Callout Overlay:** Overlays crisp, non-hallucinated vector labels, boxes, and arrows over maps and diagrams.
-- **Front & Back Matter Generator:** Produces Half-Title, Frontispiece, Title Page, Copyright, Table of Contents, and Colophon.
-- **Export All Formats:** One-click downloads for:
-  - `PDF` (Print-Ready 6x9" with mirrored margins and bleed options)
-  - `DOCX` (Fully styled editable Word document)
-  - `EPUB 3` (Reflowable EPUB with embedded CSS)
-  - `ZIP` (Complete Publishing Release Package)
-
----
-
-## 4. Quick Start
-
-### 1. Launch the Application
+### 1. Launch the Studio
 ```powershell
 python run.py
 ```
 Open your browser to: **`http://127.0.0.1:8000`**
 
-### 2. Run the Automated Test Suite
+### 2. Run the Verification Test Suite
 ```powershell
 python -m pytest tests/ --basetemp="D:\The Argon Book Studio\tmp_test" -v
 ```
+*(All 25 unit and integration tests passing: specifications, theme profiles, settings manager, parsers, filters, paginator, filmstrip, inline editing, and multi-format exporters).*
 
 ---
 
-## 5. API Reference
+## 4. API Reference
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/` | Web publishing studio UI |
-| `GET` | `/api/profiles` | Returns all 5 Book Theme Profiles & universal specs |
-| `GET` | `/api/books` | Returns bundled book list |
-| `GET` | `/api/book/{book_id}` | Loads parsed chapters, manifest, and live pagination |
-| `POST` | `/api/manuscript/upload` | Upload custom `.docx` or `.md` manuscript |
-| `POST` | `/api/manifest/{book_id}/update-anchor` | Move slot anchor (`ch01_p02` -> `ch01_p05`) |
-| `POST` | `/api/manifest/{book_id}/add-slot` | Add planned illustration slot |
-| `POST` | `/api/manifest/{book_id}/update-callouts`| Save vector text callouts |
-| `POST` | `/api/assets/upload/{book_id}/{asset_id}` | Upload illustration image (applies 300 DPI filter) |
-| `POST` | `/api/assets/apply-filter/{book_id}/{asset_id}` | Switch medium texture filter |
-| `POST` | `/api/tailpiece/auto-insert` | 1-click auto-insert tailpiece ornament |
-| `POST` | `/api/export/pdf` | Download print-ready 6x9" PDF |
-| `POST` | `/api/export/docx` | Download styled 6x9" DOCX |
-| `POST` | `/api/export/epub` | Download reflowable EPUB 3 |
-| `POST` | `/api/export/all` | Download complete release ZIP |
+| `GET` | `/` | Web studio UI |
+| `GET` | `/api/profiles` | Theme profiles, specs, and trim presets |
+| `GET` | `/api/books` | Bundled books list |
+| `GET` | `/api/book/{book_id}` | Full book state (manuscript, manifest, settings, spreads, filmstrip) |
+| `GET` | `/api/project/{book_id}/settings` | Current geometry and typography settings |
+| `POST` | `/api/project/{book_id}/settings` | Update geometry, margins, typography, matter |
+| `POST` | `/api/project/{book_id}/reset-settings`| Reset book geometry to defaults |
+| `POST` | `/api/manuscript/{book_id}/edit-element`| Inline paragraph/container editing |
+| `POST` | `/api/manuscript/{book_id}/insert-element`| Insert paragraph, scene break, or container |
+| `POST` | `/api/manuscript/{book_id}/wrap-container`| Wrap element into custom container |
+| `POST` | `/api/image-lab/preview` | Generate split before/after comparison preview |
+| `POST` | `/api/image-lab/apply` | Apply 300 DPI filter parameters to plate |
+| `POST` | `/api/manifest/{book_id}/update-callouts`| Save precision vector callout pins |
+| `POST` | `/api/tailpiece/auto-insert` | 1-click whitespace balancing tailpiece |
+| `POST` | `/api/export/pdf` | Export PDF synced with live geometry |
+| `POST` | `/api/export/docx` | Export DOCX synced with live geometry |
+| `POST` | `/api/export/epub` | Export reflowable EPUB 3 |
+| `POST` | `/api/export/all` | Export complete release ZIP bundle |

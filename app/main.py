@@ -1,6 +1,9 @@
 """
 Argon Book Studio - Main FastAPI Application.
 Desktop publishing server for illustrated novel typesetting and multi-format publication.
+Supports live typesetting geometry inspection, inline text editing,
+visual pin-dropper vector callouts, image print lab with split before/after,
+bird's-eye filmstrip, and extended front/back matter.
 """
 
 import json
@@ -15,9 +18,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from app.profiles import BOOK_PROFILES, UNIVERSAL_PUBLISHING_SPECS
+from app.settings import settings_manager, DEFAULT_TRIM_PRESETS
 from app.parser import parse_markdown_manuscript, parse_docx_manuscript
 from app.manifest import manifest_manager
-from app.filters import process_image, generate_procedural_placeholder
+from app.filters import (
+    process_image,
+    generate_procedural_placeholder,
+    generate_preview_base64
+)
 from app.paginator import paginate_manuscript
 from app.front_back_matter import generate_front_matter_data
 from app.exporters.pdf_exporter import export_pdf
@@ -25,12 +33,11 @@ from app.exporters.docx_exporter import export_docx
 from app.exporters.epub_exporter import export_epub
 
 app = FastAPI(
-    title="Argon Book Studio",
+    title="Argon Book Studio Pro",
     description="Drag-and-Drop Illustrated Novel Typesetting & Publishing Engine",
-    version="1.0.0"
+    version="2.0.0"
 )
 
-# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -52,7 +59,6 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 app.mount("/exports", StaticFiles(directory=EXPORTS_DIR), name="exports")
 
-# In-memory session state for active books & auto-tailpieces
 STATE = {
     "active_book_id": "book01",
     "custom_manuscripts": {},
@@ -82,7 +88,10 @@ def load_book_manuscript(book_id: str) -> Dict[str, Any]:
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
-        return parse_markdown_manuscript(content)
+        parsed = parse_markdown_manuscript(content)
+        # Store a working copy so inline edits can be performed
+        STATE["custom_manuscripts"][book_id] = parsed
+        return parsed
         
     return parse_markdown_manuscript("# Empty Manuscript\n\n## Chapter 1\n\nNo text available.")
 
@@ -100,7 +109,8 @@ async def serve_index():
 async def get_profiles():
     return {
         "profiles": BOOK_PROFILES,
-        "specs": UNIVERSAL_PUBLISHING_SPECS
+        "specs": UNIVERSAL_PUBLISHING_SPECS,
+        "trim_presets": DEFAULT_TRIM_PRESETS
     }
 
 
@@ -130,18 +140,363 @@ async def get_book_details(book_id: str):
     parsed = load_book_manuscript(book_id)
     manifest = manifest_manager.get_book_manifest(book_id)
     tailpieces = STATE["auto_tailpieces"].get(book_id, {})
-    pagination = paginate_manuscript(parsed, manifest, book_id, auto_tailpieces=tailpieces)
-    front_matter = generate_front_matter_data(book_id, parsed)
+    
+    # Load dynamic project settings
+    settings = settings_manager.get_settings(book_id)
+    
+    pagination = paginate_manuscript(
+        parsed,
+        manifest,
+        book_id,
+        auto_tailpieces=tailpieces,
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
+    front_matter = generate_front_matter_data(book_id, parsed, settings.get("front_back_matter"))
     
     return {
         "book_id": book_id,
         "profile": BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"]),
         "manuscript": parsed,
         "manifest": manifest,
+        "settings": settings,
         "pagination": pagination,
         "front_matter": front_matter
     }
 
+
+# ======================================================================
+# 1. LIVE TYPESETTING GEOMETRY & SETTINGS APIS
+# ======================================================================
+
+@app.get("/api/project/{book_id}/settings")
+async def get_project_settings(book_id: str):
+    return settings_manager.get_settings(book_id)
+
+
+@app.post("/api/project/{book_id}/settings")
+async def update_project_settings(book_id: str, updates: Dict[str, Any] = Body(...)):
+    new_settings = settings_manager.update_settings(book_id, updates)
+    
+    parsed = load_book_manuscript(book_id)
+    manifest = manifest_manager.get_book_manifest(book_id)
+    tailpieces = STATE["auto_tailpieces"].get(book_id, {})
+    
+    pagination = paginate_manuscript(
+        parsed,
+        manifest,
+        book_id,
+        auto_tailpieces=tailpieces,
+        custom_specs=new_settings,
+        custom_matter=new_settings.get("front_back_matter")
+    )
+    front_matter = generate_front_matter_data(book_id, parsed, new_settings.get("front_back_matter"))
+    
+    return {
+        "status": "success",
+        "settings": new_settings,
+        "pagination": pagination,
+        "front_matter": front_matter
+    }
+
+
+@app.post("/api/project/{book_id}/reset-settings")
+async def reset_project_settings(book_id: str):
+    settings = settings_manager.reset_settings(book_id)
+    parsed = load_book_manuscript(book_id)
+    manifest = manifest_manager.get_book_manifest(book_id)
+    tailpieces = STATE["auto_tailpieces"].get(book_id, {})
+    pagination = paginate_manuscript(parsed, manifest, book_id, auto_tailpieces=tailpieces, custom_specs=settings)
+    return {"status": "success", "settings": settings, "pagination": pagination}
+
+
+# ======================================================================
+# 2. INLINE MANUSCRIPT EDITING APIS
+# ======================================================================
+
+@app.post("/api/manuscript/{book_id}/edit-element")
+async def edit_manuscript_element(book_id: str, payload: Dict[str, Any] = Body(...)):
+    element_id = payload.get("element_id")
+    new_text = payload.get("text", "")
+    
+    if not element_id:
+        raise HTTPException(status_code=400, detail="Missing element_id")
+        
+    manuscript = load_book_manuscript(book_id)
+    found = False
+    
+    for ch in manuscript.get("chapters", []):
+        for el in ch.get("elements", []):
+            if el.get("id") == element_id:
+                if el.get("type") == "paragraph":
+                    el["text"] = new_text.strip()
+                    el["word_count"] = len(el["text"].split())
+                elif el.get("type") == "container":
+                    el["content"] = new_text.strip()
+                found = True
+                break
+        if found:
+            break
+            
+    if not found:
+        raise HTTPException(status_code=404, detail="Element not found in manuscript")
+        
+    STATE["custom_manuscripts"][book_id] = manuscript
+    manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
+    tailpieces = STATE["auto_tailpieces"].get(book_id, {})
+    
+    pagination = paginate_manuscript(
+        manuscript,
+        manifest,
+        book_id,
+        auto_tailpieces=tailpieces,
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
+    
+    return {
+        "status": "success",
+        "element_id": element_id,
+        "pagination": pagination
+    }
+
+
+@app.post("/api/manuscript/{book_id}/insert-element")
+async def insert_manuscript_element(book_id: str, payload: Dict[str, Any] = Body(...)):
+    target_id = payload.get("target_id")
+    elem_type = payload.get("element_type", "paragraph") # paragraph, scene_break, container
+    content = payload.get("content", "")
+    tag = payload.get("tag", "inquest-writ")
+    
+    manuscript = load_book_manuscript(book_id)
+    inserted = False
+    new_id = None
+    
+    for ch in manuscript.get("chapters", []):
+        elements = ch.get("elements", [])
+        for idx, el in enumerate(elements):
+            if el.get("id") == target_id:
+                ch_idx = ch.get("chapter_index", 1)
+                new_id = f"ch{ch_idx:02d}_p{len(elements) + 1:02d}"
+                
+                if elem_type == "paragraph":
+                    new_elem = {
+                        "id": new_id,
+                        "type": "paragraph",
+                        "text": content,
+                        "is_first_after_break": False,
+                        "word_count": len(content.split())
+                    }
+                elif elem_type == "scene_break":
+                    new_elem = {
+                        "id": new_id,
+                        "type": "scene_break",
+                        "content": "***"
+                    }
+                elif elem_type == "container":
+                    new_elem = {
+                        "id": new_id,
+                        "type": "container",
+                        "tag": tag,
+                        "content": content
+                    }
+                    
+                elements.insert(idx + 1, new_elem)
+                inserted = True
+                break
+        if inserted:
+            break
+            
+    if not inserted:
+        raise HTTPException(status_code=404, detail="Target anchor not found")
+        
+    STATE["custom_manuscripts"][book_id] = manuscript
+    manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
+    tailpieces = STATE["auto_tailpieces"].get(book_id, {})
+    
+    pagination = paginate_manuscript(
+        manuscript,
+        manifest,
+        book_id,
+        auto_tailpieces=tailpieces,
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
+    
+    return {
+        "status": "success",
+        "new_id": new_id,
+        "manuscript": manuscript,
+        "pagination": pagination
+    }
+
+
+@app.post("/api/manuscript/{book_id}/wrap-container")
+async def wrap_element_in_container(book_id: str, payload: Dict[str, Any] = Body(...)):
+    element_id = payload.get("element_id")
+    container_tag = payload.get("container_tag", "inquest-writ")
+    
+    manuscript = load_book_manuscript(book_id)
+    converted = False
+    
+    for ch in manuscript.get("chapters", []):
+        for el in ch.get("elements", []):
+            if el.get("id") == element_id:
+                content = el.get("text", el.get("content", ""))
+                el["type"] = "container"
+                el["tag"] = container_tag
+                el["content"] = content
+                if "text" in el:
+                    del el["text"]
+                converted = True
+                break
+        if converted:
+            break
+            
+    if not converted:
+        raise HTTPException(status_code=404, detail="Element not found")
+        
+    STATE["custom_manuscripts"][book_id] = manuscript
+    manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
+    tailpieces = STATE["auto_tailpieces"].get(book_id, {})
+    
+    pagination = paginate_manuscript(
+        manuscript,
+        manifest,
+        book_id,
+        auto_tailpieces=tailpieces,
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
+    
+    return {
+        "status": "success",
+        "element_id": element_id,
+        "pagination": pagination
+    }
+
+
+# ======================================================================
+# 3. IMAGE PRINT LAB (SPLIT BEFORE/AFTER & SLIDERS)
+# ======================================================================
+
+@app.post("/api/image-lab/preview")
+async def preview_image_filter(payload: Dict[str, Any] = Body(...)):
+    book_id = payload.get("book_id", STATE["active_book_id"])
+    asset_id = payload.get("asset_id")
+    filter_preset = payload.get("filter_preset", "cyanotype_silver_plate")
+    contrast = float(payload.get("contrast", 1.35))
+    grain = float(payload.get("grain", 0.08))
+    vignette = float(payload.get("vignette", 0.38))
+    brightness = float(payload.get("brightness", 1.0))
+    
+    manifest = manifest_manager.get_book_manifest(book_id)
+    asset = next((a for a in manifest.get("assets", []) if a.get("id") == asset_id), None)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+        
+    img_url = asset.get("image_url", "")
+    local_path = None
+    if img_url.startswith("/static/"):
+        local_path = os.path.join(BASE_DIR, img_url.lstrip("/"))
+    elif os.path.exists(img_url):
+        local_path = img_url
+        
+    if not local_path or not os.path.exists(local_path):
+        raise HTTPException(status_code=404, detail="Image file not found on disk")
+        
+    data_uri = generate_preview_base64(
+        image_path=local_path,
+        filter_preset=filter_preset,
+        contrast=contrast,
+        grain=grain,
+        vignette=vignette,
+        brightness=brightness,
+        callouts=asset.get("vector_callouts", []),
+        profile_id=book_id
+    )
+    
+    return {"status": "success", "preview_data_uri": data_uri}
+
+
+@app.post("/api/image-lab/apply")
+async def apply_image_lab_settings(payload: Dict[str, Any] = Body(...)):
+    book_id = payload.get("book_id", STATE["active_book_id"])
+    asset_id = payload.get("asset_id")
+    filter_preset = payload.get("filter_preset", "cyanotype_silver_plate")
+    contrast = float(payload.get("contrast", 1.35))
+    grain = float(payload.get("grain", 0.08))
+    vignette = float(payload.get("vignette", 0.38))
+    brightness = float(payload.get("brightness", 1.0))
+    target_dpi = int(payload.get("target_dpi", 300))
+    
+    manifest = manifest_manager.get_book_manifest(book_id)
+    asset = next((a for a in manifest.get("assets", []) if a.get("id") == asset_id), None)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+        
+    img_name = f"{asset_id}_custom_filtered.png"
+    out_disk_path = os.path.join(STATIC_DIR, "assets", "placeholders", img_name)
+    
+    generate_procedural_placeholder(
+        output_path=out_disk_path,
+        title=asset.get("title", ""),
+        prompt=asset.get("prompt", ""),
+        placement_type=asset.get("placement", "Half-Page Top"),
+        filter_preset=filter_preset,
+        profile_id=book_id,
+        callouts=asset.get("vector_callouts", []),
+        contrast=contrast,
+        grain=grain,
+        vignette=vignette
+    )
+    
+    new_url = f"/static/assets/placeholders/{img_name}"
+    manifest_manager.update_asset(book_id, asset_id, {
+        "image_url": new_url,
+        "filter_applied": True
+    })
+    
+    # Update settings image_lab cache
+    settings_manager.update_settings(book_id, {
+        "image_lab": {
+            "filter_preset": filter_preset,
+            "grain_intensity": grain,
+            "contrast": contrast,
+            "vignette_strength": vignette,
+            "brightness": brightness,
+            "target_dpi": target_dpi
+        }
+    })
+    
+    parsed = load_book_manuscript(book_id)
+    updated_manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
+    tailpieces = STATE["auto_tailpieces"].get(book_id, {})
+    
+    pagination = paginate_manuscript(
+        parsed,
+        updated_manifest,
+        book_id,
+        auto_tailpieces=tailpieces,
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
+    
+    return {
+        "status": "success",
+        "asset_id": asset_id,
+        "image_url": new_url,
+        "pagination": pagination
+    }
+
+
+# ======================================================================
+# 4. MANUSCRIPT & ASSET MANAGEMENT
+# ======================================================================
 
 @app.post("/api/manuscript/upload")
 async def upload_manuscript(
@@ -166,7 +521,8 @@ async def upload_manuscript(
     STATE["active_book_id"] = book_id
     
     manifest = manifest_manager.get_book_manifest(book_id)
-    pagination = paginate_manuscript(parsed, manifest, book_id)
+    settings = settings_manager.get_settings(book_id)
+    pagination = paginate_manuscript(parsed, manifest, book_id, custom_specs=settings)
     
     return {
         "status": "success",
@@ -178,10 +534,7 @@ async def upload_manuscript(
 
 
 @app.post("/api/manifest/{book_id}/update-anchor")
-async def update_asset_anchor(
-    book_id: str,
-    payload: Dict[str, Any] = Body(...)
-):
+async def update_asset_anchor(book_id: str, payload: Dict[str, Any] = Body(...)):
     asset_id = payload.get("asset_id")
     new_anchor = payload.get("new_anchor")
     if not asset_id or not new_anchor:
@@ -193,8 +546,9 @@ async def update_asset_anchor(
         
     parsed = load_book_manuscript(book_id)
     manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
     tailpieces = STATE["auto_tailpieces"].get(book_id, {})
-    pagination = paginate_manuscript(parsed, manifest, book_id, auto_tailpieces=tailpieces)
+    pagination = paginate_manuscript(parsed, manifest, book_id, auto_tailpieces=tailpieces, custom_specs=settings)
     
     return {
         "status": "success",
@@ -205,10 +559,7 @@ async def update_asset_anchor(
 
 
 @app.post("/api/manifest/{book_id}/add-slot")
-async def add_illustration_slot(
-    book_id: str,
-    payload: Dict[str, Any] = Body(...)
-):
+async def add_illustration_slot(book_id: str, payload: Dict[str, Any] = Body(...)):
     title = payload.get("title", "New Planned Illustration")
     anchor = payload.get("anchor", "ch01_p01")
     placement = payload.get("placement", "Half-Page Top")
@@ -218,7 +569,6 @@ async def add_illustration_slot(
     profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"])
     asset_id = f"{book_id}_asset_{len(manifest_manager.get_book_manifest(book_id).get('assets', [])) + 1:02d}"
     
-    # Generate procedural base plate
     img_name = f"{asset_id}.png"
     target_img_path = os.path.join(STATIC_DIR, "assets", "placeholders", img_name)
     generate_procedural_placeholder(
@@ -246,8 +596,9 @@ async def add_illustration_slot(
     manifest_manager.add_asset(book_id, slot_data)
     parsed = load_book_manuscript(book_id)
     manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
     tailpieces = STATE["auto_tailpieces"].get(book_id, {})
-    pagination = paginate_manuscript(parsed, manifest, book_id, auto_tailpieces=tailpieces)
+    pagination = paginate_manuscript(parsed, manifest, book_id, auto_tailpieces=tailpieces, custom_specs=settings)
     
     return {
         "status": "success",
@@ -261,16 +612,14 @@ async def delete_slot(book_id: str, asset_id: str):
     res = manifest_manager.delete_asset(book_id, asset_id)
     parsed = load_book_manuscript(book_id)
     manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
     tailpieces = STATE["auto_tailpieces"].get(book_id, {})
-    pagination = paginate_manuscript(parsed, manifest, book_id, auto_tailpieces=tailpieces)
+    pagination = paginate_manuscript(parsed, manifest, book_id, auto_tailpieces=tailpieces, custom_specs=settings)
     return {"status": "success", "deleted": res, "pagination": pagination}
 
 
 @app.post("/api/manifest/{book_id}/update-callouts")
-async def update_callouts(
-    book_id: str,
-    payload: Dict[str, Any] = Body(...)
-):
+async def update_callouts(book_id: str, payload: Dict[str, Any] = Body(...)):
     asset_id = payload.get("asset_id")
     callouts = payload.get("callouts", [])
     
@@ -278,7 +627,6 @@ async def update_callouts(
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
         
-    # Re-apply filter and vector callouts to image
     img_url = asset.get("image_url", "")
     if img_url.startswith("/static/"):
         disk_path = os.path.join(BASE_DIR, img_url.lstrip("/"))
@@ -314,7 +662,6 @@ async def upload_asset_image(
     with open(temp_upload_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
-    # Output filtered 300 DPI image
     filtered_name = f"{asset_id}_print300.png"
     out_path = os.path.join(STATIC_DIR, "assets", "placeholders", filtered_name)
     
@@ -335,63 +682,14 @@ async def upload_asset_image(
     
     parsed = load_book_manuscript(book_id)
     updated_manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
     tailpieces = STATE["auto_tailpieces"].get(book_id, {})
-    pagination = paginate_manuscript(parsed, updated_manifest, book_id, auto_tailpieces=tailpieces)
+    pagination = paginate_manuscript(parsed, updated_manifest, book_id, auto_tailpieces=tailpieces, custom_specs=settings)
     
     return {
         "status": "success",
         "asset_id": asset_id,
         "image_url": web_url,
-        "pagination": pagination
-    }
-
-
-@app.post("/api/assets/apply-filter/{book_id}/{asset_id}")
-async def apply_filter(
-    book_id: str,
-    asset_id: str,
-    payload: Dict[str, Any] = Body(...)
-):
-    filter_preset = payload.get("filter_preset")
-    profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"])
-    if not filter_preset:
-        filter_preset = profile.get("filter_preset", "cyanotype_silver_plate")
-        
-    manifest = manifest_manager.get_book_manifest(book_id)
-    asset = next((a for a in manifest.get("assets", []) if a.get("id") == asset_id), None)
-    if not asset:
-        raise HTTPException(status_code=404, detail="Asset slot not found")
-        
-    img_url = asset.get("image_url", "")
-    target_disk_path = os.path.join(STATIC_DIR, "assets", "placeholders", f"{asset_id}_custom_filtered.png")
-    
-    # Re-process either existing image or re-generate procedural plate
-    generate_procedural_placeholder(
-        output_path=target_disk_path,
-        title=asset.get("title", ""),
-        prompt=asset.get("prompt", ""),
-        placement_type=asset.get("placement", "Half-Page Top"),
-        filter_preset=filter_preset,
-        profile_id=book_id,
-        callouts=asset.get("vector_callouts", [])
-    )
-    
-    new_url = f"/static/assets/placeholders/{asset_id}_custom_filtered.png"
-    manifest_manager.update_asset(book_id, asset_id, {
-        "image_url": new_url,
-        "filter_applied": True
-    })
-    
-    parsed = load_book_manuscript(book_id)
-    updated_manifest = manifest_manager.get_book_manifest(book_id)
-    tailpieces = STATE["auto_tailpieces"].get(book_id, {})
-    pagination = paginate_manuscript(parsed, updated_manifest, book_id, auto_tailpieces=tailpieces)
-    
-    return {
-        "status": "success",
-        "asset_id": asset_id,
-        "filter_preset": filter_preset,
-        "image_url": new_url,
         "pagination": pagination
     }
 
@@ -409,7 +707,15 @@ async def auto_insert_tailpiece(payload: Dict[str, Any] = Body(...)):
     
     parsed = load_book_manuscript(book_id)
     manifest = manifest_manager.get_book_manifest(book_id)
-    pagination = paginate_manuscript(parsed, manifest, book_id, auto_tailpieces=STATE["auto_tailpieces"][book_id])
+    settings = settings_manager.get_settings(book_id)
+    pagination = paginate_manuscript(
+        parsed,
+        manifest,
+        book_id,
+        auto_tailpieces=STATE["auto_tailpieces"][book_id],
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
     
     return {
         "status": "success",
@@ -419,6 +725,10 @@ async def auto_insert_tailpiece(payload: Dict[str, Any] = Body(...)):
     }
 
 
+# ======================================================================
+# 5. MULTI-FORMAT EXPORTERS (CUSTOM SPECS & MATTER SYNCED)
+# ======================================================================
+
 @app.post("/api/export/pdf")
 async def export_pdf_endpoint(payload: Dict[str, Any] = Body(...)):
     book_id = payload.get("book_id", STATE["active_book_id"])
@@ -426,11 +736,20 @@ async def export_pdf_endpoint(payload: Dict[str, Any] = Body(...)):
     
     parsed = load_book_manuscript(book_id)
     manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
     
-    pdf_filename = f"{book_id}_print_6x9_{'bleed' if bleed else 'standard'}.pdf"
+    pdf_filename = f"{book_id}_print_edition.pdf"
     output_path = os.path.join(EXPORTS_DIR, pdf_filename)
     
-    export_pdf(parsed, manifest, book_id, output_path, bleed=bleed)
+    export_pdf(
+        parsed,
+        manifest,
+        book_id,
+        output_path,
+        bleed=bleed,
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
     return FileResponse(
         output_path,
         media_type="application/pdf",
@@ -444,11 +763,19 @@ async def export_docx_endpoint(payload: Dict[str, Any] = Body(...)):
     book_id = payload.get("book_id", STATE["active_book_id"])
     parsed = load_book_manuscript(book_id)
     manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
     
-    docx_filename = f"{book_id}_styled_6x9.docx"
+    docx_filename = f"{book_id}_styled_edition.docx"
     output_path = os.path.join(EXPORTS_DIR, docx_filename)
     
-    export_docx(parsed, manifest, book_id, output_path)
+    export_docx(
+        parsed,
+        manifest,
+        book_id,
+        output_path,
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
     return FileResponse(
         output_path,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -462,11 +789,19 @@ async def export_epub_endpoint(payload: Dict[str, Any] = Body(...)):
     book_id = payload.get("book_id", STATE["active_book_id"])
     parsed = load_book_manuscript(book_id)
     manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
     
-    epub_filename = f"{book_id}_reflowable_epub3.epub"
+    epub_filename = f"{book_id}_reflowable_edition.epub"
     output_path = os.path.join(EXPORTS_DIR, epub_filename)
     
-    export_epub(parsed, manifest, book_id, output_path)
+    export_epub(
+        parsed,
+        manifest,
+        book_id,
+        output_path,
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
     return FileResponse(
         output_path,
         media_type="application/epub+zip",
@@ -482,14 +817,15 @@ async def export_all_endpoint(payload: Dict[str, Any] = Body(...)):
     
     parsed = load_book_manuscript(book_id)
     manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
     
-    pdf_path = os.path.join(EXPORTS_DIR, f"{book_id}_print_6x9.pdf")
-    docx_path = os.path.join(EXPORTS_DIR, f"{book_id}_styled_6x9.docx")
-    epub_path = os.path.join(EXPORTS_DIR, f"{book_id}_reflowable.epub")
+    pdf_path = os.path.join(EXPORTS_DIR, f"{book_id}_print_edition.pdf")
+    docx_path = os.path.join(EXPORTS_DIR, f"{book_id}_styled_edition.docx")
+    epub_path = os.path.join(EXPORTS_DIR, f"{book_id}_reflowable_edition.epub")
     
-    export_pdf(parsed, manifest, book_id, pdf_path, bleed=bleed)
-    export_docx(parsed, manifest, book_id, docx_path)
-    export_epub(parsed, manifest, book_id, epub_path)
+    export_pdf(parsed, manifest, book_id, pdf_path, bleed=bleed, custom_specs=settings, custom_matter=settings.get("front_back_matter"))
+    export_docx(parsed, manifest, book_id, docx_path, custom_specs=settings, custom_matter=settings.get("front_back_matter"))
+    export_epub(parsed, manifest, book_id, epub_path, custom_specs=settings, custom_matter=settings.get("front_back_matter"))
     
     zip_filename = f"{book_id}_ArgonPublishingPackage.zip"
     zip_path = os.path.join(EXPORTS_DIR, zip_filename)

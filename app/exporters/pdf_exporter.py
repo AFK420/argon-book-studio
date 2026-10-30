@@ -1,21 +1,22 @@
 """
-Argon Book Studio - Print-Ready 6x9" PDF Exporter.
+Argon Book Studio - Print-Ready PDF Exporter.
 Renders book manuscripts with exact book-production rules:
-- Trim Size: 6.0 in x 9.0 in (with optional +0.125 in bleed toggle).
-- Mirrored print margins (@page :left inside gutter 0.875in, outside 0.625in; @page :right inside 0.875in, outside 0.625in).
+- Trim Size: configurable (default 6.0 in x 9.0 in) with optional +0.125 in bleed toggle.
+- Mirrored print margins (@page :left inside gutter, outside margin; @page :right inside, outside).
 - Strict widow/orphan control (orphans: 3; widows: 3).
-- First paragraph text-indent: 0; subsequent body paragraphs text-indent: 0.25in, margin-bottom: 0.
+- First paragraph text-indent: 0; subsequent body paragraphs text-indent: 0.25in.
 - Optical margin alignment (hanging-punctuation: first last).
-- Verso running header: Book Title in tracked small-caps (8.5pt).
-- Recto running header: Chapter Number & Title in tracked small-caps (8.5pt).
+- Verso running header: Book Title in tracked small-caps.
+- Recto running header: Chapter Number & Title in tracked small-caps.
 - Header/footer suppression on @page :first, front matter, chapter opening pages, full plates, blank pages.
-- Chapter openings with 1.75in top sinkage.
+- Chapter openings with top sinkage.
+- Respects dynamic custom geometry, typography, and extended matter.
 """
 
 import os
 import subprocess
 import tempfile
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from app.profiles import BOOK_PROFILES, UNIVERSAL_PUBLISHING_SPECS
 
 
@@ -24,19 +25,35 @@ def generate_pdf_html(
     manifest: Dict[str, Any],
     profile_id: str,
     bleed: bool = False,
-    include_front_matter: bool = True
+    include_front_matter: bool = True,
+    custom_specs: Dict[str, Any] = None,
+    custom_matter: Dict[str, Any] = None
 ) -> str:
     profile = BOOK_PROFILES.get(profile_id, BOOK_PROFILES["book01"])
     specs = UNIVERSAL_PUBLISHING_SPECS
+    cs = custom_specs or {}
+    cm = custom_matter or {}
     
-    width_in = specs["trim_width_in"] + (specs["bleed_in"] * 2 if bleed else 0)
-    height_in = specs["trim_height_in"] + (specs["bleed_in"] * 2 if bleed else 0)
+    bleed_val = float(cs.get("bleed_in", specs["bleed_in"])) if bleed else 0.0
+    width_in = float(cs.get("trim_width_in", specs["trim_width_in"])) + (bleed_val * 2)
+    height_in = float(cs.get("trim_height_in", specs["trim_height_in"])) + (bleed_val * 2)
     
-    gutter = specs["margins"]["inside_gutter_in"]
-    outside = specs["margins"]["outside_margin_in"]
-    top = specs["margins"]["top_margin_in"]
-    bottom = specs["margins"]["bottom_margin_in"]
-    sinkage = specs["grid_rules"]["chapter_sinkage_in"]
+    gutter = float(cs.get("margins", {}).get("inside_gutter_in", cs.get("inside_gutter_in", specs["margins"]["inside_gutter_in"])))
+    outside = float(cs.get("margins", {}).get("outside_margin_in", cs.get("outside_margin_in", specs["margins"]["outside_margin_in"])))
+    top = float(cs.get("margins", {}).get("top_margin_in", cs.get("top_margin_in", specs["margins"]["top_margin_in"])))
+    bottom = float(cs.get("margins", {}).get("bottom_margin_in", cs.get("bottom_margin_in", specs["margins"]["bottom_margin_in"])))
+    
+    sinkage = float(cs.get("typography", {}).get("chapter_sinkage_in", cs.get("chapter_sinkage_in", specs["grid_rules"]["chapter_sinkage_in"])))
+    indent = float(cs.get("typography", {}).get("subsequent_p_indent_in", cs.get("subsequent_p_indent_in", specs["grid_rules"]["subsequent_p_indent_in"])))
+    body_size = float(cs.get("typography", {}).get("body_font_size_pt", cs.get("body_font_size_pt", 11.0)))
+    body_leading = float(cs.get("typography", {}).get("body_leading_pt", cs.get("body_leading_pt", 15.0)))
+    
+    body_font = cs.get("typography", {}).get("body_font", profile["body_font"])
+    display_font = cs.get("typography", {}).get("display_font", profile["display_font"])
+    accent_color = cs.get("typography", {}).get("accent_color", profile["accent_color"])
+    paper_tint = cs.get("typography", {}).get("paper_tint", profile["paper_tint"])
+    
+    running_header_text = cs.get("typography", {}).get("running_header_override") or profile["short_title"].upper()
     
     assets_by_anchor: Dict[str, List[Dict[str, Any]]] = {}
     for a in manifest.get("assets", []):
@@ -59,15 +76,15 @@ def generate_pdf_html(
         margin-left: {outside}in;
         margin-right: {gutter}in;
         @top-center {{
-            content: "{profile['short_title'].upper()}";
-            font-family: {profile['body_font']};
+            content: "{running_header_text}";
+            font-family: {body_font};
             font-size: 8.5pt;
             letter-spacing: 0.14em;
             text-transform: uppercase;
         }}
         @bottom-center {{
             content: counter(page);
-            font-family: {profile['body_font']};
+            font-family: {body_font};
             font-size: 8.5pt;
         }}
     }}
@@ -79,19 +96,18 @@ def generate_pdf_html(
         margin-right: {outside}in;
         @top-center {{
             content: string(chapter-title);
-            font-family: {profile['body_font']};
+            font-family: {body_font};
             font-size: 8.5pt;
             letter-spacing: 0.14em;
             text-transform: uppercase;
         }}
         @bottom-center {{
             content: counter(page);
-            font-family: {profile['body_font']};
+            font-family: {body_font};
             font-size: 8.5pt;
         }}
     }}
 
-    /* Running Header / Footer Suppression */
     @page chapter-page {{
         margin-top: {top}in;
         margin-bottom: {bottom}in;
@@ -114,9 +130,9 @@ def generate_pdf_html(
     body {{
         margin: 0;
         padding: 0;
-        font-family: {profile['body_font']};
-        font-size: {profile['body_font_size']};
-        line-height: {profile['body_leading']};
+        font-family: {body_font};
+        font-size: {body_size}pt;
+        line-height: {body_leading}pt;
         color: #1a1a1a;
         background-color: #fff;
         text-rendering: optimizeLegibility;
@@ -157,17 +173,16 @@ def generate_pdf_html(
 
     .plate-caption {{
         margin-top: 14pt;
-        font-family: {profile['body_font']};
+        font-family: {body_font};
         font-size: 9pt;
         font-style: italic;
         text-align: center;
         color: #333;
     }}
 
-    /* Paragraph indentation rules */
     p {{
         margin: 0 0 0 0;
-        text-indent: 0.25in;
+        text-indent: {indent}in;
         text-align: justify;
     }}
 
@@ -179,21 +194,20 @@ def generate_pdf_html(
         text-indent: 0 !important;
     }}
 
-    /* Typography & Headers */
     h1.chapter-title {{
-        font-family: {profile['display_font']};
+        font-family: {display_font};
         font-size: 20pt;
         font-weight: 600;
         text-align: center;
         margin-top: 0;
         margin-bottom: 8pt;
-        color: {profile['accent_color']};
+        color: {accent_color};
         text-transform: uppercase;
         letter-spacing: 0.08em;
     }}
 
     .chapter-num-label {{
-        font-family: {profile['display_font']};
+        font-family: {display_font};
         font-size: 10pt;
         letter-spacing: 0.2em;
         text-align: center;
@@ -232,36 +246,22 @@ def generate_pdf_html(
         height: 70px;
     }}
 
-    /* Drop caps */
     p.has-drop-cap::first-letter {{
-        font-family: {profile['display_font']};
+        font-family: {display_font};
         font-size: 3.4em;
         float: left;
         line-height: 0.8;
         padding-right: 0.12em;
         padding-top: 0.04em;
-        color: {profile['accent_color']};
+        color: {accent_color};
     }}
 
-    /* In-world Custom Containers */
     .inquest-writ {{
         border: 2px solid #1B365D;
         background: #FBF8F1;
         padding: 14pt 18pt;
         margin: 16pt 0;
         font-family: 'EB Garamond', Georgia, serif;
-        box-shadow: 2px 2px 0px rgba(27, 54, 93, 0.15);
-    }}
-
-    .inquest-writ h3 {{
-        font-family: 'Cinzel', serif;
-        font-size: 10pt;
-        letter-spacing: 0.1em;
-        color: #1B365D;
-        margin-top: 0;
-        margin-bottom: 6pt;
-        border-bottom: 1px solid #B8860B;
-        padding-bottom: 4pt;
     }}
 
     .sensory-draw {{
@@ -278,9 +278,6 @@ def generate_pdf_html(
         border-left: 4px solid #00A896;
         padding: 14pt 18pt;
         margin: 16pt 0;
-        font-family: Georgia, serif;
-        font-size: 10pt;
-        letter-spacing: 0.04em;
     }}
 
     .telemetry-equation {{
@@ -289,7 +286,6 @@ def generate_pdf_html(
         padding: 12pt 16pt;
         margin: 16pt 0;
         font-family: monospace;
-        font-size: 9.5pt;
     }}
 
     .audio-transcript {{
@@ -299,8 +295,6 @@ def generate_pdf_html(
         padding: 12pt 16pt;
         margin: 16pt 0;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 9pt;
-        line-height: 14pt;
     }}
 
     .fsk-payload {{
@@ -310,7 +304,6 @@ def generate_pdf_html(
         padding: 10pt 14pt;
         margin: 14pt 0;
         font-family: monospace;
-        font-size: 8.5pt;
     }}
 
     .pelham-journal {{
@@ -318,7 +311,6 @@ def generate_pdf_html(
         background: #FCFAF2;
         padding: 14pt 18pt;
         margin: 16pt 0;
-        color: #2C402E;
         border-left: 4px solid #2C402E;
     }}
 
@@ -328,7 +320,6 @@ def generate_pdf_html(
         padding: 12pt 14pt;
         margin: 14pt 0;
         font-family: monospace;
-        font-size: 9pt;
     }}
 
     .cuneiform-tablet {{
@@ -336,8 +327,6 @@ def generate_pdf_html(
         background: #FAF6EE;
         padding: 12pt 16pt;
         margin: 16pt 0;
-        font-family: 'Crimson Pro', Georgia, serif;
-        font-size: 9.5pt;
     }}
 
     .cedar-sliver {{
@@ -345,7 +334,6 @@ def generate_pdf_html(
         background: #FDF9F3;
         padding: 10pt 14pt;
         margin: 14pt 0;
-        color: #5A2A18;
     }}
 
     .inline-plate-div {{
@@ -360,7 +348,6 @@ def generate_pdf_html(
         border: 1px solid #444;
     }}
 
-    /* Front Matter Styles */
     .half-title-page, .title-page, .colophon-page {{
         text-align: center;
         height: 100%;
@@ -371,14 +358,14 @@ def generate_pdf_html(
     }}
 
     .title-page h1 {{
-        font-family: {profile['display_font']};
+        font-family: {display_font};
         font-size: 26pt;
-        color: {profile['accent_color']};
+        color: {accent_color};
         margin-bottom: 8pt;
     }}
 
     .title-page h2 {{
-        font-family: {profile['body_font']};
+        font-family: {body_font};
         font-size: 13pt;
         font-style: italic;
         font-weight: 400;
@@ -386,7 +373,7 @@ def generate_pdf_html(
     }}
 
     .title-page .author {{
-        font-family: {profile['display_font']};
+        font-family: {display_font};
         font-size: 12pt;
         letter-spacing: 0.1em;
         text-transform: uppercase;
@@ -394,7 +381,7 @@ def generate_pdf_html(
     }}
 
     .title-page .imprint {{
-        font-family: {profile['display_font']};
+        font-family: {display_font};
         font-size: 9pt;
         letter-spacing: 0.16em;
         color: #666;
@@ -420,72 +407,83 @@ def generate_pdf_html(
 
     # FRONT MATTER
     if include_front_matter:
-        # Half title
-        html += f"""
-        <div class="suppress-all half-title-page">
-            <h2 style="font-family: {profile['display_font']}; font-size: 16pt; letter-spacing: 0.14em; text-transform: uppercase; margin-top: 3in;">
-                {parsed_book.get('title', profile['title'])}
-            </h2>
-        </div>
-        """
-
-        # Frontispiece
-        html += f"""
-        <div class="suppress-all" style="text-align: center; padding-top: 3.2in;">
-            <div style="margin-bottom: 20pt;">{profile['scene_break_svg']}</div>
-            <p style="text-indent: 0; font-style: italic; font-size: 10pt; color: #555;">
-                {parsed_book.get('subtitle', profile['subtitle'])}
-            </p>
-        </div>
-        """
-
-        # Full Title Page
-        html += f"""
-        <div class="suppress-all title-page">
-            <div style="margin-top: 1.5in;">
-                <h1>{parsed_book.get('title', profile['title'])}</h1>
-                <h2>{parsed_book.get('subtitle', profile['subtitle'])}</h2>
-                <div style="margin: 20pt 0;">{profile['scene_break_svg']}</div>
-                <div class="author">{parsed_book.get('author', profile['author'])}</div>
-                <div class="imprint" style="margin-top: 1.5in;">
-                    THE ARGON BOOK STUDIO • FINE TYPESETTING
-                </div>
-            </div>
-        </div>
-        """
-
-        # Copyright Page
-        html += f"""
-        <div class="suppress-all" style="font-size: 8.5pt; line-height: 12.5pt; color: #444; padding-top: 4.8in;">
-            <p class="indent-zero"><strong>{parsed_book.get('title', profile['title'])}</strong></p>
-            <p class="indent-zero">Copyright © 2026 by {parsed_book.get('author', profile['author'])}</p>
-            <p class="indent-zero" style="margin-top: 8pt;">All rights reserved. First 6x9" Illustrated Collector's Edition.</p>
-            <p class="indent-zero" style="margin-top: 8pt;">Published by The Argon Book Studio Press.</p>
-            <p class="indent-zero">ISBN 978-1-987654-32-1 (Fine Hardcover)</p>
-            <p class="indent-zero">ISBN 978-1-987654-33-8 (EPUB 3 Edition)</p>
-            <p class="indent-zero" style="margin-top: 14pt;">
-                Typeset in {profile['body_font_name']} ({profile['body_font_size']}) with display elements in {profile['display_font_name']}.
-                Printed on 70lb acid-free archival vellum paper.
-            </p>
-        </div>
-        """
-
-        # Table of Contents
-        html += f"""
-        <div class="suppress-all" style="padding-top: 1.5in;">
-            <h2 style="font-family: {profile['display_font']}; font-size: 14pt; letter-spacing: 0.16em; text-align: center; text-transform: uppercase; margin-bottom: 24pt;">
-                Contents
-            </h2>
-        """
-        for ch in parsed_book.get("chapters", []):
-            ch_num = ch.get("chapter_number", "")
-            ch_title = ch.get("title", "")
+        if cm.get("include_half_title", True):
             html += f"""
-            <div class="toc-entry">
-                <span><strong>Chapter {ch_num}</strong> — {ch_title}</span>
+            <div class="suppress-all half-title-page">
+                <h2 style="font-family: {display_font}; font-size: 16pt; letter-spacing: 0.14em; text-transform: uppercase; margin-top: 3in;">
+                    {parsed_book.get('title', profile['title'])}
+                </h2>
             </div>
             """
-        html += "</div>"
+
+        if cm.get("include_frontispiece", True):
+            html += f"""
+            <div class="suppress-all" style="text-align: center; padding-top: 3.2in;">
+                <div style="margin-bottom: 20pt;">{profile['scene_break_svg']}</div>
+                <p style="text-indent: 0; font-style: italic; font-size: 10pt; color: #555;">
+                    {parsed_book.get('subtitle', profile['subtitle'])}
+                </p>
+            </div>
+            """
+
+        if cm.get("include_title_page", True):
+            imprint_txt = cm.get("publisher_imprint", "THE ARGON BOOK STUDIO • FINE TYPESETTING")
+            html += f"""
+            <div class="suppress-all title-page">
+                <div style="margin-top: 1.5in;">
+                    <h1>{parsed_book.get('title', profile['title'])}</h1>
+                    <h2>{parsed_book.get('subtitle', profile['subtitle'])}</h2>
+                    <div style="margin: 20pt 0;">{profile['scene_break_svg']}</div>
+                    <div class="author">{parsed_book.get('author', profile['author'])}</div>
+                    <div class="imprint" style="margin-top: 1.5in;">
+                        {imprint_txt}
+                    </div>
+                </div>
+            </div>
+            """
+
+        if cm.get("include_copyright", True):
+            isbn_hc = cm.get("isbn_hardcover", "978-1-987654-32-1")
+            isbn_ep = cm.get("isbn_epub", "978-1-987654-33-8")
+            html += f"""
+            <div class="suppress-all" style="font-size: 8.5pt; line-height: 12.5pt; color: #444; padding-top: 4.8in;">
+                <p class="indent-zero"><strong>{parsed_book.get('title', profile['title'])}</strong></p>
+                <p class="indent-zero">Copyright © 2026 by {parsed_book.get('author', profile['author'])}</p>
+                <p class="indent-zero" style="margin-top: 8pt;">All rights reserved. First Illustrated Collector's Edition.</p>
+                <p class="indent-zero">ISBN {isbn_hc} (Fine Hardcover)</p>
+                <p class="indent-zero">ISBN {isbn_ep} (EPUB 3 Edition)</p>
+            </div>
+            """
+
+        if cm.get("include_dedication", False):
+            html += f"""
+            <div class="suppress-all" style="text-align: center; padding-top: 3.5in; font-style: italic;">
+                <p class="indent-zero" style="font-size: 11pt; color: #333;">{cm.get('dedication_text', '')}</p>
+            </div>
+            """
+
+        if cm.get("include_epigraph", False):
+            html += f"""
+            <div class="suppress-all" style="text-align: center; padding-top: 3.5in;">
+                <p class="indent-zero" style="font-size: 11pt; font-style: italic; color: #333;">"{cm.get('epigraph_text', '')}"</p>
+                <p class="indent-zero" style="font-size: 9pt; margin-top: 10pt; color: #666;">{cm.get('epigraph_source', '')}</p>
+            </div>
+            """
+
+        if cm.get("include_toc", True):
+            html += f"""
+            <div class="suppress-all" style="padding-top: 1.5in;">
+                <h2 style="font-family: {display_font}; font-size: 14pt; letter-spacing: 0.16em; text-align: center; text-transform: uppercase; margin-bottom: 24pt;">
+                    Contents
+                </h2>
+            """
+            for ch in parsed_book.get("chapters", []):
+                html += f"""
+                <div class="toc-entry">
+                    <span><strong>Chapter {ch.get('chapter_number', '')}</strong> — {ch.get('title', '')}</span>
+                </div>
+                """
+            html += "</div>"
 
     # BODY CHAPTERS
     for ch_idx, chapter in enumerate(parsed_book.get("chapters", [])):
@@ -499,7 +497,6 @@ def generate_pdf_html(
             <div class="chapter-ornament">{profile['scene_break_svg']}</div>
         """
         
-        # Check opener vignette
         first_p_done = False
         elements = chapter.get("elements", [])
         
@@ -507,13 +504,11 @@ def generate_pdf_html(
             elem_id = elem.get("id", "")
             elem_type = elem.get("type", "paragraph")
             
-            # Check anchored illustrations
             for asset in assets_by_anchor.get(elem_id, []):
                 placement = asset.get("placement", "")
                 img_path = asset.get("image_url", "")
                 caption = asset.get("caption", "")
                 
-                # Convert relative static path to absolute file URL if local
                 if img_path.startswith("/static/"):
                     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
                     local_path = os.path.join(base_dir, img_path.lstrip("/")).replace("\\", "/")
@@ -553,30 +548,46 @@ def generate_pdf_html(
             elif elem_type == "scene_break":
                 html += f'<div class="scene-break-div">{profile["scene_break_svg"]}</div>\n'
 
-        # Chapter tailpiece
         html += f"""
             <div class="tailpiece-div">{profile['tailpiece_svg']}</div>
         </div>
         """
 
-    # COLOPHON
-    html += f"""
-    <div class="suppress-all colophon-page" style="padding-top: 2.5in; font-size: 9pt; line-height: 14pt; color: #333; text-align: center;">
-        <h3 style="font-family: {profile['display_font']}; font-size: 11pt; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 14pt; color: {profile['accent_color']};">
-            Colophon
-        </h3>
-        <p class="indent-zero" style="max-width: 4.2in; margin: 0 auto; text-align: center;">
-            This volume was typeset and produced using the Argon Book Studio Universal Publishing Engine.
-            Body text is set in {profile['body_font_name']}, calibrated at {profile['body_font_size']} on {profile['body_leading']} leading.
-            Display typography and chapter headings are set in {profile['display_font_name']}.
-            Layout adheres to 6.0 x 9.0 inch book signatures with mirrored gutter margins.
-        </p>
-        <div style="margin-top: 24pt;">{profile['tailpiece_svg']}</div>
-    </div>
-    </body>
-    </html>
-    """
+    # BACK MATTER
+    if cm.get("include_acknowledgements", False):
+        html += f"""
+        <div class="suppress-all" style="padding-top: 2.0in; text-align: center;">
+            <h2 style="font-family: {display_font}; font-size: 14pt; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 18pt;">Acknowledgements</h2>
+            <p class="indent-zero" style="max-width: 4.5in; margin: 0 auto; line-height: 1.5;">{cm.get('acknowledgements_text', '')}</p>
+        </div>
+        """
 
+    if cm.get("include_about_author", False):
+        html += f"""
+        <div class="suppress-all" style="padding-top: 2.0in; text-align: center;">
+            <h2 style="font-family: {display_font}; font-size: 14pt; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 18pt;">About the Author</h2>
+            <p class="indent-zero" style="max-width: 4.5in; margin: 0 auto; line-height: 1.5;">{cm.get('about_author_text', '')}</p>
+        </div>
+        """
+
+    if cm.get("include_colophon", True):
+        colophon_body = cm.get("colophon_text") or (
+            f"This volume was typeset and produced using the Argon Book Studio Desktop Publishing Engine. "
+            f"Layout adheres to {width_in:.1f} x {height_in:.1f} inch book signatures with mirrored gutter margins ({gutter}in inside, {outside}in outside)."
+        )
+        html += f"""
+        <div class="suppress-all colophon-page" style="padding-top: 2.5in; font-size: 9pt; line-height: 14pt; color: #333; text-align: center;">
+            <h3 style="font-family: {display_font}; font-size: 11pt; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 14pt; color: {accent_color};">
+                Colophon
+            </h3>
+            <p class="indent-zero" style="max-width: 4.2in; margin: 0 auto; text-align: center;">
+                {colophon_body}
+            </p>
+            <div style="margin-top: 24pt;">{profile['tailpiece_svg']}</div>
+        </div>
+        """
+
+    html += "</body></html>"
     return html
 
 
@@ -585,12 +596,18 @@ def export_pdf(
     manifest: Dict[str, Any],
     profile_id: str,
     output_pdf_path: str,
-    bleed: bool = False
+    bleed: bool = False,
+    custom_specs: Dict[str, Any] = None,
+    custom_matter: Dict[str, Any] = None
 ) -> str:
-    """
-    Renders the print-ready 6x9" PDF using Chromium/Edge headless with strict CSS @page rules.
-    """
-    html_content = generate_pdf_html(parsed_book, manifest, profile_id, bleed=bleed)
+    html_content = generate_pdf_html(
+        parsed_book,
+        manifest,
+        profile_id,
+        bleed=bleed,
+        custom_specs=custom_specs,
+        custom_matter=custom_matter
+    )
     
     os.makedirs(os.path.dirname(output_pdf_path), exist_ok=True)
     temp_html_path = output_pdf_path + ".html"
@@ -622,28 +639,35 @@ def export_pdf(
         if os.path.exists(abs_pdf):
             return abs_pdf
 
-    # If headless browser failed or wasn't available, build via ReportLab
-    return _build_fallback_reportlab_pdf(parsed_book, manifest, profile_id, output_pdf_path)
+    return _build_fallback_reportlab_pdf(parsed_book, manifest, profile_id, output_pdf_path, custom_specs)
 
 
 def _build_fallback_reportlab_pdf(
     parsed_book: Dict[str, Any],
     manifest: Dict[str, Any],
     profile_id: str,
-    output_pdf_path: str
+    output_pdf_path: str,
+    custom_specs: Dict[str, Any] = None
 ) -> str:
-    """Fallback ReportLab generator for 6x9 inch PDF."""
     from reportlab.lib.pagesizes import inch
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     
+    cs = custom_specs or {}
+    w = float(cs.get("trim_width_in", 6.0))
+    h = float(cs.get("trim_height_in", 9.0))
+    gutter = float(cs.get("margins", {}).get("inside_gutter_in", cs.get("inside_gutter_in", 0.875)))
+    outside = float(cs.get("margins", {}).get("outside_margin_in", cs.get("outside_margin_in", 0.625)))
+    top = float(cs.get("margins", {}).get("top_margin_in", cs.get("top_margin_in", 0.75)))
+    bottom = float(cs.get("margins", {}).get("bottom_margin_in", cs.get("bottom_margin_in", 0.875)))
+    
     doc = SimpleDocTemplate(
         output_pdf_path,
-        pagesize=(6.0 * inch, 9.0 * inch),
-        leftMargin=0.875 * inch,
-        rightMargin=0.625 * inch,
-        topMargin=0.75 * inch,
-        bottomMargin=0.875 * inch
+        pagesize=(w * inch, h * inch),
+        leftMargin=gutter * inch,
+        rightMargin=outside * inch,
+        topMargin=top * inch,
+        bottomMargin=bottom * inch
     )
     
     styles = getSampleStyleSheet()
@@ -652,8 +676,8 @@ def _build_fallback_reportlab_pdf(
     title_style = ParagraphStyle(
         'BookTitle',
         parent=styles['Heading1'],
-        fontSize=20,
-        leading=24,
+        fontSize=18,
+        leading=22,
         alignment=1,
         spaceAfter=14
     )

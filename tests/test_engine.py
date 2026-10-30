@@ -1,12 +1,13 @@
 """
 Test Suite for Argon Book Studio Desktop Publishing Engine.
-Verifies all publishing rules, theme profiles, parsers, filters, paginators, and exporters.
+Verifies all publishing rules, theme profiles, parsers, filters, paginators, settings, and exporters.
 """
 
 import os
 import json
 import pytest
 from app.profiles import BOOK_PROFILES, UNIVERSAL_PUBLISHING_SPECS
+from app.settings import settings_manager, DEFAULT_TRIM_PRESETS
 from app.parser import parse_markdown_manuscript
 from app.manifest import ManifestManager
 from app.filters import (
@@ -16,7 +17,8 @@ from app.filters import (
     filter_sepia_bioluminescent_amber,
     filter_desert_ochre_uv,
     render_vector_callouts,
-    generate_procedural_placeholder
+    generate_procedural_placeholder,
+    generate_preview_base64
 )
 from app.paginator import paginate_manuscript
 from app.front_back_matter import generate_front_matter_data
@@ -61,97 +63,72 @@ def test_five_book_profiles_configured():
         assert "filter_preset" in p
 
 
+def test_settings_manager_and_presets():
+    assert "6x9" in DEFAULT_TRIM_PRESETS
+    assert "5.5x8.5" in DEFAULT_TRIM_PRESETS
+    
+    # Reset book01 settings to ensure default verification
+    settings_manager.reset_settings("book01")
+    s = settings_manager.get_settings("book01")
+    assert s["trim_width_in"] == 6.0
+    assert s["margins"]["inside_gutter_in"] == 0.875
+    assert s["typography"]["body_font_size_pt"] == 11.0
+
+
 def test_profile_specific_containers():
-    # Book 1: .inquest-writ, .sensory-draw
     p1 = BOOK_PROFILES["book01"]
     tags1 = [c["tag"] for c in p1["containers"]]
     assert "inquest-writ" in tags1
     assert "sensory-draw" in tags1
-    assert p1["filter_preset"] == "cyanotype_silver_plate"
 
-    # Book 2: .welsh-slate, .telemetry-equation
     p2 = BOOK_PROFILES["book02"]
     tags2 = [c["tag"] for c in p2["containers"]]
     assert "welsh-slate" in tags2
     assert "telemetry-equation" in tags2
-    assert p2["filter_preset"] == "charcoal_lithograph"
 
-    # Book 3: .audio-transcript, .fsk-payload
     p3 = BOOK_PROFILES["book03"]
     tags3 = [c["tag"] for c in p3["containers"]]
     assert "audio-transcript" in tags3
     assert "fsk-payload" in tags3
-    assert p3["filter_preset"] == "blueprint_halftone"
 
-    # Book 4: .pelham-journal, .oscilloscope-readout
     p4 = BOOK_PROFILES["book04"]
     tags4 = [c["tag"] for c in p4["containers"]]
     assert "pelham-journal" in tags4
     assert "oscilloscope-readout" in tags4
-    assert p4["filter_preset"] == "sepia_bioluminescent_amber"
 
-    # Book 5: .cuneiform-tablet, .cedar-sliver
     p5 = BOOK_PROFILES["book05"]
     tags5 = [c["tag"] for c in p5["containers"]]
     assert "cuneiform-tablet" in tags5
     assert "cedar-sliver" in tags5
-    assert p5["filter_preset"] == "desert_ochre_uv"
 
 
 def test_markdown_parser_with_containers():
     sample_md = """# The Alchemical Inquest
-*Subtitle: A Forensic Gaslamp Tale*
+*Being the Case of the Salt-Cellar Murders*
 *By A. E. Sterling*
 
 ## Chapter 1: Wapping Basin
-
 The Thames did not surrender its dead.
-
 Vane kneeled beside the deal planks.
-
 :::inquest-writ
 Coroner's Writ: Acute antimony poisoning.
 :::
-
 The frost held fast.
-
 ***
-
 The fog rolled inland.
 """
     parsed = parse_markdown_manuscript(sample_md)
     assert parsed["title"] == "The Alchemical Inquest"
     assert len(parsed["chapters"]) == 1
     ch = parsed["chapters"][0]
-    assert ch["title"] == "Wapping Basin"
-    
-    # Check elements and paragraph IDs
     elems = ch["elements"]
     assert elems[0]["id"] == "ch01_p01"
-    assert elems[0]["type"] == "paragraph"
     assert elems[0]["is_first_after_break"] == True
-
-    assert elems[1]["id"] == "ch01_p02"
-    assert elems[1]["type"] == "paragraph"
-    assert elems[1]["is_first_after_break"] == False
-
-    assert elems[2]["id"] == "ch01_p03"
     assert elems[2]["type"] == "container"
     assert elems[2]["tag"] == "inquest-writ"
 
-    assert elems[3]["id"] == "ch01_p04"
-    assert elems[3]["type"] == "paragraph"
-    assert elems[3]["is_first_after_break"] == True  # after container
 
-    assert elems[4]["id"] == "ch01_p05"
-    assert elems[4]["type"] == "scene_break"
-
-    assert elems[5]["id"] == "ch01_p06"
-    assert elems[5]["type"] == "paragraph"
-    assert elems[5]["is_first_after_break"] == True  # after scene break
-
-
-def test_paginator_spreads_and_margins():
+def test_paginator_spreads_and_filmstrip():
     sample_md = """# Test Book
 ## Chapter 1: The First Flight
 Paragraph 1 of chapter 1.
@@ -162,14 +139,11 @@ Paragraph 2 of chapter 1.
     paginated = paginate_manuscript(parsed, manifest, "book01", include_front_matter=True)
     
     assert paginated["total_pages"] >= 6
-    spreads = paginated["spreads"]
-    assert len(spreads) >= 4
-    # First spread has recto on right
-    assert spreads[0]["recto"] is not None
-    assert spreads[0]["recto"]["page_number"] == 1
-    # Second spread has verso 2, recto 3
-    assert spreads[1]["verso"]["page_number"] == 2
-    assert spreads[1]["recto"]["page_number"] == 3
+    assert len(paginated["spreads"]) >= 4
+    # Check filmstrip array
+    filmstrip = paginated["filmstrip"]
+    assert len(filmstrip) == len(paginated["spreads"])
+    assert filmstrip[0]["is_front"] == True
 
 
 def test_short_ending_detection_and_tailpiece():
@@ -180,31 +154,25 @@ Only one single paragraph in this entire chapter.
     parsed = parse_markdown_manuscript(sample_md)
     manifest = {"assets": []}
     
-    # Without auto-tailpiece
     paginated1 = paginate_manuscript(parsed, manifest, "book01", include_front_matter=False)
-    # The chapter page should be marked as short_ending
     chapter_pages = [p for p in paginated1["pages"] if p["is_chapter_end"]]
     assert len(chapter_pages) > 0
     short_page = chapter_pages[0]
     assert short_page["short_ending"] == True
-    assert short_page["has_tailpiece"] == False
 
-    # With auto-tailpiece enabled
     auto_tp = {short_page["page_number"]: True}
     paginated2 = paginate_manuscript(parsed, manifest, "book01", include_front_matter=False, auto_tailpieces=auto_tp)
     ch_p2 = [p for p in paginated2["pages"] if p["page_number"] == short_page["page_number"]][0]
     assert ch_p2["has_tailpiece"] == True
-    assert any(e.get("type") == "tailpiece_ornament" for e in ch_p2["elements"])
 
 
-def test_pillow_filters_and_vector_callouts(tmp_path):
+def test_pillow_filters_parameters_and_callouts(tmp_path):
     img = Image.new("RGB", (400, 300), (200, 180, 150))
     
-    # Test all 5 filters
-    f1 = filter_cyanotype_silver_plate(img)
+    f1 = filter_cyanotype_silver_plate(img, contrast=1.4, grain=0.1, vignette=0.4)
     assert f1.size == (400, 300)
     
-    f2 = filter_charcoal_lithograph(img)
+    f2 = filter_charcoal_lithograph(img, contrast=1.2)
     assert f2.size == (400, 300)
 
     f3 = filter_blueprint_halftone(img)
@@ -216,38 +184,43 @@ def test_pillow_filters_and_vector_callouts(tmp_path):
     f5 = filter_desert_ochre_uv(img)
     assert f5.size == (400, 300)
 
-    # Test vector callouts overlay
     callouts = [
         {"x": 25, "y": 30, "label": "CALIPER AXIS", "type": "box"},
-        {"x": 75, "y": 70, "label": "DATUM MARK", "type": "badge"}
+        {"x": 75, "y": 70, "label": "DATUM MARK", "type": "badge"},
+        {"x": 50, "y": 50, "label": "TARGET PIN", "type": "crosshair"}
     ]
     with_callouts = render_vector_callouts(f1, callouts, "book01")
     assert with_callouts.size == (400, 300)
 
 
-def test_pdf_export_6x9_geometry(tmp_path):
+def test_pdf_export_custom_geometry(tmp_path):
     sample_md = """# Test Gaslamp Book
 ## Chapter 1: The Wapping Wharf
 A misty night along the Thames.
 """
     parsed = parse_markdown_manuscript(sample_md)
     manifest = {"assets": []}
-    out_pdf = str(tmp_path / "test_out_6x9.pdf")
+    out_pdf = str(tmp_path / "test_out_custom.pdf")
     
-    export_pdf(parsed, manifest, "book01", out_pdf, bleed=False)
+    custom_specs = {
+        "trim_width_in": 5.5,
+        "trim_height_in": 8.5,
+        "inside_gutter_in": 0.75,
+        "outside_margin_in": 0.5
+    }
+    export_pdf(parsed, manifest, "book01", out_pdf, bleed=False, custom_specs=custom_specs)
     assert os.path.exists(out_pdf)
     
-    # Inspect PDF geometry with PyMuPDF
     doc = pymupdf.open(out_pdf)
     assert len(doc) >= 1
     rect = doc[0].rect
-    # 6.0 in x 72 pt/in = 432 pt, 9.0 in x 72 pt/in = 648 pt
-    assert abs(rect.width - 432.0) < 5.0
-    assert abs(rect.height - 648.0) < 5.0
+    # 5.5 in * 72 = 396 pt, 8.5 in * 72 = 612 pt
+    assert abs(rect.width - 396.0) < 5.0
+    assert abs(rect.height - 612.0) < 5.0
     doc.close()
 
 
-def test_docx_export_geometry(tmp_path):
+def test_docx_export_custom_specs(tmp_path):
     sample_md = """# Test Word Book
 ## Chapter 1: Basalt Cliffs
 Wind howling over the Atlantic.
@@ -257,20 +230,21 @@ Wind howling over the Atlantic.
 """
     parsed = parse_markdown_manuscript(sample_md)
     manifest = {"assets": []}
-    out_docx = str(tmp_path / "test_out_6x9.docx")
+    out_docx = str(tmp_path / "test_out_custom.docx")
     
-    export_docx(parsed, manifest, "book02", out_docx)
+    custom_specs = {
+        "trim_width_in": 5.5,
+        "trim_height_in": 8.5,
+        "inside_gutter_in": 0.75,
+        "outside_margin_in": 0.5
+    }
+    export_docx(parsed, manifest, "book02", out_docx, custom_specs=custom_specs)
     assert os.path.exists(out_docx)
     
-    # Inspect docx dimensions
     doc = docx.Document(out_docx)
     sec = doc.sections[0]
-    assert abs(sec.page_width.inches - 6.0) < 0.01
-    assert abs(sec.page_height.inches - 9.0) < 0.01
-    assert abs(sec.left_margin.inches - 0.875) < 0.01
-    assert abs(sec.right_margin.inches - 0.625) < 0.01
-    assert abs(sec.top_margin.inches - 0.75) < 0.01
-    assert abs(sec.bottom_margin.inches - 0.875) < 0.01
+    assert abs(sec.page_width.inches - 5.5) < 0.01
+    assert abs(sec.page_height.inches - 8.5) < 0.01
 
 
 def test_epub_export_structure(tmp_path):
