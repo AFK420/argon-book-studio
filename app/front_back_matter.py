@@ -79,6 +79,25 @@ def generate_front_matter_data(
             "title": "Contents",
             "enabled": cm.get("include_toc", True)
         },
+        "map_plate": {
+            "title": cm.get("map_title", "Archival Chart & Survey Map"),
+            "caption": cm.get("map_caption", "Hydrographic Soundings & Survey of the Ghyll Skerries."),
+            "ornament_svg": profile["scene_break_svg"],
+            "enabled": cm.get("include_map", False)
+        },
+        "appendix": {
+            "title": cm.get("appendix_title", "Appendix: Chronometric & Forensic Telemetry"),
+            "text": cm.get("appendix_text", "Calibration logs recorded at 14-minute intervals following the barometric depression."),
+            "enabled": cm.get("include_appendix", False)
+        },
+        "glossary": {
+            "title": cm.get("glossary_title", "Glossary of Technical & In-World Terms"),
+            "terms": cm.get("glossary_terms", [
+                {"term": "Barometer Skerry", "definition": "A sub-surface basalt reef producing localized micro-baric fluctuations."},
+                {"term": "Vesper Draw", "definition": "An occult sensory distillation utilizing mercury and sea-salt."}
+            ]),
+            "enabled": cm.get("include_glossary", False)
+        },
         "acknowledgements": {
             "title": "Acknowledgements",
             "text": cm.get("acknowledgements_text", "With special gratitude to the archivists and epigraphers whose field diaries provided foundational technical references."),

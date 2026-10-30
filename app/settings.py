@@ -25,6 +25,10 @@ def get_default_settings_for_book(book_id: str) -> Dict[str, Any]:
     profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"])
     specs = UNIVERSAL_PUBLISHING_SPECS
     
+    body_size = float(profile["body_font_size"].replace("pt", ""))
+    body_leading = float(profile["body_leading"].replace("pt", ""))
+    line_height = round(body_leading / body_size, 2)
+    
     return {
         "book_id": book_id,
         "trim_preset": "6x9",
@@ -40,13 +44,28 @@ def get_default_settings_for_book(book_id: str) -> Dict[str, Any]:
         "typography": {
             "body_font_name": profile["body_font_name"],
             "body_font": profile["body_font"],
-            "body_font_size_pt": float(profile["body_font_size"].replace("pt", "")),
-            "body_leading_pt": float(profile["body_leading"].replace("pt", "")),
+            "body_font_size_pt": body_size,
+            "font_size_pt": body_size,
+            "body_leading_pt": body_leading,
+            "line_height": line_height,
             "display_font_name": profile["display_font_name"],
             "display_font": profile["display_font"],
+            "heading_font_name": profile["display_font_name"],
+            "heading_font": profile["display_font"],
+            "mono_font_name": profile.get("mono_font_name", "JetBrains Mono"),
+            "mono_font": profile.get("mono_font", "'JetBrains Mono', 'Courier New', monospace"),
             "first_p_indent_in": specs["grid_rules"]["first_p_indent_in"],
             "subsequent_p_indent_in": specs["grid_rules"]["subsequent_p_indent_in"],
+            "para_indent_in": specs["grid_rules"]["subsequent_p_indent_in"],
+            "para_spacing_pt": 0.0,
+            "letter_spacing_em": 0.0,
+            "justify_text": True,
+            "hyphenation": True,
             "chapter_sinkage_in": specs["grid_rules"]["chapter_sinkage_in"],
+            "drop_cap_enabled": profile.get("drop_cap_type", "Plain Serif") != "None",
+            "drop_cap_lines": profile.get("drop_cap_lines", 3),
+            "drop_cap_style": profile.get("drop_cap_type", "Plain Serif"),
+            "running_header_style": "Small Caps Centered",
             "running_header_font_size_pt": specs["grid_rules"]["running_header_font_size_pt"],
             "accent_color": profile["accent_color"],
             "brass_accent": profile["brass_accent"],
@@ -66,12 +85,25 @@ def get_default_settings_for_book(book_id: str) -> Dict[str, Any]:
             "epigraph_text": "The sea does not surrender its dead, nor does the stone forget.",
             "epigraph_source": "— Port Assayer's Chronicle, 1844",
             "include_toc": True,
+            "include_map": False,
+            "map_title": "Archival Chart & Survey Map",
+            "map_caption": "Hydrographic Soundings & Survey of the Ghyll Skerries.",
             "include_acknowledgements": False,
             "acknowledgements_text": "With special gratitude to the archivists and epigraphers whose field diaries provided foundational technical references.",
+            "include_appendix": False,
+            "appendix_title": "Appendix: Chronometric & Forensic Telemetry",
+            "appendix_text": "Calibration logs recorded at 14-minute intervals following the barometric depression.",
+            "include_glossary": False,
+            "glossary_title": "Glossary of Technical & In-World Terms",
+            "glossary_terms": [
+                {"term": "Barometer Skerry", "definition": "A sub-surface basalt reef producing localized micro-baric fluctuations."},
+                {"term": "Vesper Draw", "definition": "An occult sensory distillation utilizing mercury and sea-salt."}
+            ],
             "include_about_author": False,
             "about_author_text": "The authors and artists of Argon Studio specialize in archaeometric thrillers and illustrated fine book design.",
             "include_colophon": True,
             "colophon_headline": "A NOTE ON THE TYPE AND PRODUCTION",
+            "colophon_text": "",
             "publisher_imprint": "THE ARGON BOOK STUDIO • PRESS",
             "city": "London & San Francisco",
             "isbn_hardcover": "978-1-954321-01-9",
@@ -123,6 +155,34 @@ class ProjectSettingsManager:
             else:
                 current[k] = v
                 
+        # Synchronize typography and margin aliases
+        typo = current.setdefault("typography", {})
+        if "font_size_pt" in updates:
+            typo["font_size_pt"] = float(updates["font_size_pt"])
+            typo["body_font_size_pt"] = typo["font_size_pt"]
+        elif "body_font_size_pt" in typo:
+            typo["font_size_pt"] = float(typo["body_font_size_pt"])
+            
+        if "line_height" in updates:
+            typo["line_height"] = float(updates["line_height"])
+            base_size = typo.get("font_size_pt", 11.0)
+            typo["body_leading_pt"] = round(base_size * typo["line_height"], 1)
+        elif "body_leading_pt" in typo and "line_height" not in typo:
+            base_size = typo.get("font_size_pt", 11.0)
+            typo["line_height"] = round(float(typo["body_leading_pt"]) / base_size, 2)
+
+        if "para_indent_in" in updates:
+            typo["para_indent_in"] = float(updates["para_indent_in"])
+            typo["subsequent_p_indent_in"] = typo["para_indent_in"]
+        elif "subsequent_p_indent_in" in typo:
+            typo["para_indent_in"] = float(typo["subsequent_p_indent_in"])
+
+        # Preset sync
+        if "trim_preset" in updates and updates["trim_preset"] in DEFAULT_TRIM_PRESETS:
+            preset = DEFAULT_TRIM_PRESETS[updates["trim_preset"]]
+            current["trim_width_in"] = preset["trim_width_in"]
+            current["trim_height_in"] = preset["trim_height_in"]
+
         self.cache[book_id] = current
         
         # Save to disk

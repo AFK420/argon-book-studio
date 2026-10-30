@@ -213,6 +213,19 @@ def export_epub(
             book.add_item(c_epi)
             spine.append(c_epi)
 
+        if cm.get("include_map", False):
+            map_html = f"""
+            <div style="text-align:center; margin-top:20%;">
+                <h2>{cm.get('map_title', 'Archival Survey Map')}</h2>
+                <p style="font-style:italic; color:#666; margin-top:1em;">{cm.get('map_caption', 'Hydrographic Soundings & Survey of the Ghyll Skerries.')}</p>
+            </div>
+            """
+            c_map = epub.EpubHtml(title="Survey Map", file_name="map_plate.xhtml", lang="en")
+            c_map.content = map_html
+            c_map.add_item(css_item)
+            book.add_item(c_map)
+            spine.append(c_map)
+
     # Chapters
     for ch_idx, chapter in enumerate(parsed_book.get("chapters", [])):
         ch_num = chapter.get("chapter_number", str(ch_idx + 1))
@@ -228,6 +241,8 @@ def export_epub(
         for elem in chapter.get("elements", []):
             elem_id = elem.get("id", "")
             elem_type = elem.get("type", "paragraph")
+            btype = elem.get("block_type", "body")
+            f_html = elem.get("formatted_html") or elem.get("text", "")
             
             for asset in assets_by_anchor.get(elem_id, []):
                 caption = asset.get("caption", "")
@@ -237,15 +252,16 @@ def export_epub(
                 </div>
                 """
 
-            if elem_type == "paragraph":
-                text = elem.get("text", "")
+            if btype == "chapter_subtitle":
+                ch_html += f'<div class="chapter-subtitle" style="text-align:center; font-weight:bold; letter-spacing:0.15em; text-transform:uppercase; margin:1em 0;">{f_html}</div>\n'
+            elif elem_type == "paragraph":
                 is_first = elem.get("is_first_after_break", False) or not first_p_done
                 cls = ' class="indent-zero"' if is_first else ''
-                ch_html += f'<p{cls}>{text}</p>\n'
+                ch_html += f'<p{cls}>{f_html}</p>\n'
                 first_p_done = True
-            elif elem_type == "container":
-                tag = elem.get("tag", "inquest-writ")
-                content = elem.get("content", "").replace("\n", "<br/>")
+            elif elem_type == "container" or btype in ["inworld_writ", "welsh_slate", "audio_transcript", "archival_journal", "scientific_formula", "cuneiform_clause"]:
+                tag = elem.get("tag", btype.replace("_", "-"))
+                content = elem.get("formatted_html") or elem.get("content", "").replace("\n", "<br/>")
                 ch_html += f'<div class="container {tag}">{content}</div>\n'
             elif elem_type == "scene_break":
                 ch_html += '<div class="scene-break">❖   ❖   ❖</div>\n'
@@ -256,6 +272,33 @@ def export_epub(
         book.add_item(c_item)
         spine.append(c_item)
         toc_items.append(c_item)
+
+    if cm.get("include_appendix", False):
+        app_html = f"""
+        <div style="margin-top:15%;">
+            <h2 style="text-align:center; text-transform:uppercase;">{cm.get('appendix_title', 'Appendix')}</h2>
+            <div style="font-family:monospace; font-size:0.9em; padding:1em; background:#f4f4f4;">{cm.get('appendix_text', '').replace(chr(10), '<br/>')}</div>
+        </div>
+        """
+        c_app = epub.EpubHtml(title="Appendix", file_name="appendix.xhtml", lang="en")
+        c_app.content = app_html
+        c_app.add_item(css_item)
+        book.add_item(c_app)
+        spine.append(c_app)
+
+    if cm.get("include_glossary", False):
+        glo_body = "".join(f"<p><strong>{g.get('term', '')}</strong> — {g.get('definition', '')}</p>" for g in cm.get("glossary_terms", []))
+        glo_html = f"""
+        <div style="margin-top:15%;">
+            <h2 style="text-align:center; text-transform:uppercase;">{cm.get('glossary_title', 'Glossary')}</h2>
+            <div>{glo_body}</div>
+        </div>
+        """
+        c_glo = epub.EpubHtml(title="Glossary", file_name="glossary.xhtml", lang="en")
+        c_glo.content = glo_html
+        c_glo.add_item(css_item)
+        book.add_item(c_glo)
+        spine.append(c_glo)
 
     if cm.get("include_acknowledgements", False):
         ack_html = f"""

@@ -7,15 +7,18 @@ bird's-eye filmstrip, and extended front/back matter.
 """
 
 import json
+import io
 import os
 import shutil
 import zipfile
 from typing import Dict, Any, List, Optional
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, Body
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, Body, Response
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import pymupdf
+from PIL import Image
 
 from app.profiles import BOOK_PROFILES, UNIVERSAL_PUBLISHING_SPECS
 from app.settings import settings_manager, DEFAULT_TRIM_PRESETS
@@ -240,6 +243,72 @@ async def edit_manuscript_element(book_id: str, payload: Dict[str, Any] = Body(.
             
     if not found:
         raise HTTPException(status_code=404, detail="Element not found in manuscript")
+        
+    STATE["custom_manuscripts"][book_id] = manuscript
+    manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
+    tailpieces = STATE["auto_tailpieces"].get(book_id, {})
+    
+    pagination = paginate_manuscript(
+        manuscript,
+        manifest,
+        book_id,
+        auto_tailpieces=tailpieces,
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
+    
+    return {
+        "status": "success",
+        "element_id": element_id,
+        "pagination": pagination
+    }
+
+
+@app.post("/api/manuscript/{book_id}/update-paragraph")
+async def update_paragraph(book_id: str, payload: Dict[str, Any] = Body(...)):
+    element_id = payload.get("element_id")
+    new_text = payload.get("text")
+    new_block_type = payload.get("block_type")
+    page_break_before = payload.get("page_break_before")
+    keep_with_next = payload.get("keep_with_next")
+    scene_break_after = payload.get("scene_break_after")
+    
+    if not element_id:
+        raise HTTPException(status_code=400, detail="Missing element_id")
+        
+    manuscript = load_book_manuscript(book_id)
+    found = False
+    
+    for ch in manuscript.get("chapters", []):
+        for el in ch.get("elements", []):
+            if el.get("id") == element_id:
+                if new_text is not None:
+                    el["text"] = str(new_text).strip()
+                    el["content"] = str(new_text).strip()
+                    el["word_count"] = len(el["text"].split())
+                if new_block_type:
+                    el["block_type"] = new_block_type
+                    if new_block_type in ["inworld_writ", "welsh_slate", "audio_transcript", "archival_journal", "scientific_formula", "cuneiform_clause"]:
+                        el["type"] = "container"
+                        el["tag"] = new_block_type.replace("_", "-")
+                    elif new_block_type == "scene_break":
+                        el["type"] = "scene_break"
+                    else:
+                        el["type"] = "paragraph"
+                if page_break_before is not None:
+                    el["page_break_before"] = bool(page_break_before)
+                if keep_with_next is not None:
+                    el["keep_with_next"] = bool(keep_with_next)
+                if scene_break_after is not None:
+                    el["scene_break_after"] = str(scene_break_after)
+                found = True
+                break
+        if found:
+            break
+            
+    if not found:
+        raise HTTPException(status_code=404, detail="Element not found")
         
     STATE["custom_manuscripts"][book_id] = manuscript
     manifest = manifest_manager.get_book_manifest(book_id)
@@ -643,6 +712,86 @@ async def update_callouts(book_id: str, payload: Dict[str, Any] = Body(...)):
             )
             
     return {"status": "success", "asset": asset}
+
+
+@app.post("/api/manifest/{book_id}/update-asset")
+async def update_manifest_asset(book_id: str, payload: Dict[str, Any] = Body(...)):
+    asset_id = payload.get("asset_id")
+    updates = payload.get("updates", {})
+    if not asset_id:
+        raise HTTPException(status_code=400, detail="Missing asset_id")
+        
+    updated = manifest_manager.update_asset(book_id, asset_id, updates)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Asset not found")
+        
+    parsed = load_book_manuscript(book_id)
+    manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
+    tailpieces = STATE["auto_tailpieces"].get(book_id, {})
+    
+    pagination = paginate_manuscript(
+        parsed,
+        manifest,
+        book_id,
+        auto_tailpieces=tailpieces,
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
+    return {"status": "success", "asset": updated, "pagination": pagination}
+
+
+# ======================================================================
+# LIVE PRINT PDF RASTER PREVIEW (PYMUPDF)
+# ======================================================================
+
+@app.get("/api/pdf-info/{book_id}")
+async def get_pdf_info(book_id: str):
+    parsed = load_book_manuscript(book_id)
+    manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
+    pdf_path = os.path.join(EXPORTS_DIR, f"{book_id}_print_edition.pdf")
+    
+    if not os.path.exists(pdf_path):
+        export_pdf(parsed, manifest, book_id, pdf_path, custom_specs=settings, custom_matter=settings.get("front_back_matter"))
+        
+    try:
+        doc = pymupdf.open(pdf_path)
+        total_pages = len(doc)
+        doc.close()
+    except Exception as e:
+        total_pages = 1
+        
+    return {"book_id": book_id, "total_pages": total_pages}
+
+
+@app.get("/api/pdf-preview/{book_id}/{page_num}")
+@app.get("/api/pdf-page/{book_id}/{page_num}")
+async def get_pdf_page_preview(book_id: str, page_num: int, dpi: int = 150):
+    pdf_path = os.path.join(EXPORTS_DIR, f"{book_id}_print_edition.pdf")
+    
+    if not os.path.exists(pdf_path):
+        parsed = load_book_manuscript(book_id)
+        manifest = manifest_manager.get_book_manifest(book_id)
+        settings = settings_manager.get_settings(book_id)
+        export_pdf(parsed, manifest, book_id, pdf_path, custom_specs=settings, custom_matter=settings.get("front_back_matter"))
+        
+    try:
+        doc = pymupdf.open(pdf_path)
+        if page_num < 1 or page_num > len(doc):
+            blank = Image.new("RGB", (int(6.0 * dpi), int(9.0 * dpi)), (255, 255, 255))
+            buf = io.BytesIO()
+            blank.save(buf, format="PNG")
+            doc.close()
+            return Response(content=buf.getvalue(), media_type="image/png")
+            
+        page = doc.load_page(page_num - 1)
+        pix = page.get_pixmap(dpi=dpi)
+        img_bytes = pix.tobytes("png")
+        doc.close()
+        return Response(content=img_bytes, media_type="image/png")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error rendering PDF page: {e}")
 
 
 @app.post("/api/assets/upload/{book_id}/{asset_id}")

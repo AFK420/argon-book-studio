@@ -187,6 +187,18 @@ def export_docx(
             r_src.font.size = Pt(9)
             doc.add_page_break()
 
+        if cm.get("include_map", False):
+            p_map = doc.add_paragraph()
+            p_map.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p_map.paragraph_format.space_before = Inches(2.2)
+            r_m = p_map.add_run(f"{cm.get('map_title', 'Archival Survey Map')}\n\n")
+            r_m.bold = True
+            r_m.font.size = Pt(12)
+            r_mc = p_map.add_run(cm.get('map_caption', 'Hydrographic Soundings & Survey of the Ghyll Skerries.'))
+            r_mc.italic = True
+            r_mc.font.size = Pt(9.5)
+            doc.add_page_break()
+
     # BODY CHAPTERS
     for ch_idx, chapter in enumerate(parsed_book.get("chapters", [])):
         ch_num = chapter.get("chapter_number", str(ch_idx + 1))
@@ -219,6 +231,7 @@ def export_docx(
         for elem in chapter.get("elements", []):
             elem_id = elem.get("id", "")
             elem_type = elem.get("type", "paragraph")
+            btype = elem.get("block_type", "body")
             
             for asset in assets_by_anchor.get(elem_id, []):
                 img_path = asset.get("image_url", "")
@@ -255,6 +268,18 @@ def export_docx(
                     r_cap.font.italic = True
                     r_cap.font.color.rgb = RGBColor(100, 100, 100)
 
+            if btype == "chapter_subtitle":
+                p_sub = doc.add_paragraph()
+                p_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                p_sub.paragraph_format.space_before = Pt(6)
+                p_sub.paragraph_format.space_after = Pt(14)
+                p_sub.paragraph_format.keep_with_next = True
+                r_sub = p_sub.add_run(elem.get("text", "").upper())
+                r_sub.font.bold = True
+                r_sub.font.size = Pt(9.5)
+                r_sub.font.name = font_name
+                continue
+
             if elem_type == "paragraph":
                 text = elem.get("text", "")
                 is_first = elem.get("is_first_after_break", False) or not first_p_done
@@ -263,6 +288,10 @@ def export_docx(
                 p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
                 p.paragraph_format.space_after = Pt(0)
                 p.paragraph_format.line_spacing = 1.25
+                if elem.get("page_break_before"):
+                    p.paragraph_format.page_break_before = True
+                if elem.get("keep_with_next"):
+                    p.paragraph_format.keep_with_next = True
                 
                 if is_first:
                     p.paragraph_format.first_line_indent = Inches(0.0)
@@ -274,9 +303,9 @@ def export_docx(
                 r.font.size = Pt(body_size)
                 first_p_done = True
                 
-            elif elem_type == "container":
-                tag = elem.get("tag", "custom-container")
-                content = elem.get("content", "")
+            elif elem_type == "container" or btype in ["inworld_writ", "welsh_slate", "audio_transcript", "archival_journal", "scientific_formula", "cuneiform_clause"]:
+                tag = elem.get("tag", btype.replace("_", "-"))
+                content = elem.get("content", elem.get("text", ""))
                 
                 tbl = doc.add_table(rows=1, cols=1)
                 tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -290,7 +319,7 @@ def export_docx(
                     bg_hex = "FBF8F1"
                 elif "transcript" in tag:
                     bg_hex = "0F172A"
-                elif "pelham" in tag:
+                elif "pelham" in tag or "journal" in tag:
                     bg_hex = "FCFAF2"
                 elif "cuneiform" in tag:
                     bg_hex = "FAF6EE"
@@ -301,7 +330,7 @@ def export_docx(
                 cp.alignment = WD_ALIGN_PARAGRAPH.LEFT
                 c_run = cp.add_run(content)
                 c_run.font.size = Pt(9.0)
-                c_run.font.name = "Courier New" if "transcript" in tag or "telemetry" in tag or "fsk" in tag else font_name
+                c_run.font.name = "Courier New" if "transcript" in tag or "telemetry" in tag or "formula" in tag or "fsk" in tag else font_name
                 if "slate" in tag or "transcript" in tag:
                     c_run.font.color.rgb = RGBColor(240, 240, 240)
                 else:
@@ -323,6 +352,25 @@ def export_docx(
         doc.add_page_break()
 
     # BACK MATTER
+    if cm.get("include_appendix", False):
+        p_ap = doc.add_paragraph()
+        p_ap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_ap.paragraph_format.space_before = Inches(2.0)
+        p_ap.add_run(f"{cm.get('appendix_title', 'APPENDIX')}\n\n").bold = True
+        doc.add_paragraph(cm.get("appendix_text", "")).alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        doc.add_page_break()
+
+    if cm.get("include_glossary", False):
+        p_gl = doc.add_paragraph()
+        p_gl.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_gl.paragraph_format.space_before = Inches(2.0)
+        p_gl.add_run(f"{cm.get('glossary_title', 'GLOSSARY')}\n\n").bold = True
+        for g in cm.get("glossary_terms", []):
+            p_gt = doc.add_paragraph()
+            p_gt.add_run(f"{g.get('term', '')}: ").bold = True
+            p_gt.add_run(g.get("definition", ""))
+        doc.add_page_break()
+
     if cm.get("include_acknowledgements", False):
         p_ak = doc.add_paragraph()
         p_ak.alignment = WD_ALIGN_PARAGRAPH.CENTER

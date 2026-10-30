@@ -116,3 +116,51 @@ def test_api_export_all_zip():
     r = client.post("/api/export/all", json={"book_id": "book01"})
     assert r.status_code == 200
     assert len(r.content) > 10000
+
+def test_api_update_paragraph_v2():
+    r = client.post("/api/manuscript/book01/update-paragraph", json={
+        "element_id": "ch01_p01",
+        "text": "The Thames river police stood motionless in the freezing cold.",
+        "block_type": "inworld_writ",
+        "page_break_before": True,
+        "keep_with_next": True,
+        "scene_break_after": "book_svg"
+    })
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "success"
+    assert data["element_id"] == "ch01_p01"
+    assert "pagination" in data
+
+def test_api_update_manifest_asset_v2():
+    r = client.post("/api/manifest/book01/update-asset", json={
+        "asset_id": "b01_asset_01",
+        "updates": {
+            "placement": "Full-Page Recto Plate",
+            "frame_style": "double_brass_frame",
+            "width_pct": 95,
+            "max_height_in": 7.5,
+            "caption": "The Thames Estuary at Twilight",
+            "caption_position": "below"
+        }
+    })
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "success"
+    assert data["asset"]["placement"] == "Full-Page Recto Plate"
+    assert data["asset"]["frame_style"] == "double_brass_frame"
+
+def test_api_pdf_raster_preview():
+    # 1. Info endpoint
+    info_res = client.get("/api/pdf-info/book01")
+    assert info_res.status_code == 200
+    info_data = info_res.json()
+    assert "total_pages" in info_data
+    assert info_data["total_pages"] > 0
+
+    # 2. Page preview endpoint
+    page_res = client.get("/api/pdf-preview/book01/1?dpi=150")
+    assert page_res.status_code == 200
+    assert page_res.headers["content-type"] == "image/png"
+    assert len(page_res.content) > 1000
+

@@ -25,6 +25,7 @@ class BookPage:
         self.page_type = page_type  # body, chapter_opener, full_plate, front_matter, end_matter, blank
         self.elements: List[Dict[str, Any]] = []
         self.running_header_text = ""
+        self.running_header_style = "Small Caps Centered"
         self.suppress_header = False
         self.suppress_footer = False
         self.chapter_title = ""
@@ -45,6 +46,7 @@ class BookPage:
             "suppress_header": self.suppress_header,
             "suppress_footer": self.suppress_footer,
             "running_header_text": self.running_header_text,
+            "running_header_style": self.running_header_style,
             "chapter_title": self.chapter_title,
             "chapter_number": self.chapter_number,
             "book_title": self.book_title,
@@ -119,6 +121,7 @@ def paginate_manuscript(
     sinkage = float(cs.get("typography", {}).get("chapter_sinkage_in", cs.get("chapter_sinkage_in", specs["grid_rules"]["chapter_sinkage_in"])))
     body_size = float(cs.get("typography", {}).get("body_font_size_pt", cs.get("body_font_size_pt", 11.0)))
     body_leading = float(cs.get("typography", {}).get("body_leading_pt", cs.get("body_leading_pt", 15.0)))
+    header_style = cs.get("typography", {}).get("running_header_style", "Small Caps Centered")
     
     cap = calculate_line_capacity(
         trim_width_in=trim_w,
@@ -244,6 +247,21 @@ def paginate_manuscript(
             pages.append(p5)
             current_page_num += 1
 
+        # Pre-Book Map / Survey Plate (Optional)
+        if cm.get("include_map", False):
+            p_map = BookPage(page_number=current_page_num, page_type="map_plate")
+            p_map.suppress_header = True
+            p_map.suppress_footer = True
+            p_map.has_plate = True
+            p_map.elements.append({
+                "type": "map_plate",
+                "title": cm.get("map_title", "Archival Chart & Survey Map"),
+                "caption": cm.get("map_caption", "Hydrographic Soundings & Survey of the Ghyll Skerries."),
+                "ornament_svg": profile["scene_break_svg"]
+            })
+            pages.append(p_map)
+            current_page_num += 1
+
         # Blank verso before Chapter 1 to ensure Chapter 1 starts clean
         if current_page_num % 2 == 0:
             p_blank = BookPage(page_number=current_page_num, page_type="blank")
@@ -293,17 +311,38 @@ def paginate_manuscript(
             elem_id = elem.get("id", "")
             elem_type = elem.get("type", "paragraph")
             
+            # Check for page_break_before on element
+            if elem.get("page_break_before", False) and cur_page.elements:
+                cur_page = BookPage(page_number=current_page_num, page_type="body")
+                cur_page.chapter_title = ch_title
+                cur_page.chapter_number = ch_num
+                cur_page.book_title = parsed_book.get("title", profile["short_title"])
+                cur_page.running_header_text = (
+                    profile["short_title"].upper() if cur_page.is_verso else f"CHAPTER {ch_num} • {ch_title.upper()}"
+                )
+                cur_page_lines = 0
+                page_capacity = lines_per_full_page
+                pages.append(cur_page)
+                current_page_num += 1
+
             # Check for anchored illustrations
             for asset in assets_by_anchor.get(elem_id, []):
                 placement = asset.get("placement", "Inline Archival Insert")
                 if placement == "Chapter Opener Vignette":
                     continue
-                elif placement == "Full-Page Recto Plate":
+                elif placement in ["Full-Page Recto Plate", "Full Bleed Plate"]:
+                    # Must be placed on a Recto (odd) page
                     if cur_page.is_recto and cur_page.elements:
+                        # Advance through a blank verso page to reach next recto
                         cur_page = BookPage(page_number=current_page_num, page_type="blank")
                         cur_page.suppress_header = True
                         cur_page.suppress_footer = True
                         pages.append(cur_page)
+                        current_page_num += 1
+                    elif cur_page.is_verso and cur_page.elements:
+                        pass # cur_page will finish and next page is recto
+                    elif cur_page.is_verso and not cur_page.elements:
+                        # Skip empty verso
                         current_page_num += 1
                         
                     plate_page = BookPage(page_number=current_page_num, page_type="full_plate")
@@ -312,7 +351,7 @@ def paginate_manuscript(
                     plate_page.has_plate = True
                     plate_page.elements.append({
                         "type": "illustration",
-                        "placement": "Full-Page Recto Plate",
+                        "placement": placement,
                         "asset": asset
                     })
                     pages.append(plate_page)
@@ -330,7 +369,45 @@ def paginate_manuscript(
                     pages.append(cur_page)
                     current_page_num += 1
                     continue
-                elif placement == "Half-Page Top":
+                elif placement == "Full-Page Verso Plate":
+                    # Must be placed on a Verso (even) page
+                    if cur_page.is_verso and cur_page.elements:
+                        # Advance through a blank recto
+                        cur_page = BookPage(page_number=current_page_num, page_type="blank")
+                        cur_page.suppress_header = True
+                        cur_page.suppress_footer = True
+                        pages.append(cur_page)
+                        current_page_num += 1
+                    elif cur_page.is_recto and cur_page.elements:
+                        pass
+                    elif cur_page.is_recto and not cur_page.elements:
+                        current_page_num += 1
+                        
+                    plate_page = BookPage(page_number=current_page_num, page_type="full_plate")
+                    plate_page.suppress_header = True
+                    plate_page.suppress_footer = True
+                    plate_page.has_plate = True
+                    plate_page.elements.append({
+                        "type": "illustration",
+                        "placement": "Full-Page Verso Plate",
+                        "asset": asset
+                    })
+                    pages.append(plate_page)
+                    current_page_num += 1
+                    
+                    cur_page = BookPage(page_number=current_page_num, page_type="body")
+                    cur_page.chapter_title = ch_title
+                    cur_page.chapter_number = ch_num
+                    cur_page.book_title = parsed_book.get("title", profile["short_title"])
+                    cur_page.running_header_text = (
+                        profile["short_title"].upper() if cur_page.is_verso else f"CHAPTER {ch_num} • {ch_title.upper()}"
+                    )
+                    cur_page_lines = 0
+                    page_capacity = lines_per_full_page
+                    pages.append(cur_page)
+                    current_page_num += 1
+                    continue
+                elif placement in ["Half-Page Top", "Half-Page Bottom"]:
                     if cur_page_lines + 14 > page_capacity:
                         cur_page = BookPage(page_number=current_page_num, page_type="body")
                         cur_page.chapter_title = ch_title
@@ -345,13 +422,13 @@ def paginate_manuscript(
                         current_page_num += 1
                     cur_page.elements.append({
                         "type": "illustration",
-                        "placement": "Half-Page Top",
+                        "placement": placement,
                         "asset": asset
                     })
                     cur_page.has_plate = True
                     cur_page_lines += 14
                     continue
-                elif placement == "Inline Archival Insert":
+                elif placement in ["Inline Centered", "Inline Archival Insert"]:
                     if cur_page_lines + 10 > page_capacity:
                         cur_page = BookPage(page_number=current_page_num, page_type="body")
                         cur_page.chapter_title = ch_title
@@ -366,7 +443,7 @@ def paginate_manuscript(
                         current_page_num += 1
                     cur_page.elements.append({
                         "type": "illustration",
-                        "placement": "Inline Archival Insert",
+                        "placement": placement,
                         "asset": asset
                     })
                     cur_page.has_plate = True
@@ -374,74 +451,83 @@ def paginate_manuscript(
                     continue
 
             # Process paragraph / element
-            if elem_type == "paragraph":
-                text = elem.get("text", "")
-                est_lines = max(1, math.ceil(len(text) / chars_per_line))
-                
-                if cur_page_lines + est_lines > page_capacity and cur_page.elements:
-                    cur_page = BookPage(page_number=current_page_num, page_type="body")
-                    cur_page.chapter_title = ch_title
-                    cur_page.chapter_number = ch_num
-                    cur_page.book_title = parsed_book.get("title", profile["short_title"])
-                    cur_page.running_header_text = (
-                        profile["short_title"].upper() if cur_page.is_verso else f"CHAPTER {ch_num} • {ch_title.upper()}"
-                    )
-                    cur_page_lines = 0
-                    page_capacity = lines_per_full_page
-                    pages.append(cur_page)
-                    current_page_num += 1
-                    
-                cur_page.elements.append({
-                    "id": elem_id,
-                    "type": "paragraph",
-                    "text": text,
-                    "is_first_after_break": elem.get("is_first_after_break", False),
-                    "estimated_lines": est_lines
-                })
-                cur_page_lines += est_lines
-                
-            elif elem_type == "container":
-                raw_content = elem.get("content", "")
-                tag = elem.get("tag", "inquest-writ")
-                lines_count = len(raw_content.splitlines()) + 3
-                if cur_page_lines + lines_count > page_capacity and cur_page.elements:
-                    cur_page = BookPage(page_number=current_page_num, page_type="body")
-                    cur_page.chapter_title = ch_title
-                    cur_page.chapter_number = ch_num
-                    cur_page.book_title = parsed_book.get("title", profile["short_title"])
-                    cur_page.running_header_text = (
-                        profile["short_title"].upper() if cur_page.is_verso else f"CHAPTER {ch_num} • {ch_title.upper()}"
-                    )
-                    cur_page_lines = 0
-                    page_capacity = lines_per_full_page
-                    pages.append(cur_page)
-                    current_page_num += 1
-                cur_page.elements.append({
-                    "id": elem_id,
-                    "type": "container",
-                    "tag": tag,
-                    "content": raw_content,
-                    "estimated_lines": lines_count
-                })
-                cur_page_lines += lines_count
+            btype = elem.get("block_type", "body")
+            raw_text = elem.get("text", elem.get("content", ""))
+            f_html = elem.get("formatted_html") or raw_text
 
+            if btype == "chapter_subtitle":
+                est_lines = 2
+            elif btype == "scientific_formula":
+                est_lines = 4
+            elif btype in ["inworld_writ", "welsh_slate", "audio_transcript", "archival_journal", "cuneiform_clause"]:
+                est_lines = max(4, len(raw_text.splitlines()) + 3)
             elif elem_type == "scene_break":
-                if cur_page_lines + 3 > page_capacity and cur_page.elements:
-                    cur_page = BookPage(page_number=current_page_num, page_type="body")
-                    cur_page.chapter_title = ch_title
-                    cur_page.chapter_number = ch_num
-                    cur_page.book_title = parsed_book.get("title", profile["short_title"])
-                    cur_page.running_header_text = (
-                        profile["short_title"].upper() if cur_page.is_verso else f"CHAPTER {ch_num} • {ch_title.upper()}"
-                    )
-                    cur_page_lines = 0
-                    page_capacity = lines_per_full_page
-                    pages.append(cur_page)
-                    current_page_num += 1
+                est_lines = 3
+            else:
+                est_lines = max(1, math.ceil(len(raw_text) / chars_per_line))
+
+            if cur_page_lines + est_lines > page_capacity and cur_page.elements:
+                cur_page = BookPage(page_number=current_page_num, page_type="body")
+                cur_page.chapter_title = ch_title
+                cur_page.chapter_number = ch_num
+                cur_page.book_title = parsed_book.get("title", profile["short_title"])
+                cur_page.running_header_text = (
+                    profile["short_title"].upper() if cur_page.is_verso else f"CHAPTER {ch_num} • {ch_title.upper()}"
+                )
+                cur_page_lines = 0
+                page_capacity = lines_per_full_page
+                pages.append(cur_page)
+                current_page_num += 1
+
+            if elem_type == "scene_break":
                 cur_page.elements.append({
                     "id": elem_id,
                     "type": "scene_break",
-                    "svg": profile["scene_break_svg"]
+                    "block_type": "scene_break",
+                    "svg": profile["scene_break_svg"],
+                    "estimated_lines": 3
+                })
+                cur_page_lines += 3
+            elif btype in ["inworld_writ", "welsh_slate", "audio_transcript", "archival_journal", "scientific_formula", "cuneiform_clause"] or elem_type == "container":
+                cur_page.elements.append({
+                    "id": elem_id,
+                    "type": "container",
+                    "tag": elem.get("tag", btype.replace("_", "-")),
+                    "block_type": btype,
+                    "content": raw_text,
+                    "text": raw_text,
+                    "formatted_html": f_html,
+                    "estimated_lines": est_lines,
+                    "page_break_before": elem.get("page_break_before", False),
+                    "keep_with_next": elem.get("keep_with_next", False),
+                    "scene_break_after": elem.get("scene_break_after", "none")
+                })
+                cur_page_lines += est_lines
+            else:
+                cur_page.elements.append({
+                    "id": elem_id,
+                    "type": "paragraph",
+                    "block_type": btype,
+                    "text": raw_text,
+                    "content": raw_text,
+                    "formatted_html": f_html,
+                    "is_first_after_break": elem.get("is_first_after_break", False),
+                    "estimated_lines": est_lines,
+                    "page_break_before": elem.get("page_break_before", False),
+                    "keep_with_next": elem.get("keep_with_next", False),
+                    "scene_break_after": elem.get("scene_break_after", "none")
+                })
+                cur_page_lines += est_lines
+
+            # Handle scene_break_after on element
+            sb_after = elem.get("scene_break_after", "none")
+            if sb_after and sb_after != "none":
+                cur_page.elements.append({
+                    "id": f"{elem_id}_sb",
+                    "type": "scene_break",
+                    "block_type": "scene_break",
+                    "svg": profile["scene_break_svg"],
+                    "estimated_lines": 3
                 })
                 cur_page_lines += 3
 
@@ -459,7 +545,31 @@ def paginate_manuscript(
                     "note": "Whitespace balanced via Thematic Tailpiece Ornament"
                 })
 
-    # BACK MATTER (Acknowledgements, About Author, Colophon)
+    # BACK MATTER (Acknowledgements, Appendix, Glossary, About Author, Colophon)
+    if cm.get("include_appendix", False):
+        p_app = BookPage(page_number=current_page_num, page_type="appendix")
+        p_app.suppress_header = True
+        p_app.suppress_footer = True
+        p_app.elements.append({
+            "type": "appendix",
+            "title": cm.get("appendix_title", "Appendix: Chronometric & Forensic Telemetry"),
+            "text": cm.get("appendix_text", "")
+        })
+        pages.append(p_app)
+        current_page_num += 1
+
+    if cm.get("include_glossary", False):
+        p_glo = BookPage(page_number=current_page_num, page_type="glossary")
+        p_glo.suppress_header = True
+        p_glo.suppress_footer = True
+        p_glo.elements.append({
+            "type": "glossary",
+            "title": cm.get("glossary_title", "Glossary of Technical & In-World Terms"),
+            "terms": cm.get("glossary_terms", [])
+        })
+        pages.append(p_glo)
+        current_page_num += 1
+
     if cm.get("include_acknowledgements", False):
         p_ack = BookPage(page_number=current_page_num, page_type="end_matter")
         p_ack.suppress_header = True

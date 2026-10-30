@@ -260,6 +260,31 @@ FILTER_MAP = {
 }
 
 
+def apply_frame_style(image: Image.Image, frame_style: str = "none", profile_id: str = "book01") -> Image.Image:
+    """Applies authentic book frame styling around illustration."""
+    if not frame_style or frame_style == "none":
+        return image
+        
+    img = image.convert("RGB")
+    w, h = img.size
+    draw = ImageDraw.Draw(img)
+    
+    if frame_style == "thin_ink_border":
+        draw.rectangle([8, 8, w - 8, h - 8], outline=(30, 30, 30), width=2)
+    elif frame_style == "double_brass_frame":
+        draw.rectangle([10, 10, w - 10, h - 10], outline=(27, 40, 56), width=3)
+        draw.rectangle([16, 16, w - 16, h - 16], outline=(184, 134, 11), width=1)
+    elif frame_style == "blueprint_grid_frame":
+        draw.rectangle([12, 12, w - 12, h - 12], outline=(15, 23, 42), width=2)
+        for cx, cy in [(12, 12), (w - 12, 12), (12, h - 12), (w - 12, h - 12)]:
+            draw.line([(cx - 10, cy), (cx + 10, cy)], fill=(56, 189, 248), width=2)
+            draw.line([(cx, cy - 10), (cx, cy + 10)], fill=(56, 189, 248), width=2)
+    elif frame_style == "rounded_slate":
+        draw.rounded_rectangle([10, 10, w - 10, h - 10], radius=14, outline=(40, 48, 60), width=3)
+        
+    return img
+
+
 def render_vector_callouts(image: Image.Image, callouts: List[Dict[str, Any]], profile_id: str = "book01") -> Image.Image:
     """
     Renders high-resolution vector text callout labels, boxes, crosshairs, and pointers
@@ -293,15 +318,22 @@ def render_vector_callouts(image: Image.Image, callouts: List[Dict[str, Any]], p
             font = ImageFont.load_default()
 
     for c in callouts:
-        x_pct = float(c.get("x", 50))
-        y_pct = float(c.get("y", 50))
-        label = str(c.get("label", "")).strip().upper()
-        c_type = c.get("type", "badge")
+        x_pct = float(c.get("x_pct", c.get("x", 50)))
+        y_pct = float(c.get("y_pct", c.get("y", 50)))
+        
+        has_target = ("target_x_pct" in c or "target_x" in c)
+        tx_pct = float(c.get("target_x_pct", c.get("target_x", x_pct)))
+        ty_pct = float(c.get("target_y_pct", c.get("target_y", y_pct)))
+        
+        label = str(c.get("text", c.get("label", ""))).strip().upper()
+        c_type = str(c.get("style", c.get("type", "badge"))).lower()
         if not label:
             continue
             
         px = int((x_pct / 100.0) * w)
         py = int((y_pct / 100.0) * h)
+        tpx = int((tx_pct / 100.0) * w)
+        tpy = int((ty_pct / 100.0) * h)
         
         bbox = draw.textbbox((0, 0), label, font=font)
         text_w = bbox[2] - bbox[0]
@@ -317,36 +349,49 @@ def render_vector_callouts(image: Image.Image, callouts: List[Dict[str, Any]], p
         x1 = x0 + box_w
         y1 = y0 + box_h
         
-        if c_type == "crosshair":
-            # Target crosshair at (px, py)
+        # If target point is separated from label, draw pointer leader line
+        if has_target and (abs(tpx - px) > 15 or abs(tpy - py) > 15):
+            # Find closest edge point on label box
+            mid_x = (x0 + x1) // 2
+            mid_y = (y0 + y1) // 2
+            edge_x = x0 if tpx < mid_x else x1
+            edge_y = y0 if tpy < mid_y else y1
+            
+            # Draw leader line
+            draw.line([(edge_x, mid_y), (tpx, tpy)], fill=tc["border"], width=2)
+            # Draw target indicator at (tpx, tpy)
+            draw.circle((tpx, tpy), radius=4, fill=tc["border"])
+            draw.ellipse([tpx - 8, tpy - 8, tpx + 8, tpy + 8], outline=tc["border"], width=1)
+
+        if "crosshair" in c_type:
+            # Target crosshair at (tpx, tpy)
             cr = 14
-            draw.ellipse([px - cr, py - cr, px + cr, py + cr], outline=tc["border"], width=2)
-            draw.line([(px - cr - 6, py), (px + cr + 6, py)], fill=tc["border"], width=2)
-            draw.line([(px, py - cr - 6), (px, py + cr + 6)], fill=tc["border"], width=2)
-            draw.circle((px, py), radius=3, fill=tc["border"])
-            # Label box offset
-            y0 = max(10, min(h - box_h - 10, py + cr + 8))
-            y1 = y0 + box_h
+            draw.ellipse([tpx - cr, tpy - cr, tpx + cr, tpy + cr], outline=tc["border"], width=2)
+            draw.line([(tpx - cr - 6, tpy), (tpx + cr + 6, tpy)], fill=tc["border"], width=2)
+            draw.line([(tpx, tpy - cr - 6), (tpx, tpy + cr + 6)], fill=tc["border"], width=2)
+            draw.circle((tpx, tpy), radius=3, fill=tc["border"])
             draw.rounded_rectangle([x0, y0, x1, y1], radius=4, fill=tc["bg"], outline=tc["border"], width=1)
             draw.text((x0 + pad_x, y0 + pad_y - 2), label, font=font, fill=tc["text"])
-        elif c_type == "box":
+        elif "box" in c_type:
             draw.rectangle([x0, y0, x1, y1], fill=tc["bg"], outline=tc["border"], width=2)
             draw.line([x0 - 4, y0, x0 + 4, y0], fill=tc["border"], width=1)
             draw.line([x0, y0 - 4, x0, y0 + 4], fill=tc["border"], width=1)
             draw.text((x0 + pad_x, y0 + pad_y - 2), label, font=font, fill=tc["text"])
-        elif c_type == "badge":
+        elif "badge" in c_type:
             draw.rounded_rectangle([x0, y0, x1, y1], radius=6, fill=tc["bg"], outline=tc["border"], width=2)
-            draw.circle((px, py + box_h // 2 + 10), radius=4, fill=tc["border"])
-            draw.line([(px, py + box_h // 2), (px, py + box_h // 2 + 10)], fill=tc["border"], width=2)
+            if not has_target:
+                draw.circle((px, py + box_h // 2 + 10), radius=4, fill=tc["border"])
+                draw.line([(px, py + box_h // 2), (px, py + box_h // 2 + 10)], fill=tc["border"], width=2)
             draw.text((x0 + pad_x, y0 + pad_y - 2), label, font=font, fill=tc["text"])
         elif "arrow" in c_type:
             draw.rounded_rectangle([x0, y0, x1, y1], radius=4, fill=tc["bg"], outline=tc["border"], width=2)
-            target_y = y1 + 16 if "down" in c_type or "up" not in c_type else y0 - 16
-            draw.line([(px, y1), (px, target_y)], fill=tc["border"], width=2)
-            draw.polygon([(px - 4, target_y), (px + 4, target_y), (px, target_y + 6)], fill=tc["border"])
+            if not has_target:
+                target_y = y1 + 16 if "down" in c_type or "up" not in c_type else y0 - 16
+                draw.line([(px, y1), (px, target_y)], fill=tc["border"], width=2)
+                draw.polygon([(px - 4, target_y), (px + 4, target_y), (px, target_y + 6)], fill=tc["border"])
             draw.text((x0 + pad_x, y0 + pad_y - 2), label, font=font, fill=tc["text"])
-        else:
-            draw.rectangle([x0, y0, x1, y1], fill=tc["bg"], outline=tc["border"], width=2)
+        else: # callout_pointer or default
+            draw.rounded_rectangle([x0, y0, x1, y1], radius=4, fill=tc["bg"], outline=tc["border"], width=2)
             draw.text((x0 + pad_x, y0 + pad_y - 2), label, font=font, fill=tc["text"])
             
     img_copy.alpha_composite(overlay)
@@ -364,9 +409,10 @@ def process_image(
     contrast: float = 1.35,
     grain: float = 0.08,
     vignette: float = 0.38,
-    brightness: float = 1.0
+    brightness: float = 1.0,
+    frame_style: str = "none"
 ) -> str:
-    """Applies filter, custom adjustments, callouts, and resamples to target DPI."""
+    """Applies filter, custom adjustments, callouts, framing, and resamples to target DPI."""
     img = Image.open(input_image_path).convert("RGB")
     
     scale_factor = 2 if target_dpi >= 600 else 1
@@ -384,6 +430,9 @@ def process_image(
         brightness=brightness
     )
     
+    if frame_style and frame_style != "none":
+        filtered = apply_frame_style(filtered, frame_style, profile_id)
+        
     if callouts:
         filtered = render_vector_callouts(filtered, callouts, profile_id)
         
@@ -400,7 +449,8 @@ def generate_preview_base64(
     vignette: float = 0.38,
     brightness: float = 1.0,
     callouts: List[Dict[str, Any]] = None,
-    profile_id: str = "book01"
+    profile_id: str = "book01",
+    frame_style: str = "none"
 ) -> str:
     """Generates a fast base64 preview for the interactive split comparison slider."""
     if not os.path.exists(image_path):
@@ -417,6 +467,8 @@ def generate_preview_base64(
         vignette=vignette,
         brightness=brightness
     )
+    if frame_style and frame_style != "none":
+        filtered = apply_frame_style(filtered, frame_style, profile_id)
     if callouts:
         filtered = render_vector_callouts(filtered, callouts, profile_id)
         
@@ -435,7 +487,8 @@ def generate_procedural_placeholder(
     callouts: List[Dict[str, Any]] = None,
     contrast: float = 1.35,
     grain: float = 0.08,
-    vignette: float = 0.38
+    vignette: float = 0.38,
+    frame_style: str = "none"
 ) -> str:
     """Generates an authentic procedural etching/engraving plate with custom parameters."""
     size = DIMENSIONS_300DPI.get(placement_type, (1600, 1050))
@@ -493,6 +546,9 @@ def generate_procedural_placeholder(
     filter_func = FILTER_MAP.get(filter_preset, filter_cyanotype_silver_plate)
     filtered = filter_func(base, contrast=contrast, grain=grain, vignette=vignette)
     
+    if frame_style and frame_style != "none":
+        filtered = apply_frame_style(filtered, frame_style, profile_id)
+        
     if callouts:
         filtered = render_vector_callouts(filtered, callouts, profile_id)
         

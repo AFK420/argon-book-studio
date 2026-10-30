@@ -27,3 +27,5 @@ exports/*.docx
 exports/*.epub
 !exports/.gitkeep
 tmp_test/
+*.rar
+

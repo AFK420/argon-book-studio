@@ -259,3 +259,66 @@ Oscilloscope carrier frequency active at 42.4 Hz.
     export_epub(parsed, manifest, "book03", out_epub)
     assert os.path.exists(out_epub)
     assert os.path.getsize(out_epub) > 1000
+
+
+def test_parser_block_heuristics_and_formatting():
+    from app.parser import detect_block_type
+    assert detect_block_type("RONAN: Thursday, 08:00 — Barometric drop detected") == "chapter_subtitle"
+    assert detect_block_type("BAROMETER 960 HPA THRESHOLD REACHED") == "welsh_slate"
+    assert detect_block_type("[04:22.15] MIC-A: Carrier frequency detected") == "audio_transcript"
+    assert detect_block_type("May 14, 1928 — The marsh waters receded two cubits.") == "archival_journal"
+    assert detect_block_type("ΔP / Δt = -3.42 mbar/hr") == "scientific_formula"
+    assert detect_block_type("di-gir-ra / [dingir] : celestial sign") == "cuneiform_clause"
+    assert detect_block_type("Normal narrative prose about the river banks.") == "body"
+
+
+def test_filters_frames_and_pointer_targets():
+    from app.filters import apply_frame_style, render_vector_callouts
+    base_img = Image.new("RGB", (400, 300), (220, 210, 190))
+    
+    # Frames
+    framed_brass = apply_frame_style(base_img, "double_brass_frame")
+    assert framed_brass.size == (400, 300)
+    framed_grid = apply_frame_style(base_img, "blueprint_grid_frame")
+    assert framed_grid.size == (400, 300)
+    framed_slate = apply_frame_style(base_img, "rounded_slate")
+    assert framed_slate.size == (400, 300)
+
+    # Callouts with pointer targets
+    callouts = [
+        {
+            "x": 30, "y": 40,
+            "target_x": 60, "target_y": 70,
+            "label": "VERIFIED STRATUM",
+            "type": "callout_pointer"
+        }
+    ]
+    annotated = render_vector_callouts(base_img, callouts, "book01")
+    assert annotated.size == (400, 300)
+
+
+def test_extended_front_back_matter_pagination():
+    sample_md = """# Test Matter Book
+## Chapter 1: The First Chapter
+A brief narrative passage.
+"""
+    parsed = parse_markdown_manuscript(sample_md)
+    manifest = {"assets": []}
+    custom_matter = {
+        "include_map": True,
+        "map_title": "Map of the Salt Marshes",
+        "map_caption": "Plate I: The Lowlands",
+        "include_appendix": True,
+        "appendix_title": "Archaeometric Notes",
+        "appendix_text": "Detailed carbon dating methodologies and findings.",
+        "include_glossary": True,
+        "glossary_title": "Acoustic Lexicon",
+        "include_toc": True
+    }
+    paginated = paginate_manuscript(parsed, manifest, "book01", include_front_matter=True, custom_matter=custom_matter)
+    
+    types = [p["page_type"] for p in paginated["pages"]]
+    assert "map_plate" in types
+    assert "appendix" in types
+    assert "glossary" in types
+

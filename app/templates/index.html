@@ -111,6 +111,16 @@
           </button>
         </div>
 
+        <!-- Live View Mode Switcher -->
+        <div style="display:flex; background:rgba(0,0,0,0.4); border-radius:4px; padding:2px; border:1px solid var(--border-subtle);">
+          <button id="view-mode-html-btn" onclick="setViewMode('html')" class="view-mode-btn active" title="Interactive HTML Spread Preview">
+            📄 HTML Spread
+          </button>
+          <button id="view-mode-pdf-btn" onclick="setViewMode('pdf')" class="view-mode-btn" title="True Print PDF Raster Spread">
+            🖨️ True Print PDF
+          </button>
+        </div>
+
         <div style="display:flex; align-items:center; gap:10px;">
           <button onclick="toggleMargins()" id="btn-toggle-margins" style="background:none; border:1px solid var(--border-subtle); color:var(--accent-gold); font-size:0.72rem; padding:3px 8px; border-radius:4px; cursor:pointer;">
             ◫ Margins Guide
@@ -156,13 +166,13 @@
         
         <div style="display:flex; background:rgba(0,0,0,0.3); border-radius:4px; padding:2px;">
           <button id="rtab-geom-btn" onclick="switchRightTab('geometry')" style="background:none; border:none; color:var(--text-muted); font-size:0.68rem; padding:3px 6px; border-radius:3px; cursor:pointer;" class="active">
-            Layout
+            Design & Typo
           </button>
           <button id="rtab-matter-btn" onclick="switchRightTab('matter')" style="background:none; border:none; color:var(--text-muted); font-size:0.68rem; padding:3px 6px; border-radius:3px; cursor:pointer;">
-            Matter
+            Front/Back Matter
           </button>
           <button id="rtab-export-btn" onclick="switchRightTab('export')" style="background:none; border:none; color:var(--text-muted); font-size:0.68rem; padding:3px 6px; border-radius:3px; cursor:pointer;">
-            Export
+            Release & Export
           </button>
         </div>
       </div>

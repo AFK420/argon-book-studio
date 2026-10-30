@@ -1,13 +1,15 @@
 /**
- * Argon Book Studio Pro - Master Typesetting & Publishing Frontend.
+ * Argon Book Studio Pro v2.0 - Master Typesetting & Publishing Frontend.
  * Powers:
- * 1. Live Geometry & Margin Inspector (trim, margins, fonts, leading, paper tint)
- * 2. Click-to-Edit Inline Manuscript Studio (in-spread editing, splitting, containers)
- * 3. Visual Pin-Dropper Callout Studio (click & drag pins directly on plates)
- * 4. Image Print Lab with Split Before/After comparison slider
- * 5. Bird's-Eye Thumbnail Filmstrip (instant spread navigation)
- * 6. Extended Front & Back Matter Customizer (dedications, epigraphs, bio)
- * 7. Multi-Format Export Sync (PDF, DOCX, EPUB, ZIP)
+ * 1. Live Book Design, Typography & Margin Inspector
+ * 2. Click-to-Style Paragraph & In-World Block Controller
+ * 3. Granular Image & Plate Inspector + Interactive Vector Callouts
+ * 4. True WYSIWYG Spread Preview + Live PDF Raster Preview (PyMuPDF)
+ * 5. Visual Pin-Dropper Callout Studio with Leader Pointers
+ * 6. Image Print Lab with Split Before/After comparison slider
+ * 7. Bird's-Eye Thumbnail Filmstrip & Short Ending Balancer
+ * 8. Comprehensive Front & Back Matter Visual Editor (Map, Appendix, Glossary)
+ * 9. Multi-Format Export Sync (PDF, DOCX, EPUB, Release ZIP)
  */
 
 const state = {
@@ -26,6 +28,7 @@ const state = {
   zoomLevel: 1.0,
   activeLeftTab: "manifest", // 'manifest' or 'tree'
   activeRightTab: "geometry", // 'geometry', 'matter', 'export'
+  viewMode: "html", // 'html' or 'pdf'
   activeEditingId: null,
   imageLabState: {
     assetId: null,
@@ -40,11 +43,14 @@ const state = {
   pinStudioState: {
     assetId: null,
     callouts: [],
-    activePinIndex: null
+    activePinIndex: null,
+    targetMode: false
   }
 };
 
-// API Helpers
+// ======================================================================
+// API HELPERS & TOASTS
+// ======================================================================
 async function fetchAPI(endpoint, options = {}) {
   try {
     const res = await fetch(endpoint, options);
@@ -83,7 +89,9 @@ function showToast(message, type = "info") {
   }, 3200);
 }
 
-// Studio Initialization
+// ======================================================================
+// STUDIO INITIALIZATION & BOOK LOADING
+// ======================================================================
 async function initStudio() {
   try {
     const profilesRes = await fetchAPI("/api/profiles");
@@ -109,7 +117,9 @@ async function loadBook(bookId) {
   state.settings = data.settings;
   state.pagination = data.pagination;
   state.frontMatter = data.front_matter;
-  state.currentSpreadIndex = 1;
+  if (state.currentSpreadIndex >= (state.pagination.spreads || []).length) {
+    state.currentSpreadIndex = 1;
+  }
 
   renderAll();
 }
@@ -122,9 +132,9 @@ function renderAll() {
   renderRightPanel();
 }
 
-// -------------------------------------------------------------
-// 1. TOP HEADER
-// -------------------------------------------------------------
+// ======================================================================
+// 1. TOP HEADER & VIEW MODE CONTROLLER
+// ======================================================================
 function renderHeader() {
   const selector = document.getElementById("book-profile-select");
   if (selector) {
@@ -138,10 +148,15 @@ function renderHeader() {
   const indicator = document.getElementById("active-profile-indicator");
   if (indicator && state.activeBook && state.settings) {
     const s = state.settings;
+    const bodyFont = s.typography.body_font_name || s.body_font || state.activeBook.body_font_name;
+    const bodySize = s.typography.body_font_size_pt || s.font_size_pt || 11;
+    const leading = s.typography.body_leading_pt || (bodySize * (s.line_height || 1.36));
+    const accent = s.typography.accent_color || state.activeBook.accent_color || "#D97706";
+
     indicator.innerHTML = `
-      <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${s.typography.accent_color};"></span>
+      <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${accent};"></span>
       <span style="font-weight:600;">${state.activeBook.short_title}</span>
-      <span style="color:var(--text-dim); font-size:0.75rem;">${s.trim_width_in}×${s.trim_height_in}" • ${s.typography.body_font_name} ${s.typography.body_font_size_pt}pt/${s.typography.body_leading_pt}pt</span>
+      <span style="color:var(--text-dim); font-size:0.75rem;">${s.trim_width_in}×${s.trim_height_in}" • ${bodyFont} ${parseFloat(bodySize).toFixed(1)}pt/${parseFloat(leading).toFixed(1)}pt</span>
     `;
   }
 }
@@ -162,20 +177,27 @@ function setupHeaderListeners() {
       formData.append("book_id", state.activeBookId);
       formData.append("file", file);
 
-      showToast(`Parsing manuscript: ${file.name}...`, "info");
+      showToast(`Importing full manuscript: ${file.name}...`, "info");
       const res = await fetch("/api/manuscript/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (data.status === "success") {
-        showToast("Manuscript deconstructed into chapters & paragraphs!", "success");
+        showToast("Manuscript successfully parsed with semantic block auto-detection!", "success");
         await loadBook(state.activeBookId);
       }
     });
   }
 }
 
-// -------------------------------------------------------------
-// 2. LEFT PANEL (SLOTS & MANUSCRIPT TREE)
-// -------------------------------------------------------------
+function setViewMode(mode) {
+  state.viewMode = mode;
+  document.getElementById("view-mode-html-btn")?.classList.toggle("active", mode === "html");
+  document.getElementById("view-mode-pdf-btn")?.classList.toggle("active", mode === "pdf");
+  renderSpreadCanvas();
+}
+
+// ======================================================================
+// 2. LEFT PANEL: SLOTS & MANUSCRIPT TREE
+// ======================================================================
 function renderLeftPanel() {
   const tabManifestBtn = document.getElementById("tab-manifest-btn");
   const tabTreeBtn = document.getElementById("tab-tree-btn");
@@ -211,6 +233,7 @@ function renderManifestTab(container) {
     assets.forEach(asset => {
       const badgeCls = getPlacementBadgeClass(asset.placement);
       const calloutCount = (asset.vector_callouts || []).length;
+      const frameLabel = (asset.frame_style || "none").replace(/_/g, " ");
 
       html += `
         <div class="asset-card" draggable="true" data-asset-id="${asset.id}" ondragstart="handleAssetDragStart(event, '${asset.id}')">
@@ -221,17 +244,20 @@ function renderManifestTab(container) {
           <div class="asset-title">${asset.title}</div>
           
           <div class="asset-thumbnail-row">
-            <img src="${asset.image_url}" class="asset-thumb" alt="${asset.title}" onerror="this.src='/static/assets/placeholders/book01_vignette.png'">
+            <img src="${asset.image_url}" class="asset-thumb frame-${asset.frame_style || 'none'}" alt="${asset.title}" onerror="this.src='/static/assets/placeholders/book01_vignette.png'">
             <div style="flex:1; font-size:0.72rem;">
-              <div style="margin-bottom:6px; display:flex; gap:4px;">
+              <div style="margin-bottom:6px; display:flex; flex-wrap:wrap; gap:4px;">
+                <button onclick="openAssetInspector('${asset.id}')" style="background:rgba(217,119,6,0.15); border:1px solid var(--accent-gold); color:var(--accent-gold); font-size:0.68rem; padding:3px 6px; border-radius:4px; cursor:pointer; font-weight:700;" title="Granular Sizing, Frames & Placement">
+                  ⚙️ Frame & Size
+                </button>
                 <button onclick="openVisualPinStudio('${asset.id}')" style="background:rgba(56,189,248,0.12); border:1px solid var(--accent-cyan); color:var(--accent-cyan); font-size:0.68rem; padding:3px 6px; border-radius:4px; cursor:pointer; font-weight:600;">
                   📍 Pins (${calloutCount})
                 </button>
-                <button onclick="openImageLabModal('${asset.id}')" style="background:rgba(217,119,6,0.12); border:1px solid var(--accent-gold); color:var(--accent-gold); font-size:0.68rem; padding:3px 6px; border-radius:4px; cursor:pointer; font-weight:600;">
-                  🔬 Print Lab
+                <button onclick="openImageLabModal('${asset.id}')" style="background:rgba(148,163,184,0.12); border:1px solid #64748B; color:#CBD5E1; font-size:0.68rem; padding:3px 6px; border-radius:4px; cursor:pointer; font-weight:600;">
+                  🔬 Lab
                 </button>
               </div>
-              <div style="color:var(--text-dim);">300 DPI Texture Filter: <strong style="color:var(--accent-cyan);">${asset.filter_applied ? "Active" : "Standard"}</strong></div>
+              <div style="color:var(--text-dim); font-size:0.67rem;">Frame: <strong style="color:#FFF;">${frameLabel}</strong> • Width: ${asset.width_pct || 100}%</div>
             </div>
           </div>
 
@@ -259,7 +285,7 @@ function renderManifestTab(container) {
 
 function renderTreeTab(container) {
   const chapters = state.manuscript?.chapters || [];
-  let html = `<div style="font-size:0.73rem; color:var(--text-dim); margin-bottom:10px;">Drag an illustration card here to anchor it to any paragraph. Click paragraph to edit.</div>`;
+  let html = `<div style="font-size:0.73rem; color:var(--text-dim); margin-bottom:10px;">Click any paragraph to open the Semantic Block & Flow Inspector. Drag slots to anchor.</div>`;
 
   chapters.forEach(ch => {
     html += `
@@ -270,11 +296,20 @@ function renderTreeTab(container) {
 
     (ch.elements || []).forEach(el => {
       const isAnchored = (state.manifest.assets || []).some(a => a.anchor === el.id);
+      const blockType = el.block_type || (el.type === "container" ? el.tag : el.type);
       const textPreview = el.type === "paragraph"
-        ? (el.text || "").substring(0, 65) + "..."
+        ? (el.text || "").substring(0, 60) + "..."
         : el.type === "container"
-        ? `[${el.tag.toUpperCase()}: ${(el.content || '').substring(0, 40)}]`
+        ? `[${(el.tag || blockType).toUpperCase()}: ${(el.content || '').substring(0, 35)}]`
         : "— Scene Break Divider —";
+
+      const badgeColor = blockType === "inworld_writ" || blockType === "inquest-writ" ? "#F59E0B"
+        : blockType === "welsh_slate" || blockType === "welsh-slate" ? "#38BDF8"
+        : blockType === "audio_transcript" || blockType === "audio-transcript" ? "#10B981"
+        : blockType === "archival_journal" || blockType === "pelham-journal" ? "#A78BFA"
+        : blockType === "scientific_formula" ? "#F43F5E"
+        : blockType === "cuneiform_clause" ? "#FB923C"
+        : "#64748B";
 
       html += `
         <div class="manuscript-p-row ${isAnchored ? 'drop-target' : ''}" 
@@ -283,9 +318,15 @@ function renderTreeTab(container) {
              ondragleave="handleDragLeave(event)" 
              ondrop="handleDropAnchor(event, '${el.id}')"
              onclick="focusParagraphOnCanvas('${el.id}')">
-          <span class="p-id-tag">${el.id}</span>
-          <span style="flex:1;">${textPreview}</span>
-          ${isAnchored ? '<span style="color:var(--accent-gold); font-size:0.8rem;">⚓</span>' : ''}
+          <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+            <span class="p-id-tag">${el.id}</span>
+            <span style="flex:1; margin:0 6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${textPreview}</span>
+            <div style="display:flex; align-items:center; gap:4px;">
+              ${blockType !== 'body' ? `<span style="font-size:0.62rem; padding:1px 4px; border-radius:3px; background:${badgeColor}22; color:${badgeColor}; font-weight:700;">${blockType}</span>` : ''}
+              ${isAnchored ? '<span style="color:var(--accent-gold); font-size:0.75rem;">⚓</span>' : ''}
+              <button onclick="event.stopPropagation(); openParagraphInspector('${el.id}')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.75rem; padding:1px 3px;" title="Block Inspector">⚙️</button>
+            </div>
+          </div>
         </div>
       `;
     });
@@ -297,7 +338,10 @@ function renderTreeTab(container) {
 function getPlacementBadgeClass(placement) {
   switch (placement) {
     case "Full-Page Recto Plate": return "badge-full-plate";
+    case "Full-Page Verso Plate": return "badge-full-plate";
+    case "Full Bleed Plate": return "badge-full-plate";
     case "Half-Page Top": return "badge-half-top";
+    case "Half-Page Bottom": return "badge-half-top";
     case "Inline Archival Insert": return "badge-inline";
     case "Chapter Opener Vignette": return "badge-opener";
     case "Chapter End Tailpiece": return "badge-tailpiece";
@@ -318,9 +362,9 @@ function switchRightTab(tabName) {
   renderRightPanel();
 }
 
-// -------------------------------------------------------------
-// 3. CENTER SPREAD CANVAS & INLINE EDITING
-// -------------------------------------------------------------
+// ======================================================================
+// 3. CENTER SPREAD CANVAS (HTML SPREAD & TRUE PRINT PDF SPREAD)
+// ======================================================================
 function renderSpreadCanvas() {
   const viewport = document.getElementById("spread-viewport");
   const spreadIndicator = document.getElementById("spread-indicator");
@@ -331,7 +375,7 @@ function renderSpreadCanvas() {
 
   const spreads = state.pagination.spreads || [];
   if (spreads.length === 0) {
-    viewport.innerHTML = `<div style="color:var(--text-dim);">No pages to display.</div>`;
+    viewport.innerHTML = `<div style="color:var(--text-dim); text-align:center; padding:50px;">No pages to display in this edition.</div>`;
     return;
   }
 
@@ -349,6 +393,83 @@ function renderSpreadCanvas() {
   if (prevBtn) prevBtn.disabled = state.currentSpreadIndex === 0;
   if (nextBtn) nextBtn.disabled = state.currentSpreadIndex === spreads.length - 1;
 
+  // Branch: TRUE PRINT PDF VIEW vs INTERACTIVE HTML VIEW
+  if (state.viewMode === "pdf") {
+    renderPdfSpread(viewport, currentSpread);
+  } else {
+    renderHtmlSpread(viewport, currentSpread);
+  }
+
+  // Short Chapter Ending Detection Banner
+  if (bannerContainer) {
+    const hasShortVerso = currentSpread.verso?.short_ending && !currentSpread.verso?.has_tailpiece;
+    const hasShortRecto = currentSpread.recto?.short_ending && !currentSpread.recto?.has_tailpiece;
+    const shortPageNum = hasShortVerso ? currentSpread.verso.page_number : (hasShortRecto ? currentSpread.recto.page_number : null);
+
+    if (shortPageNum) {
+      bannerContainer.innerHTML = `
+        <div class="short-ending-banner">
+          <div style="font-size:1.1rem;">⚠️</div>
+          <div>
+            <div style="font-size:0.8rem; font-weight:700; color:#FDE68A;">Short Chapter Ending Detected (Page ${shortPageNum})</div>
+            <div style="font-size:0.72rem; color:#E0E7FF;">Page content has &lt; 18 lines of text. Whitespace is unbalanced.</div>
+          </div>
+          <button class="btn-tailpiece" onclick="autoInsertTailpiece(${shortPageNum})">
+            ✨ Auto-Insert Tailpiece Ornament
+          </button>
+        </div>
+      `;
+    } else {
+      bannerContainer.innerHTML = "";
+    }
+  }
+}
+
+function renderPdfSpread(viewport, currentSpread) {
+  const versoNum = currentSpread.verso?.page_number;
+  const rectoNum = currentSpread.recto?.page_number;
+
+  let spreadHTML = `
+    <div class="pdf-spread-container" style="transform: scale(${state.zoomLevel});">
+  `;
+
+  // Verso PDF page
+  if (versoNum) {
+    spreadHTML += `
+      <div class="pdf-spread-page verso">
+        <img class="pdf-page-img" src="/api/pdf-preview/${state.activeBookId}/${versoNum}?dpi=150" alt="Verso PDF Page ${versoNum}" onerror="this.onerror=null; this.src='/api/pdf-page/${state.activeBookId}/${versoNum}';">
+        <div class="pdf-page-num-badge">Verso • Page ${versoNum}</div>
+      </div>
+    `;
+  } else {
+    spreadHTML += `
+      <div class="pdf-spread-page verso empty-placeholder">
+        <span>[VERSO BLANK / COVER REVERSE]</span>
+      </div>
+    `;
+  }
+
+  // Recto PDF page
+  if (rectoNum) {
+    spreadHTML += `
+      <div class="pdf-spread-page recto">
+        <img class="pdf-page-img" src="/api/pdf-preview/${state.activeBookId}/${rectoNum}?dpi=150" alt="Recto PDF Page ${rectoNum}" onerror="this.onerror=null; this.src='/api/pdf-page/${state.activeBookId}/${rectoNum}';">
+        <div class="pdf-page-num-badge">Recto • Page ${rectoNum}</div>
+      </div>
+    `;
+  } else {
+    spreadHTML += `
+      <div class="pdf-spread-page recto empty-placeholder">
+        <span>[BLANK ENDPAGE]</span>
+      </div>
+    `;
+  }
+
+  spreadHTML += `</div>`;
+  viewport.innerHTML = spreadHTML;
+}
+
+function renderHtmlSpread(viewport, currentSpread) {
   let spreadHTML = `<div class="book-spread-container" style="transform: scale(${state.zoomLevel});">`;
 
   // VERSO
@@ -376,50 +497,33 @@ function renderSpreadCanvas() {
   spreadHTML += `</div>`;
   viewport.innerHTML = spreadHTML;
 
-  // Short Chapter Ending Detection Banner
-  if (bannerContainer) {
-    const hasShortVerso = currentSpread.verso?.short_ending && !currentSpread.verso?.has_tailpiece;
-    const hasShortRecto = currentSpread.recto?.short_ending && !currentSpread.recto?.has_tailpiece;
-    const shortPageNum = hasShortVerso ? currentSpread.verso.page_number : (hasShortRecto ? currentSpread.recto.page_number : null);
-
-    if (shortPageNum) {
-      bannerContainer.innerHTML = `
-        <div class="short-ending-banner">
-          <div style="font-size:1.1rem;">⚠️</div>
-          <div>
-            <div style="font-size:0.8rem; font-weight:700; color:#FDE68A;">Short Chapter Ending Detected (Page ${shortPageNum})</div>
-            <div style="font-size:0.72rem; color:#E0E7FF;">Page content has &lt; 18 lines of text. Whitespace is unbalanced.</div>
-          </div>
-          <button class="btn-tailpiece" onclick="autoInsertTailpiece(${shortPageNum})">
-            ✨ Auto-Insert Tailpiece Ornament
-          </button>
-        </div>
-      `;
-    } else {
-      bannerContainer.innerHTML = "";
-    }
-  }
-
   setupInlineEditListeners();
 }
 
 function renderSinglePageHTML(page, sideClass) {
   const profile = state.activeBook || state.profiles["book01"];
-  const s = state.settings || { typography: {} };
+  const s = state.settings || { typography: {}, margins: {} };
   const isVerso = sideClass === "page-verso";
 
-  const fontName = s.typography.body_font_name || profile.body_font_name;
-  const displayFont = s.typography.display_font_name || profile.display_font_name;
+  const fontName = s.typography.body_font_name || s.body_font || profile.body_font_name;
+  const displayFont = s.typography.display_font_name || s.heading_font || profile.display_font_name;
   const accentColor = s.typography.accent_color || profile.accent_color;
-  const paperTint = s.typography.paper_tint || profile.paper_tint;
-  const fontSize = s.typography.body_font_size_pt || 11;
-  const leading = s.typography.body_leading_pt || 15;
-  const indent = s.typography.subsequent_p_indent_in || 0.25;
-  const sinkage = s.typography.chapter_sinkage_in || 1.75;
+  const paperTint = s.typography.paper_tint || profile.paper_tint || "#FBF8F1";
+  const fontSize = s.typography.body_font_size_pt || s.font_size_pt || 11;
+  const lineHeightVal = s.line_height || 1.36;
+  const leading = s.typography.body_leading_pt || (fontSize * lineHeightVal);
+  const indent = s.para_indent_in !== undefined ? s.para_indent_in : (s.typography.subsequent_p_indent_in || 0.25);
+  const sinkage = s.chapter_sinkage_in !== undefined ? s.chapter_sinkage_in : (s.typography.chapter_sinkage_in || 1.75);
+  const runningHeaderStyle = s.running_header_style || "Small Caps Centered";
 
-  const runningHeader = !page.suppress_header ? (
-    isVerso ? (s.typography.running_header_override || profile.short_title.toUpperCase()) : `CHAPTER ${page.chapter_number} • ${page.chapter_title.toUpperCase()}`
-  ) : "";
+  let runningHeader = "";
+  if (!page.suppress_header && runningHeaderStyle !== "Hidden") {
+    if (isVerso) {
+      runningHeader = s.typography.running_header_override || profile.short_title.toUpperCase();
+    } else {
+      runningHeader = `CHAPTER ${page.chapter_number} • ${page.chapter_title.toUpperCase()}`;
+    }
+  }
 
   let elementsHTML = "";
 
@@ -470,6 +574,16 @@ function renderSinglePageHTML(page, sideClass) {
           <p class="indent-zero" style="font-size:7.5pt; color:#666; margin-top:8px;">${elem.source}</p>
         </div>
       `;
+    } else if (elem.type === "map_plate") {
+      elementsHTML += `
+        <div style="text-align:center; margin-top:60px;">
+          <h2 style="font-family:${displayFont}; font-size:11pt; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:12px; color:${accentColor};">${elem.title}</h2>
+          <div style="border:2px solid #333; padding:4px; display:inline-block; max-width:92%;">
+            <img src="${elem.image_url}" style="max-height:280px; width:100%; object-fit:contain; display:block;" onerror="this.src='/static/assets/placeholders/book01_vignette.png'">
+          </div>
+          <div style="font-style:italic; font-size:7.5pt; color:#666; margin-top:8px;">${elem.caption}</div>
+        </div>
+      `;
     } else if (elem.type === "table_of_contents") {
       elementsHTML += `
         <div style="margin-top:70px;">
@@ -489,45 +603,88 @@ function renderSinglePageHTML(page, sideClass) {
           <div class="ornament-wrap">${elem.ornament_svg}</div>
         </div>
       `;
+    } else if (elem.type === "chapter_subtitle" || elem.block_type === "chapter_subtitle") {
+      elementsHTML += `
+        <div class="chapter-subtitle" data-p-id="${elem.id}" ondblclick="openParagraphInspector('${elem.id}')">
+          ${elem.text || elem.content}
+        </div>
+      `;
     } else if (elem.type === "paragraph") {
       const isFirst = elem.is_first_after_break;
-      const isDrop = isFirst && page.page_type === "chapter_opener";
+      const isDrop = isFirst && page.page_type === "chapter_opener" && s.drop_cap_enabled !== false;
+      const dropClass = isDrop ? (s.drop_cap_style === "Boxed Rule" ? "has-dropcap dropcap-boxed" : "has-dropcap") : "";
+      const textStyle = `font-family:${fontName}; font-size:${fontSize}pt; line-height:${leading}pt; text-indent:${isFirst ? '0' : indent * 72 + 'px'}; text-align:${s.justify_text !== false ? 'justify' : 'left'};`;
+
       elementsHTML += `
-        <p class="${isFirst ? 'indent-zero' : ''} ${isDrop ? 'has-dropcap' : ''}" 
-           style="font-family:${fontName}; font-size:${fontSize}pt; line-height:${leading}pt; text-indent:${isFirst ? '0' : indent * 72 + 'px'};" 
+        <p class="${isFirst ? 'indent-zero' : ''} ${dropClass}" 
+           style="${textStyle}" 
            data-p-id="${elem.id}"
            contenteditable="true"
-           title="Click to inline-edit text">
+           ondblclick="openParagraphInspector('${elem.id}')"
+           title="Click to inline-edit • Double-click for Block Inspector">
           ${elem.text}
         </p>
       `;
-    } else if (elem.type === "container") {
+    } else if (elem.type === "container" || ["inworld_writ", "welsh_slate", "audio_transcript", "archival_journal", "scientific_formula", "cuneiform_clause"].includes(elem.block_type)) {
+      const tagClass = elem.block_type ? elem.block_type.replace(/_/g, "-") : elem.tag;
       elementsHTML += `
-        <div class="container-box ${elem.tag}" 
+        <div class="container-box ${tagClass}" 
              data-p-id="${elem.id}"
              contenteditable="true"
-             title="Click to inline-edit container content">
-          ${elem.content.replace(/\n/g, "<br>")}
+             ondblclick="openParagraphInspector('${elem.id}')"
+             title="Click to inline-edit • Double-click for Block Inspector">
+          ${(elem.content || elem.text || '').replace(/\n/g, "<br>")}
         </div>
       `;
     } else if (elem.type === "scene_break") {
       elementsHTML += `
-        <div class="spread-scene-break">${elem.svg}</div>
+        <div class="spread-scene-break">${elem.svg || profile.scene_break_svg}</div>
       `;
     } else if (elem.type === "illustration") {
       const asset = elem.asset;
-      const isFull = elem.placement === "Full-Page Recto Plate";
+      const isFull = elem.placement && elem.placement.startsWith("Full");
+      const frameCls = `frame-${asset.frame_style || 'none'}`;
+      const widthPct = asset.width_pct || 100;
+      const maxH = asset.max_height_in ? `${asset.max_height_in}in` : "7.0in";
+      const marginT = asset.margin_top_pt !== undefined ? `${asset.margin_top_pt}pt` : "8pt";
+      const marginB = asset.margin_bottom_pt !== undefined ? `${asset.margin_bottom_pt}pt` : "8pt";
+
       elementsHTML += `
         <div class="spread-plate-wrapper ${isFull ? 'full-page' : ''}" 
              draggable="true" 
-             ondragstart="handleAssetDragStart(event, '${asset.id}')">
-          <img src="${asset.image_url}" alt="${asset.title}">
-          <div class="spread-plate-caption">${asset.caption || asset.title}</div>
+             ondragstart="handleAssetDragStart(event, '${asset.id}')"
+             ondblclick="openAssetInspector('${asset.id}')"
+             style="text-align:center; margin-top:${marginT}; margin-bottom:${marginB};"
+             title="Double-click to open Plate Inspector">
+          <img src="${asset.image_url}" class="${frameCls}" style="width:${widthPct}%; max-height:${maxH}; object-fit:contain; display:inline-block;" alt="${asset.title}">
+          ${asset.caption_position !== 'hidden' ? `<div class="spread-plate-caption">${asset.caption || asset.title}</div>` : ''}
         </div>
       `;
     } else if (elem.type === "tailpiece_ornament") {
       elementsHTML += `
         <div class="spread-tailpiece">${elem.svg}</div>
+      `;
+    } else if (elem.type === "appendix") {
+      elementsHTML += `
+        <div style="margin-top:60px;">
+          <h2 style="font-family:${displayFont}; font-size:11pt; letter-spacing:0.12em; text-align:center; text-transform:uppercase; margin-bottom:14px; color:${accentColor};">${elem.title}</h2>
+          <div style="font-family:${fontName}; font-size:8.2pt; line-height:12pt; text-align:justify;">
+            ${(elem.text || '').replace(/\n\n/g, "</p><p style='text-indent:14px;'>").replace(/\n/g, "<br>")}
+          </div>
+        </div>
+      `;
+    } else if (elem.type === "glossary") {
+      elementsHTML += `
+        <div style="margin-top:60px;">
+          <h2 style="font-family:${displayFont}; font-size:11pt; letter-spacing:0.12em; text-align:center; text-transform:uppercase; margin-bottom:14px; color:${accentColor};">${elem.title}</h2>
+          <div style="font-family:${fontName}; font-size:8pt; line-height:11.5pt;">
+            ${(elem.terms || []).map(t => `
+              <div style="margin-bottom:8px;">
+                <strong style="color:#000;">${t.term}</strong> — <span style="color:#444;">${t.definition}</span>
+              </div>
+            `).join("")}
+          </div>
+        </div>
       `;
     } else if (elem.type === "acknowledgements" || elem.type === "about_author") {
       elementsHTML += `
@@ -567,7 +724,9 @@ function renderSinglePageHTML(page, sideClass) {
   `;
 }
 
-// Inline contenteditable listeners
+// ======================================================================
+// 4. INLINE EDITING & PARAGRAPH INSPECTOR
+// ======================================================================
 function setupInlineEditListeners() {
   const editableElems = document.querySelectorAll("[contenteditable='true']");
   
@@ -603,6 +762,7 @@ function showInlineActionToolbar(targetEl, elemId) {
   
   toolbar.innerHTML = `
     <button onclick="saveInlineEdit('${elemId}', document.querySelector('[data-p-id=\\'${elemId}\\']').innerText)">✓ Save</button>
+    <button onclick="openParagraphInspector('${elemId}')" style="background:#0284C7; color:#FFF;">⚙️ Block</button>
     <button onclick="insertSceneBreakAfter('${elemId}')">❖ Break</button>
     <button onclick="wrapInContainerPrompt('${elemId}')">📦 Box</button>
   `;
@@ -626,12 +786,146 @@ async function saveInlineEdit(elemId, newText) {
     });
     if (res.status === "success") {
       state.pagination = res.pagination;
-      // Do not re-render entire spread on every keystroke to maintain cursor,
-      // but update indicators and filmstrip
       renderFilmstrip();
     }
   } catch (err) {
     console.error("Save inline edit failed:", err);
+  }
+}
+
+function openParagraphInspector(elementId) {
+  let targetElem = null;
+  let chNum = 1;
+  const chapters = state.manuscript?.chapters || [];
+  for (const ch of chapters) {
+    for (const el of ch.elements || []) {
+      if (el.id === elementId) {
+        targetElem = el;
+        chNum = ch.chapter_number;
+        break;
+      }
+    }
+    if (targetElem) break;
+  }
+
+  if (!targetElem) {
+    showToast("Element not found", "error");
+    return;
+  }
+
+  const modal = document.getElementById("modal-container");
+  if (!modal) return;
+
+  const currentText = targetElem.text || targetElem.content || "";
+  const wordCount = (currentText.trim().split(/\s+/).filter(Boolean)).length;
+  const blockType = targetElem.block_type || (targetElem.type === "container" ? targetElem.tag.replace(/-/g, "_") : "body");
+  const breakBefore = !!targetElem.page_break_before;
+  const keepNext = !!targetElem.keep_with_next;
+  const breakAfter = targetElem.scene_break_after || "none";
+
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="closeModal(event)">
+      <div class="modal-content" style="width:680px;" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3 style="margin:0; font-size:0.95rem; color:var(--accent-gold); display:flex; align-items:center; gap:8px;">
+            <span>⚙️ Paragraph & In-World Block Inspector</span>
+            <span style="font-family:monospace; font-size:0.75rem; color:var(--accent-cyan); background:rgba(56,189,248,0.1); padding:2px 6px; border-radius:4px;">${elementId}</span>
+          </h3>
+          <button onclick="closeModal()" style="background:none; border:none; color:#AAA; font-size:1.2rem; cursor:pointer;">&times;</button>
+        </div>
+
+        <div class="modal-body" style="padding:16px; display:flex; flex-direction:column; gap:14px;">
+          <!-- Paragraph Text Editor -->
+          <div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <label style="font-size:0.72rem; color:var(--text-muted); font-weight:700;">PARAGRAPH / BLOCK TEXT CONTENT</label>
+              <span style="font-size:0.7rem; color:var(--text-dim);">${wordCount} words • ~${Math.ceil(wordCount / 200)} min read</span>
+            </div>
+            <textarea id="p-inspector-text" rows="5" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.82rem; padding:8px; border-radius:4px; resize:vertical; font-family:inherit;">${currentText}</textarea>
+          </div>
+
+          <!-- Semantic Block Type Selector -->
+          <div style="background:var(--bg-card); padding:12px; border-radius:6px; border:1px solid var(--border-subtle);">
+            <div style="font-size:0.75rem; color:var(--accent-gold); font-weight:700; margin-bottom:6px;">
+              SEMANTIC BLOCK TYPE & THEME CONTAINER
+            </div>
+            <select id="p-inspector-block-type" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.8rem; padding:6px; border-radius:4px;">
+              <option value="body" ${blockType === 'body' ? 'selected' : ''}>Body: Standard Indented Paragraph</option>
+              <option value="body_first" ${blockType === 'body_first' ? 'selected' : ''}>Body First: Flush-Left Opener (Indent: 0)</option>
+              <option value="chapter_subtitle" ${blockType === 'chapter_subtitle' ? 'selected' : ''}>Chapter Subtitle: Telemetry / Timestamp Header</option>
+              <option value="inworld_writ" ${blockType === 'inworld_writ' ? 'selected' : ''}>In-World Writ: Parchment Legal Box (Book 01)</option>
+              <option value="welsh_slate" ${blockType === 'welsh_slate' ? 'selected' : ''}>Welsh Slate: Dark Basalt & Chalk White Box (Book 02)</option>
+              <option value="audio_transcript" ${blockType === 'audio_transcript' ? 'selected' : ''}>Audio Transcript: Monospace DAW Log & Ruler (Book 03)</option>
+              <option value="archival_journal" ${blockType === 'archival_journal' ? 'selected' : ''}>Archival Journal: 1928 Ledger & Letter Box (Book 04)</option>
+              <option value="scientific_formula" ${blockType === 'scientific_formula' ? 'selected' : ''}>Scientific Formula: Centered Equation Callout (Books 02/03/04)</option>
+              <option value="cuneiform_clause" ${blockType === 'cuneiform_clause' ? 'selected' : ''}>Cuneiform Clause: Epigraphic Transliteration Table (Book 05)</option>
+            </select>
+          </div>
+
+          <!-- Page Flow & Pagination Toggles -->
+          <div style="background:var(--bg-card); padding:12px; border-radius:6px; border:1px solid var(--border-subtle); display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+              <div style="font-size:0.75rem; color:var(--accent-cyan); font-weight:700; margin-bottom:8px;">
+                PAGE FLOW CONTROLS
+              </div>
+              <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:var(--text-main); margin-bottom:6px; cursor:pointer;">
+                <input type="checkbox" id="p-inspector-break-before" ${breakBefore ? 'checked' : ''}>
+                <span>Force Page Break Before (Top of Next Page)</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:var(--text-main); cursor:pointer;">
+                <input type="checkbox" id="p-inspector-keep-next" ${keepNext ? 'checked' : ''}>
+                <span>Keep With Next Paragraph (No Page Break)</span>
+              </label>
+            </div>
+
+            <div>
+              <div style="font-size:0.75rem; color:var(--accent-cyan); font-weight:700; margin-bottom:8px;">
+                SCENE BREAK AFTER BLOCK
+              </div>
+              <select id="p-inspector-break-after" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:5px; border-radius:4px;">
+                <option value="none" ${breakAfter === 'none' ? 'selected' : ''}>None (Standard Flow)</option>
+                <option value="book_svg" ${breakAfter === 'book_svg' ? 'selected' : ''}>Thematic Ornament SVG</option>
+                <option value="asterisks" ${breakAfter === 'asterisks' ? 'selected' : ''}>Centered Asterisks (* * *)</option>
+                <option value="custom_svg" ${breakAfter === 'custom_svg' ? 'selected' : ''}>Cuneiform / Wedge Divider</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="padding:12px 16px; background:rgba(0,0,0,0.3); border-top:1px solid var(--border-subtle); display:flex; justify-content:flex-end; gap:8px;">
+          <button onclick="closeModal()" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:#FFF; padding:6px 14px; border-radius:4px; cursor:pointer; font-size:0.75rem;">Cancel</button>
+          <button onclick="saveParagraphInspector('${elementId}')" style="background:var(--accent-gold); color:#000; font-weight:700; border:none; padding:6px 18px; border-radius:4px; cursor:pointer; font-size:0.78rem;">Save & Re-Paginate</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function saveParagraphInspector(elementId) {
+  const newText = document.getElementById("p-inspector-text").value;
+  const blockType = document.getElementById("p-inspector-block-type").value;
+  const breakBefore = document.getElementById("p-inspector-break-before").checked;
+  const keepNext = document.getElementById("p-inspector-keep-next").checked;
+  const breakAfter = document.getElementById("p-inspector-break-after").value;
+
+  showToast(`Updating paragraph ${elementId}...`, "info");
+  const res = await fetchAPI(`/api/manuscript/${state.activeBookId}/update-paragraph`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      element_id: elementId,
+      text: newText,
+      block_type: blockType,
+      page_break_before: breakBefore,
+      keep_with_next: keepNext,
+      scene_break_after: breakAfter
+    })
+  });
+
+  if (res.status === "success") {
+    showToast("Paragraph updated and spread paginated!", "success");
+    closeModal();
+    await loadBook(state.activeBookId);
   }
 }
 
@@ -673,7 +967,6 @@ async function wrapInContainerPrompt(targetId) {
 }
 
 function focusParagraphOnCanvas(elemId) {
-  // Find which spread holds this element
   const spreads = state.pagination.spreads || [];
   for (let sIdx = 0; sIdx < spreads.length; sIdx++) {
     const sp = spreads[sIdx];
@@ -695,9 +988,435 @@ function focusParagraphOnCanvas(elemId) {
   }
 }
 
-// -------------------------------------------------------------
-// 4. BIRD'S-EYE FILMSTRIP DOCK (BOTTOM)
-// -------------------------------------------------------------
+// ======================================================================
+// 5. GRANULAR IMAGE & PLATE INSPECTOR MODAL
+// ======================================================================
+function openAssetInspector(assetId) {
+  const asset = state.manifest.assets.find(a => a.id === assetId);
+  if (!asset) {
+    showToast("Asset not found", "error");
+    return;
+  }
+
+  const modal = document.getElementById("modal-container");
+  if (!modal) return;
+
+  const currentPlacement = asset.placement || "Half-Page Top";
+  const currentFrame = asset.frame_style || "none";
+  const widthPct = asset.width_pct || 100;
+  const maxH = asset.max_height_in || 7.0;
+  const marginT = asset.margin_top_pt !== undefined ? asset.margin_top_pt : 8;
+  const marginB = asset.margin_bottom_pt !== undefined ? asset.margin_bottom_pt : 8;
+  const captionPos = asset.caption_position || "below";
+  const captionText = asset.caption || "";
+
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="closeModal(event)">
+      <div class="modal-content" style="width:720px;" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3 style="margin:0; font-size:0.95rem; color:var(--accent-gold); display:flex; align-items:center; gap:8px;">
+            <span>📐 Granular Plate & Frame Inspector</span>
+            <span style="font-family:monospace; font-size:0.75rem; color:var(--accent-cyan); background:rgba(56,189,248,0.1); padding:2px 6px; border-radius:4px;">${asset.id}</span>
+          </h3>
+          <button onclick="closeModal()" style="background:none; border:none; color:#AAA; font-size:1.2rem; cursor:pointer;">&times;</button>
+        </div>
+
+        <div class="modal-body" style="padding:16px; display:flex; flex-direction:column; gap:14px;">
+          <!-- Preview & Sizing -->
+          <div style="display:flex; gap:14px; background:var(--bg-card); padding:12px; border-radius:6px; border:1px solid var(--border-subtle); align-items:center;">
+            <div style="width:140px; text-align:center;">
+              <img id="asset-inspect-img-preview" src="${asset.image_url}" class="frame-${currentFrame}" style="max-height:120px; max-width:100%; object-fit:contain;" alt="${asset.title}">
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:0.85rem; font-weight:700; color:#FFF; margin-bottom:4px;">${asset.title}</div>
+              <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:8px;">Anchored to Paragraph: <strong style="color:var(--accent-gold);">${asset.anchor}</strong></div>
+              
+              <div style="display:flex; gap:8px;">
+                <button onclick="openVisualPinStudio('${asset.id}')" style="background:rgba(56,189,248,0.15); border:1px solid var(--accent-cyan); color:var(--accent-cyan); font-size:0.72rem; padding:4px 8px; border-radius:4px; cursor:pointer; font-weight:600;">
+                  📍 Open Visual Pin Studio
+                </button>
+                <button onclick="openImageLabModal('${asset.id}')" style="background:rgba(217,119,6,0.15); border:1px solid var(--accent-gold); color:var(--accent-gold); font-size:0.72rem; padding:4px 8px; border-radius:4px; cursor:pointer; font-weight:600;">
+                  🔬 Open 300 DPI Texture Lab
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Placement & Page Locking -->
+          <div style="background:var(--bg-card); padding:12px; border-radius:6px; border:1px solid var(--border-subtle); display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+              <label style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; display:block; margin-bottom:4px;">PAGE PLACEMENT & LOCKING</label>
+              <select id="asset-placement" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:6px; border-radius:4px;">
+                <option value="Full-Page Recto Plate" ${currentPlacement === 'Full-Page Recto Plate' ? 'selected' : ''}>Full-Page Recto Plate (Odd Right Page)</option>
+                <option value="Full-Page Verso Plate" ${currentPlacement === 'Full-Page Verso Plate' ? 'selected' : ''}>Full-Page Verso Plate (Even Left Page)</option>
+                <option value="Full Bleed Plate" ${currentPlacement === 'Full Bleed Plate' ? 'selected' : ''}>Full Bleed Plate (6.125 x 9.25")</option>
+                <option value="Half-Page Top" ${currentPlacement === 'Half-Page Top' ? 'selected' : ''}>Half-Page Top (Top 45%)</option>
+                <option value="Half-Page Bottom" ${currentPlacement === 'Half-Page Bottom' ? 'selected' : ''}>Half-Page Bottom (Bottom 45%)</option>
+                <option value="Inline Archival Insert" ${currentPlacement === 'Inline Archival Insert' ? 'selected' : ''}>Inline Archival Insert (Centered in flow)</option>
+                <option value="Chapter Opener Vignette" ${currentPlacement === 'Chapter Opener Vignette' ? 'selected' : ''}>Chapter Opener Vignette (Above Title)</option>
+                <option value="Chapter End Tailpiece" ${currentPlacement === 'Chapter End Tailpiece' ? 'selected' : ''}>Chapter End Tailpiece (Bottom of Scene)</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; display:block; margin-bottom:4px;">FRAME & BORDER STYLE</label>
+              <select id="asset-frame-style" onchange="document.getElementById('asset-inspect-img-preview').className = 'frame-' + this.value" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:6px; border-radius:4px;">
+                <option value="none" ${currentFrame === 'none' ? 'selected' : ''}>None (Frameless / Edge-to-Edge)</option>
+                <option value="thin_ink_border" ${currentFrame === 'thin_ink_border' ? 'selected' : ''}>Thin Ink Border (0.75pt Crisp Ink)</option>
+                <option value="double_brass_frame" ${currentFrame === 'double_brass_frame' ? 'selected' : ''}>Double Brass Ruled Frame (Book 01)</option>
+                <option value="blueprint_grid_frame" ${currentFrame === 'blueprint_grid_frame' ? 'selected' : ''}>Blueprint Grid Frame (Book 03)</option>
+                <option value="rounded_slate" ${currentFrame === 'rounded_slate' ? 'selected' : ''}>Basalt Rounded Slate (Book 02)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Sizing & Margins -->
+          <div style="background:var(--bg-card); padding:12px; border-radius:6px; border:1px solid var(--border-subtle); display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+              <div class="slider-label-wrap">
+                <span style="font-size:0.72rem; color:var(--text-muted);">Width Scale %:</span>
+                <span class="slider-val-tag" id="asset-val-width">${widthPct}%</span>
+              </div>
+              <input type="range" min="20" max="100" step="5" value="${widthPct}" oninput="document.getElementById('asset-val-width').innerText = this.value + '%'" id="asset-width-pct">
+            </div>
+
+            <div>
+              <div class="slider-label-wrap">
+                <span style="font-size:0.72rem; color:var(--text-muted);">Max Height (in):</span>
+                <span class="slider-val-tag" id="asset-val-height">${parseFloat(maxH).toFixed(1)}"</span>
+              </div>
+              <input type="range" min="1.0" max="8.5" step="0.25" value="${maxH}" oninput="document.getElementById('asset-val-height').innerText = parseFloat(this.value).toFixed(2) + '\"'" id="asset-max-height">
+            </div>
+
+            <div>
+              <div class="slider-label-wrap">
+                <span style="font-size:0.72rem; color:var(--text-muted);">Top Margin (pt):</span>
+                <span class="slider-val-tag" id="asset-val-margintop">${marginT} pt</span>
+              </div>
+              <input type="range" min="0" max="36" step="2" value="${marginT}" oninput="document.getElementById('asset-val-margintop').innerText = this.value + ' pt'" id="asset-margin-top">
+            </div>
+
+            <div>
+              <div class="slider-label-wrap">
+                <span style="font-size:0.72rem; color:var(--text-muted);">Bottom Margin (pt):</span>
+                <span class="slider-val-tag" id="asset-val-marginbottom">${marginB} pt</span>
+              </div>
+              <input type="range" min="0" max="36" step="2" value="${marginB}" oninput="document.getElementById('asset-val-marginbottom').innerText = this.value + ' pt'" id="asset-margin-bottom">
+            </div>
+          </div>
+
+          <!-- Caption & Position -->
+          <div style="background:var(--bg-card); padding:12px; border-radius:6px; border:1px solid var(--border-subtle); display:grid; grid-template-columns:2fr 1fr; gap:12px;">
+            <div>
+              <label style="font-size:0.72rem; color:var(--text-muted); font-weight:700; display:block; margin-bottom:4px;">CAPTION TEXT</label>
+              <input type="text" id="asset-caption-text" value="${captionText}" placeholder="Plate caption..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:6px; border-radius:4px;">
+            </div>
+
+            <div>
+              <label style="font-size:0.72rem; color:var(--text-muted); font-weight:700; display:block; margin-bottom:4px;">CAPTION POSITION</label>
+              <select id="asset-caption-position" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:6px; border-radius:4px;">
+                <option value="below" ${captionPos === 'below' ? 'selected' : ''}>Below Plate</option>
+                <option value="above" ${captionPos === 'above' ? 'selected' : ''}>Above Plate</option>
+                <option value="facing_verso_bottom" ${captionPos === 'facing_verso_bottom' ? 'selected' : ''}>Facing Verso Bottom</option>
+                <option value="hidden" ${captionPos === 'hidden' ? 'selected' : ''}>Hidden / Silent</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="padding:12px 16px; background:rgba(0,0,0,0.3); border-top:1px solid var(--border-subtle); display:flex; justify-content:flex-end; gap:8px;">
+          <button onclick="closeModal()" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:#FFF; padding:6px 14px; border-radius:4px; cursor:pointer; font-size:0.75rem;">Cancel</button>
+          <button onclick="saveAssetInspector('${asset.id}')" style="background:var(--accent-gold); color:#000; font-weight:700; border:none; padding:6px 18px; border-radius:4px; cursor:pointer; font-size:0.78rem;">Save Plate Settings</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function saveAssetInspector(assetId) {
+  const placement = document.getElementById("asset-placement").value;
+  const frameStyle = document.getElementById("asset-frame-style").value;
+  const widthPct = parseInt(document.getElementById("asset-width-pct").value, 10);
+  const maxH = parseFloat(document.getElementById("asset-max-height").value);
+  const marginT = parseInt(document.getElementById("asset-margin-top").value, 10);
+  const marginB = parseInt(document.getElementById("asset-margin-bottom").value, 10);
+  const captionText = document.getElementById("asset-caption-text").value;
+  const captionPos = document.getElementById("asset-caption-position").value;
+
+  showToast(`Updating plate specs for ${assetId}...`, "info");
+  const res = await fetchAPI(`/api/manifest/${state.activeBookId}/update-asset`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      asset_id: assetId,
+      updates: {
+        placement: placement,
+        frame_style: frameStyle,
+        width_pct: widthPct,
+        max_height_in: maxH,
+        margin_top_pt: marginT,
+        margin_bottom_pt: marginB,
+        caption: captionText,
+        caption_position: captionPos
+      }
+    })
+  });
+
+  if (res.status === "success") {
+    showToast("Plate specifications updated!", "success");
+    closeModal();
+    await loadBook(state.activeBookId);
+  }
+}
+
+// ======================================================================
+// 6. VISUAL PIN-DROPPER CALLOUT STUDIO WITH POINTER TARGETS
+// ======================================================================
+function openVisualPinStudio(assetId) {
+  const asset = state.manifest.assets.find(a => a.id === assetId);
+  if (!asset) return;
+
+  state.pinStudioState.assetId = assetId;
+  state.pinStudioState.callouts = JSON.parse(JSON.stringify(asset.vector_callouts || []));
+  state.pinStudioState.activePinIndex = null;
+  state.pinStudioState.targetMode = false;
+
+  renderPinStudioModal();
+}
+
+function renderPinStudioModal() {
+  const modal = document.getElementById("modal-container");
+  if (!modal) return;
+
+  const asset = state.manifest.assets.find(a => a.id === state.pinStudioState.assetId);
+  if (!asset) return;
+
+  const callouts = state.pinStudioState.callouts;
+
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="closeModal(event)">
+      <div class="modal-content" style="width:800px;" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3 style="margin:0; font-size:0.95rem; color:var(--accent-cyan); display:flex; align-items:center; gap:8px;">
+            <span>📍 Visual Callout Studio — Click Canvas to Drop Pins & Targets</span>
+          </h3>
+          <button onclick="closeModal()" style="background:none; border:none; color:#AAA; font-size:1.2rem; cursor:pointer;">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:14px; display:flex; flex-direction:column; gap:12px;">
+          <div style="font-size:0.75rem; color:var(--text-muted);">
+            Click anywhere on the plate to place a callout label. Drag pins to reposition. Select a pin to adjust its pointer leader line to a feature target.
+          </div>
+
+          <!-- Interactive Pin Canvas -->
+          <div style="text-align:center; background:#000; padding:10px; border-radius:6px; overflow:hidden;">
+            <div id="pin-canvas-wrap" class="pin-canvas-container" style="position:relative; display:inline-block;" onclick="handlePinCanvasClick(event)">
+              <img id="pin-target-img" src="${asset.image_url}" style="max-height:360px; max-width:100%; display:block;" alt="${asset.title}">
+              
+              <!-- SVG Leader Lines -->
+              <svg id="pin-svg-overlay" style="position:absolute; inset:0; width:100%; height:100%; pointer-events:none;">
+                ${callouts.map((c, i) => {
+                  const hasTarget = c.target_x !== undefined && c.target_y !== undefined;
+                  if (!hasTarget) return '';
+                  return `
+                    <line x1="${c.x}%" y1="${c.y}%" x2="${c.target_x}%" y2="${c.target_y}%" stroke="#D97706" stroke-width="1.5" stroke-dasharray="3,2" />
+                    <circle cx="${c.target_x}%" cy="${c.target_y}%" r="3.5" fill="#EF4444" stroke="#FFF" stroke-width="1" />
+                  `;
+                }).join("")}
+              </svg>
+
+              <!-- Render pins -->
+              ${callouts.map((c, i) => `
+                <div class="pin-marker ${state.pinStudioState.activePinIndex === i ? 'active-pin' : ''}" 
+                     style="left:${c.x}%; top:${c.y}%; position:absolute;" 
+                     title="${c.label}"
+                     onclick="event.stopPropagation(); selectPin(${i});"
+                     onmousedown="startDraggingPin(event, ${i})">
+                  ${i + 1}
+                  <div class="pin-label-preview">${c.label}</div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+
+          <!-- Selected Pin Properties Editor -->
+          <div id="pin-editor-panel" style="background:var(--bg-card); padding:10px; border-radius:6px; font-size:0.75rem;">
+            ${renderPinEditorControls()}
+          </div>
+        </div>
+
+        <div class="modal-footer" style="padding:12px 16px; background:rgba(0,0,0,0.3); border-top:1px solid var(--border-subtle); display:flex; justify-content:flex-end; gap:8px;">
+          <button onclick="closeModal()" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:#FFF; padding:6px 12px; border-radius:4px; cursor:pointer;">Cancel</button>
+          <button onclick="saveVisualPins()" style="background:var(--accent-cyan); color:#000; font-weight:700; border:none; padding:6px 16px; border-radius:4px; cursor:pointer;">Save & Render Vectors</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderPinEditorControls() {
+  const idx = state.pinStudioState.activePinIndex;
+  const callouts = state.pinStudioState.callouts;
+
+  if (idx === null || !callouts[idx]) {
+    return `<div style="color:var(--text-dim); text-align:center;">Click anywhere on the image above to add a pin, or click an existing pin number to edit its label and pointer target.</div>`;
+  }
+
+  const pin = callouts[idx];
+  const hasTarget = pin.target_x !== undefined && pin.target_y !== undefined;
+
+  return `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <strong style="color:var(--accent-cyan);">Editing Pin #${idx + 1}</strong>
+      <div style="display:flex; gap:6px;">
+        <button onclick="togglePinTargetMode(${idx})" style="background:${state.pinStudioState.targetMode ? '#D97706' : '#1E293B'}; color:#FFF; border:1px solid #D97706; padding:2px 8px; border-radius:3px; cursor:pointer; font-size:0.7rem;">
+          ${state.pinStudioState.targetMode ? '🎯 Click Image to Place Target' : '🎯 Set Pointer Target'}
+        </button>
+        <button onclick="deletePin(${idx})" style="background:#EF4444; color:#FFF; border:none; padding:2px 8px; border-radius:3px; cursor:pointer; font-size:0.7rem;">Delete Pin</button>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:8px;">
+      <div>
+        <label style="color:var(--text-muted); font-size:0.7rem;">Label Text</label>
+        <input type="text" value="${pin.label}" oninput="updateActivePinProperty('label', this.value)" style="width:100%; padding:5px; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; border-radius:3px;">
+      </div>
+      <div>
+        <label style="color:var(--text-muted); font-size:0.7rem;">Style / Type</label>
+        <select onchange="updateActivePinProperty('type', this.value)" style="width:100%; padding:5px; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; border-radius:3px;">
+          <option value="badge" ${pin.type === 'badge' ? 'selected' : ''}>Pill Badge</option>
+          <option value="box" ${pin.type === 'box' ? 'selected' : ''}>Technical Box</option>
+          <option value="crosshair" ${pin.type === 'crosshair' ? 'selected' : ''}>Crosshair Target</option>
+          <option value="callout_pointer" ${pin.type === 'callout_pointer' ? 'selected' : ''}>Callout Pointer Line</option>
+          <option value="arrow_target" ${pin.type === 'arrow_target' ? 'selected' : ''}>Arrow Target</option>
+        </select>
+      </div>
+      <div>
+        <label style="color:var(--text-muted); font-size:0.7rem;">Coordinates</label>
+        <div style="padding:5px; color:var(--accent-gold); font-family:monospace; font-size:0.7rem;">
+          Pin: (${pin.x.toFixed(1)}%, ${pin.y.toFixed(1)}%)<br>
+          Target: ${hasTarget ? `(${pin.target_x.toFixed(1)}%, ${pin.target_y.toFixed(1)}%)` : 'None'}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function handlePinCanvasClick(event) {
+  const img = document.getElementById("pin-target-img");
+  if (!img) return;
+
+  const rect = img.getBoundingClientRect();
+  const clickX = event.clientX - rect.left;
+  const clickY = event.clientY - rect.top;
+
+  const pctX = Math.max(2, Math.min(98, (clickX / rect.width) * 100));
+  const pctY = Math.max(2, Math.min(98, (clickY / rect.height) * 100));
+
+  if (state.pinStudioState.targetMode && state.pinStudioState.activePinIndex !== null) {
+    const idx = state.pinStudioState.activePinIndex;
+    state.pinStudioState.callouts[idx].target_x = parseFloat(pctX.toFixed(1));
+    state.pinStudioState.callouts[idx].target_y = parseFloat(pctY.toFixed(1));
+    state.pinStudioState.targetMode = false;
+    renderPinStudioModal();
+    return;
+  }
+
+  const newPin = {
+    label: `FEATURE #${state.pinStudioState.callouts.length + 1}`,
+    x: parseFloat(pctX.toFixed(1)),
+    y: parseFloat(pctY.toFixed(1)),
+    type: "badge"
+  };
+
+  state.pinStudioState.callouts.push(newPin);
+  state.pinStudioState.activePinIndex = state.pinStudioState.callouts.length - 1;
+  renderPinStudioModal();
+}
+
+function togglePinTargetMode(idx) {
+  state.pinStudioState.activePinIndex = idx;
+  state.pinStudioState.targetMode = !state.pinStudioState.targetMode;
+  renderPinStudioModal();
+}
+
+function selectPin(index) {
+  state.pinStudioState.activePinIndex = index;
+  renderPinStudioModal();
+}
+
+function deletePin(index) {
+  state.pinStudioState.callouts.splice(index, 1);
+  state.pinStudioState.activePinIndex = null;
+  renderPinStudioModal();
+}
+
+function updateActivePinProperty(key, val) {
+  const idx = state.pinStudioState.activePinIndex;
+  if (idx !== null && state.pinStudioState.callouts[idx]) {
+    state.pinStudioState.callouts[idx][key] = val;
+    const marker = document.querySelectorAll(".pin-marker")[idx];
+    if (marker) {
+      const preview = marker.querySelector(".pin-label-preview");
+      if (preview && key === "label") preview.innerText = val;
+    }
+  }
+}
+
+function startDraggingPin(event, index) {
+  event.stopPropagation();
+  state.pinStudioState.activePinIndex = index;
+
+  const img = document.getElementById("pin-target-img");
+  if (!img) return;
+
+  const rect = img.getBoundingClientRect();
+
+  function onMouseMove(moveEvent) {
+    const moveX = moveEvent.clientX - rect.left;
+    const moveY = moveEvent.clientY - rect.top;
+    const pctX = Math.max(2, Math.min(98, (moveX / rect.width) * 100));
+    const pctY = Math.max(2, Math.min(98, (moveY / rect.height) * 100));
+
+    state.pinStudioState.callouts[index].x = parseFloat(pctX.toFixed(1));
+    state.pinStudioState.callouts[index].y = parseFloat(pctY.toFixed(1));
+
+    const marker = document.querySelectorAll(".pin-marker")[index];
+    if (marker) {
+      marker.style.left = `${pctX}%`;
+      marker.style.top = `${pctY}%`;
+    }
+  }
+
+  function onMouseUp() {
+    window.removeEventListener("mousemove", onMouseMove);
+    window.removeEventListener("mouseup", onMouseUp);
+    renderPinStudioModal();
+  }
+
+  window.addEventListener("mousemove", onMouseMove);
+  window.addEventListener("mouseup", onMouseUp);
+}
+
+async function saveVisualPins() {
+  const assetId = state.pinStudioState.assetId;
+  const callouts = state.pinStudioState.callouts;
+
+  showToast("Rendering precision vector callout overlay with pointer targets...", "info");
+  const res = await fetchAPI(`/api/manifest/${state.activeBookId}/update-callouts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ asset_id: assetId, callouts })
+  });
+
+  if (res.status === "success") {
+    showToast("Vector callout overlay rendered and saved!", "success");
+    closeModal();
+    await loadBook(state.activeBookId);
+  }
+}
+
+// ======================================================================
+// 7. BIRD'S-EYE FILMSTRIP DOCK (BOTTOM)
+// ======================================================================
 function renderFilmstrip() {
   const dock = document.getElementById("filmstrip-dock");
   if (!dock) return;
@@ -759,9 +1478,9 @@ function toggleFilmstrip() {
   renderFilmstrip();
 }
 
-// -------------------------------------------------------------
-// 5. RIGHT PANEL: GEOMETRY INSPECTOR, MATTER, EXPORT
-// -------------------------------------------------------------
+// ======================================================================
+// 8. RIGHT PANEL: DESIGN & TYPOGRAPHY INSPECTOR (TAB 1)
+// ======================================================================
 function renderRightPanel() {
   const container = document.getElementById("right-panel-content");
   if (!container) return;
@@ -781,22 +1500,120 @@ function renderGeometryTab(container) {
 
   const trimW = s.trim_width_in || 6.0;
   const trimH = s.trim_height_in || 9.0;
-  const gutter = s.margins.inside_gutter_in || 0.875;
-  const outside = s.margins.outside_margin_in || 0.625;
-  const top = s.margins.top_margin_in || 0.75;
-  const bottom = s.margins.bottom_margin_in || 0.875;
-  const bodySize = s.typography.body_font_size_pt || 11;
-  const leading = s.typography.body_leading_pt || 15;
-  const indent = s.typography.subsequent_p_indent_in || 0.25;
-  const sinkage = s.typography.chapter_sinkage_in || 1.75;
-  const paperTint = s.typography.paper_tint || p.paper_tint;
+  const gutter = s.margin_inside_in !== undefined ? s.margin_inside_in : (s.margins.inside_gutter_in || 0.875);
+  const outside = s.margin_outside_in !== undefined ? s.margin_outside_in : (s.margins.outside_margin_in || 0.625);
+  const top = s.margin_top_in !== undefined ? s.margin_top_in : (s.margins.top_margin_in || 0.75);
+  const bottom = s.margin_bottom_in !== undefined ? s.margin_bottom_in : (s.margins.bottom_margin_in || 0.875);
+
+  const bodyFont = s.body_font || s.typography.body_font_name || p.body_font_name || "EB Garamond";
+  const headingFont = s.heading_font || s.typography.display_font_name || p.display_font_name || "Cinzel";
+  const monoFont = s.mono_font || s.typography.mono_font_name || p.mono_font_name || "JetBrains Mono";
+
+  const bodySize = s.font_size_pt !== undefined ? s.font_size_pt : (s.typography.body_font_size_pt || 11.0);
+  const lineHeightVal = s.line_height !== undefined ? s.line_height : 1.36;
+  const indent = s.para_indent_in !== undefined ? s.para_indent_in : (s.typography.subsequent_p_indent_in || 0.25);
+  const paraSpacing = s.para_spacing_pt !== undefined ? s.para_spacing_pt : 0.0;
+  const letterSpacing = s.letter_spacing_em !== undefined ? s.letter_spacing_em : 0.0;
+  const justifyText = s.justify_text !== false;
+  const hyphenation = s.hyphenation !== false;
+
+  const sinkage = s.chapter_sinkage_in !== undefined ? s.chapter_sinkage_in : (s.typography.chapter_sinkage_in || 1.75);
+  const dropCapEnabled = s.drop_cap_enabled !== false;
+  const dropCapLines = s.drop_cap_lines || 3;
+  const dropCapStyle = s.drop_cap_style || "Plain Serif";
+  const runningHeaderStyle = s.running_header_style || "Small Caps Centered";
   const headerText = s.typography.running_header_override || "";
 
   container.innerHTML = `
-    <!-- Section 1: Trim Size -->
+    <!-- Section 1: Typography Controls -->
     <div class="section-block">
       <div class="section-title">
-        <span>📐 Trim Geometry</span>
+        <span>🔤 Typography & Grid</span>
+        <button onclick="resetTypographyToDefaults()" style="background:none; border:none; color:var(--accent-gold); font-size:0.68rem; cursor:pointer;">Defaults</button>
+      </div>
+
+      <div style="margin-bottom:8px;">
+        <label style="font-size:0.7rem; color:var(--text-muted);">Body Font:</label>
+        <select onchange="handleSettingsUpdate({ body_font: this.value, typography: { body_font_name: this.value } })" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">
+          <option value="EB Garamond" ${bodyFont === 'EB Garamond' ? 'selected' : ''}>EB Garamond (Gaslamp / Classic)</option>
+          <option value="Lora" ${bodyFont === 'Lora' ? 'selected' : ''}>Lora (Barometer / Chronometric)</option>
+          <option value="Source Serif 4" ${bodyFont === 'Source Serif 4' ? 'selected' : ''}>Source Serif 4 (Acoustic / Cold)</option>
+          <option value="Cormorant Garamond" ${bodyFont === 'Cormorant Garamond' ? 'selected' : ''}>Cormorant Garamond (Salt Orchard)</option>
+          <option value="Crimson Pro" ${bodyFont === 'Crimson Pro' ? 'selected' : ''}>Crimson Pro (Archaeometric)</option>
+          <option value="Baskerville" ${bodyFont === 'Baskerville' ? 'selected' : ''}>Baskerville (Transitional)</option>
+          <option value="Georgia" ${bodyFont === 'Georgia' ? 'selected' : ''}>Georgia (Editorial)</option>
+          <option value="Palatino" ${bodyFont === 'Palatino' ? 'selected' : ''}>Palatino (Renaissance)</option>
+        </select>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+        <div>
+          <label style="font-size:0.7rem; color:var(--text-muted);">Heading Font:</label>
+          <select onchange="handleSettingsUpdate({ heading_font: this.value, typography: { display_font_name: this.value } })" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.72rem; padding:4px; border-radius:3px;">
+            <option value="Cinzel" ${headingFont === 'Cinzel' ? 'selected' : ''}>Cinzel</option>
+            <option value="Oswald" ${headingFont === 'Oswald' ? 'selected' : ''}>Oswald</option>
+            <option value="JetBrains Mono" ${headingFont === 'JetBrains Mono' ? 'selected' : ''}>JetBrains Mono</option>
+            <option value="Cormorant Garamond" ${headingFont === 'Cormorant Garamond' ? 'selected' : ''}>Cormorant</option>
+            <option value="Crimson Pro" ${headingFont === 'Crimson Pro' ? 'selected' : ''}>Crimson Pro</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size:0.7rem; color:var(--text-muted);">Monospace Font:</label>
+          <select onchange="handleSettingsUpdate({ mono_font: this.value, typography: { mono_font_name: this.value } })" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.72rem; padding:4px; border-radius:3px;">
+            <option value="JetBrains Mono" ${monoFont === 'JetBrains Mono' ? 'selected' : ''}>JetBrains Mono</option>
+            <option value="IBM Plex Mono" ${monoFont === 'IBM Plex Mono' ? 'selected' : ''}>IBM Plex Mono</option>
+            <option value="Courier Prime" ${monoFont === 'Courier Prime' ? 'selected' : ''}>Courier Prime</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="inspector-slider-row">
+        <div class="slider-label-wrap">
+          <span>Body Font Size:</span>
+          <span class="slider-val-tag" id="val-font-size">${parseFloat(bodySize).toFixed(2)} pt</span>
+        </div>
+        <input type="range" min="9.0" max="13.5" step="0.25" value="${bodySize}" oninput="handleDebouncedSlider('font_size_pt', parseFloat(this.value), 'val-font-size', ' pt')">
+      </div>
+
+      <div class="inspector-slider-row">
+        <div class="slider-label-wrap">
+          <span>Leading / Line Height:</span>
+          <span class="slider-val-tag" id="val-leading">${parseFloat(lineHeightVal).toFixed(2)}x</span>
+        </div>
+        <input type="range" min="1.15" max="1.65" step="0.02" value="${lineHeightVal}" oninput="handleDebouncedSlider('line_height', parseFloat(this.value), 'val-leading', 'x')">
+      </div>
+
+      <div class="inspector-slider-row">
+        <div class="slider-label-wrap">
+          <span>First-Line Indent:</span>
+          <span class="slider-val-tag" id="val-indent">${parseFloat(indent).toFixed(2)}"</span>
+        </div>
+        <input type="range" min="0.0" max="0.5" step="0.025" value="${indent}" oninput="handleDebouncedSlider('para_indent_in', parseFloat(this.value), 'val-indent', '\"')">
+      </div>
+
+      <div class="inspector-slider-row">
+        <div class="slider-label-wrap">
+          <span>Paragraph Spacing:</span>
+          <span class="slider-val-tag" id="val-para-spacing">${parseFloat(paraSpacing).toFixed(1)} pt</span>
+        </div>
+        <input type="range" min="0.0" max="12.0" step="0.5" value="${paraSpacing}" oninput="handleDebouncedSlider('para_spacing_pt', parseFloat(this.value), 'val-para-spacing', ' pt')">
+      </div>
+
+      <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:0.75rem; color:var(--text-muted);">
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="checkbox" ${justifyText ? 'checked' : ''} onchange="handleSettingsUpdate({ justify_text: this.checked })"> Justify Text
+        </label>
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="checkbox" ${hyphenation ? 'checked' : ''} onchange="handleSettingsUpdate({ hyphenation: this.checked })"> Hyphenation
+        </label>
+      </div>
+    </div>
+
+    <!-- Section 2: Page Geometry & Margins -->
+    <div class="section-block">
+      <div class="section-title">
+        <span>📐 Page Geometry & Bleed</span>
         <span class="slider-val-tag">${trimW}" × ${trimH}"</span>
       </div>
       <div class="trim-preset-grid">
@@ -805,21 +1622,13 @@ function renderGeometryTab(container) {
         <button class="btn-trim-preset ${trimW === 5.0 && trimH === 8.0 ? 'active' : ''}" onclick="updateTrimPreset(5.0, 8.0)">5.0 × 8.0" Pocket</button>
         <button class="btn-trim-preset ${trimW === 7.0 && trimH === 10.0 ? 'active' : ''}" onclick="updateTrimPreset(7.0, 10.0)">7.0 × 10.0" Royal</button>
       </div>
-    </div>
 
-    <!-- Section 2: Mirrored Margins -->
-    <div class="section-block">
-      <div class="section-title">
-        <span>◫ Mirrored Margins</span>
-        <button onclick="resetMarginsToDefaults()" style="background:none; border:none; color:var(--accent-gold); font-size:0.68rem; cursor:pointer;">Reset</button>
-      </div>
-      
-      <div class="inspector-slider-row">
+      <div class="inspector-slider-row" style="margin-top:10px;">
         <div class="slider-label-wrap">
           <span>Inside Gutter (Spine Fold):</span>
           <span class="slider-val-tag" id="val-gutter">${gutter.toFixed(3)}"</span>
         </div>
-        <input type="range" min="0.5" max="1.375" step="0.025" value="${gutter}" oninput="handleGeometrySlider('inside_gutter_in', this.value, 'val-gutter')">
+        <input type="range" min="0.5" max="1.5" step="0.025" value="${gutter}" oninput="handleDebouncedMargin('margin_inside_in', parseFloat(this.value), 'val-gutter')">
       </div>
 
       <div class="inspector-slider-row">
@@ -827,7 +1636,7 @@ function renderGeometryTab(container) {
           <span>Outside Margin:</span>
           <span class="slider-val-tag" id="val-outside">${outside.toFixed(3)}"</span>
         </div>
-        <input type="range" min="0.375" max="1.125" step="0.025" value="${outside}" oninput="handleGeometrySlider('outside_margin_in', this.value, 'val-outside')">
+        <input type="range" min="0.375" max="1.25" step="0.025" value="${outside}" oninput="handleDebouncedMargin('margin_outside_in', parseFloat(this.value), 'val-outside')">
       </div>
 
       <div class="inspector-slider-row">
@@ -835,7 +1644,7 @@ function renderGeometryTab(container) {
           <span>Top Margin:</span>
           <span class="slider-val-tag" id="val-top">${top.toFixed(3)}"</span>
         </div>
-        <input type="range" min="0.5" max="1.25" step="0.025" value="${top}" oninput="handleGeometrySlider('top_margin_in', this.value, 'val-top')">
+        <input type="range" min="0.5" max="1.25" step="0.025" value="${top}" oninput="handleDebouncedMargin('margin_top_in', parseFloat(this.value), 'val-top')">
       </div>
 
       <div class="inspector-slider-row">
@@ -843,38 +1652,14 @@ function renderGeometryTab(container) {
           <span>Bottom Margin:</span>
           <span class="slider-val-tag" id="val-bottom">${bottom.toFixed(3)}"</span>
         </div>
-        <input type="range" min="0.5" max="1.25" step="0.025" value="${bottom}" oninput="handleGeometrySlider('bottom_margin_in', this.value, 'val-bottom')">
+        <input type="range" min="0.5" max="1.25" step="0.025" value="${bottom}" oninput="handleDebouncedMargin('margin_bottom_in', parseFloat(this.value), 'val-bottom')">
       </div>
     </div>
 
-    <!-- Section 3: Typography & Leading -->
+    <!-- Section 3: Chapter Opener & Drop-Caps -->
     <div class="section-block">
       <div class="section-title">
-        <span>🔤 Typography & Leading</span>
-      </div>
-
-      <div class="inspector-slider-row">
-        <div class="slider-label-wrap">
-          <span>Body Font Size:</span>
-          <span class="slider-val-tag" id="val-font-size">${bodySize.toFixed(1)} pt</span>
-        </div>
-        <input type="range" min="9.0" max="13.5" step="0.25" value="${bodySize}" oninput="handleTypographySlider('body_font_size_pt', this.value, 'val-font-size')">
-      </div>
-
-      <div class="inspector-slider-row">
-        <div class="slider-label-wrap">
-          <span>Leading / Line Height:</span>
-          <span class="slider-val-tag" id="val-leading">${leading.toFixed(1)} pt</span>
-        </div>
-        <input type="range" min="12.0" max="18.5" step="0.25" value="${leading}" oninput="handleTypographySlider('body_leading_pt', this.value, 'val-leading')">
-      </div>
-
-      <div class="inspector-slider-row">
-        <div class="slider-label-wrap">
-          <span>First-Line Indent:</span>
-          <span class="slider-val-tag" id="val-indent">${indent.toFixed(2)}"</span>
-        </div>
-        <input type="range" min="0.0" max="0.5" step="0.05" value="${indent}" oninput="handleTypographySlider('subsequent_p_indent_in', this.value, 'val-indent')">
+        <span>📖 Chapter Openers & Headers</span>
       </div>
 
       <div class="inspector-slider-row">
@@ -882,92 +1667,282 @@ function renderGeometryTab(container) {
           <span>Chapter Top Sinkage:</span>
           <span class="slider-val-tag" id="val-sinkage">${sinkage.toFixed(2)}"</span>
         </div>
-        <input type="range" min="1.0" max="2.75" step="0.125" value="${sinkage}" oninput="handleTypographySlider('chapter_sinkage_in', this.value, 'val-sinkage')">
-      </div>
-    </div>
-
-    <!-- Section 4: Paper Tint & Running Header -->
-    <div class="section-block">
-      <div class="section-title">
-        <span>📜 Paper & Running Headers</span>
+        <input type="range" min="0.5" max="2.5" step="0.125" value="${sinkage}" oninput="handleDebouncedSlider('chapter_sinkage_in', parseFloat(this.value), 'val-sinkage', '\"')">
       </div>
 
-      <div style="margin-bottom:10px;">
-        <label style="font-size:0.72rem; color:var(--text-muted);">Paper Tone:</label>
-        <div style="display:flex; gap:6px; margin-top:4px;">
-          <button onclick="updatePaperTint('#FBF8F1')" style="flex:1; height:24px; background:#FBF8F1; border:1px solid #CCC; border-radius:3px; cursor:pointer;" title="Antique Cream"></button>
-          <button onclick="updatePaperTint('#FAF6EE')" style="flex:1; height:24px; background:#FAF6EE; border:1px solid #CCC; border-radius:3px; cursor:pointer;" title="Ochre Vellum"></button>
-          <button onclick="updatePaperTint('#F5F6F8')" style="flex:1; height:24px; background:#F5F6F8; border:1px solid #CCC; border-radius:3px; cursor:pointer;" title="Slate Crisp"></button>
-          <button onclick="updatePaperTint('#FFFFFF')" style="flex:1; height:24px; background:#FFFFFF; border:1px solid #CCC; border-radius:3px; cursor:pointer;" title="Pure White"></button>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+        <div>
+          <label style="font-size:0.7rem; color:var(--text-muted);">Drop-Cap Style:</label>
+          <select onchange="handleSettingsUpdate({ drop_cap_style: this.value })" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.72rem; padding:4px; border-radius:3px;">
+            <option value="Plain Serif" ${dropCapStyle === 'Plain Serif' ? 'selected' : ''}>Plain Serif</option>
+            <option value="Boxed Rule" ${dropCapStyle === 'Boxed Rule' ? 'selected' : ''}>Boxed Rule</option>
+            <option value="Botanical/Ornate" ${dropCapStyle === 'Botanical/Ornate' ? 'selected' : ''}>Botanical / Ornate</option>
+            <option value="None" ${dropCapStyle === 'None' ? 'selected' : ''}>None</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size:0.7rem; color:var(--text-muted);">Drop-Cap Lines:</label>
+          <select onchange="handleSettingsUpdate({ drop_cap_lines: parseInt(this.value, 10) })" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.72rem; padding:4px; border-radius:3px;">
+            <option value="2" ${dropCapLines === 2 ? 'selected' : ''}>2 Lines</option>
+            <option value="3" ${dropCapLines === 3 ? 'selected' : ''}>3 Lines</option>
+            <option value="4" ${dropCapLines === 4 ? 'selected' : ''}>4 Lines</option>
+            <option value="5" ${dropCapLines === 5 ? 'selected' : ''}>5 Lines</option>
+          </select>
         </div>
       </div>
 
+      <div style="margin-bottom:8px;">
+        <label style="font-size:0.7rem; color:var(--text-muted);">Running Header Style:</label>
+        <select onchange="handleSettingsUpdate({ running_header_style: this.value })" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.72rem; padding:4px; border-radius:3px;">
+          <option value="Small Caps Centered" ${runningHeaderStyle === 'Small Caps Centered' ? 'selected' : ''}>Small Caps Centered</option>
+          <option value="Small Caps Outer" ${runningHeaderStyle === 'Small Caps Outer' ? 'selected' : ''}>Small Caps Outer Margins</option>
+          <option value="Rule Underlined" ${runningHeaderStyle === 'Rule Underlined' ? 'selected' : ''}>Rule Underlined Header</option>
+          <option value="Hidden" ${runningHeaderStyle === 'Hidden' ? 'selected' : ''}>Hidden / Suppressed</option>
+        </select>
+      </div>
+
       <div>
-        <label style="font-size:0.72rem; color:var(--text-muted);">Custom Verso Header Text:</label>
-        <input type="text" value="${headerText}" placeholder="${p.short_title.toUpperCase()}" onchange="handleHeaderOverride(this.value)" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:5px; border-radius:4px; margin-top:3px;">
+        <label style="font-size:0.7rem; color:var(--text-muted);">Custom Verso Header Text:</label>
+        <input type="text" value="${headerText}" placeholder="${p.short_title.toUpperCase()}" onchange="handleSettingsUpdate({ typography: { running_header_override: this.value } })" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:5px; border-radius:4px; margin-top:2px;">
+      </div>
+    </div>
+
+    <!-- Section 4: Paper Tint -->
+    <div class="section-block">
+      <div class="section-title">
+        <span>📜 Paper Tint & Texture</span>
+      </div>
+      <div style="display:flex; gap:6px; margin-top:4px;">
+        <button onclick="updatePaperTint('#FBF8F1')" style="flex:1; height:24px; background:#FBF8F1; border:1px solid #CCC; border-radius:3px; cursor:pointer;" title="Antique Cream"></button>
+        <button onclick="updatePaperTint('#FAF6EE')" style="flex:1; height:24px; background:#FAF6EE; border:1px solid #CCC; border-radius:3px; cursor:pointer;" title="Ochre Vellum"></button>
+        <button onclick="updatePaperTint('#F5F6F8')" style="flex:1; height:24px; background:#F5F6F8; border:1px solid #CCC; border-radius:3px; cursor:pointer;" title="Slate Crisp"></button>
+        <button onclick="updatePaperTint('#FFFFFF')" style="flex:1; height:24px; background:#FFFFFF; border:1px solid #CCC; border-radius:3px; cursor:pointer;" title="Pure White"></button>
       </div>
     </div>
   `;
 }
 
+// Debounced settings dispatchers
+let settingsDebounce = null;
+function handleDebouncedSlider(field, val, labelId, suffix = '') {
+  document.getElementById(labelId).innerText = val + suffix;
+  clearTimeout(settingsDebounce);
+  settingsDebounce = setTimeout(async () => {
+    const updates = {};
+    updates[field] = val;
+    await dispatchSettingsUpdate(updates);
+  }, 250);
+}
+
+function handleDebouncedMargin(field, val, labelId) {
+  document.getElementById(labelId).innerText = val.toFixed(3) + '"';
+  clearTimeout(settingsDebounce);
+  settingsDebounce = setTimeout(async () => {
+    const updates = {};
+    updates[field] = val;
+    await dispatchSettingsUpdate(updates);
+  }, 250);
+}
+
+function handleSettingsUpdate(updates) {
+  dispatchSettingsUpdate(updates);
+}
+
+function updateTrimPreset(w, h) {
+  dispatchSettingsUpdate({ trim_width_in: w, trim_height_in: h });
+}
+
+function updatePaperTint(hex) {
+  dispatchSettingsUpdate({ typography: { paper_tint: hex } });
+}
+
+async function resetTypographyToDefaults() {
+  await dispatchSettingsUpdate({
+    font_size_pt: 11.0,
+    line_height: 1.36,
+    para_indent_in: 0.25,
+    para_spacing_pt: 0.0,
+    letter_spacing_em: 0.0,
+    justify_text: true,
+    hyphenation: true
+  });
+}
+
+// ======================================================================
+// 9. FRONT & BACK MATTER EDITOR (TAB 2)
+// ======================================================================
 function renderFrontMatterTab(container) {
   const fm = state.settings?.front_back_matter || {};
 
   container.innerHTML = `
     <div class="section-block">
       <div class="section-title">
-        <span>📖 Front & Back Matter</span>
-        <button onclick="saveMatterSettings()" style="background:var(--accent-gold); color:#000; font-weight:700; border:none; padding:3px 8px; border-radius:4px; font-size:0.68rem; cursor:pointer;">Save</button>
+        <span>📖 Front & Back Matter Suite</span>
+        <button onclick="saveMatterSettings()" style="background:var(--accent-gold); color:#000; font-weight:700; border:none; padding:3px 8px; border-radius:4px; font-size:0.68rem; cursor:pointer;">Save Matter</button>
       </div>
 
       <div style="display:flex; flex-direction:column; gap:10px; font-size:0.75rem; color:var(--text-muted);">
-        <label style="display:flex; align-items:center; gap:6px;">
-          <input type="checkbox" id="fm-half-title" ${fm.include_half_title !== false ? 'checked' : ''}> Half-Title Page
-        </label>
+        <!-- Half Title -->
+        <div class="matter-card">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; margin-bottom:4px; cursor:pointer;">
+            <input type="checkbox" id="fm-half-title" ${fm.include_half_title !== false ? 'checked' : ''}> Half-Title Page
+          </label>
+          <input type="text" id="fm-half-title-text" value="${fm.half_title_text || ''}" placeholder="Half-title text..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">
+        </div>
 
-        <label style="display:flex; align-items:center; gap:6px;">
-          <input type="checkbox" id="fm-frontispiece" ${fm.include_frontispiece !== false ? 'checked' : ''}> Frontispiece Ornament Plate
-        </label>
+        <!-- Frontispiece -->
+        <div class="matter-card">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; margin-bottom:4px; cursor:pointer;">
+            <input type="checkbox" id="fm-frontispiece" ${fm.include_frontispiece !== false ? 'checked' : ''}> Frontispiece Ornament Plate
+          </label>
+          <input type="text" id="fm-frontispiece-subtitle" value="${fm.frontispiece_subtitle || ''}" placeholder="Frontispiece subtitle..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">
+        </div>
 
-        <label style="display:flex; align-items:center; gap:6px;">
-          <input type="checkbox" id="fm-title-page" ${fm.include_title_page !== false ? 'checked' : ''}> Full Title Page (Imprint)
-        </label>
+        <!-- Title Page -->
+        <div class="matter-card">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; margin-bottom:4px; cursor:pointer;">
+            <input type="checkbox" id="fm-title-page" ${fm.include_title_page !== false ? 'checked' : ''}> Title Page (Imprint)
+          </label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+            <input type="text" id="fm-book-title" value="${fm.book_title || ''}" placeholder="Book title..." style="background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">
+            <input type="text" id="fm-author-name" value="${fm.author_name || ''}" placeholder="Author name..." style="background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">
+          </div>
+        </div>
 
-        <label style="display:flex; align-items:center; gap:6px;">
-          <input type="checkbox" id="fm-copyright" ${fm.include_copyright !== false ? 'checked' : ''}> Copyright & ISBN Page
-        </label>
+        <!-- Copyright -->
+        <div class="matter-card">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; margin-bottom:4px; cursor:pointer;">
+            <input type="checkbox" id="fm-copyright" ${fm.include_copyright !== false ? 'checked' : ''}> Copyright & ISBN Page
+          </label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+            <input type="text" id="fm-copyright-year" value="${fm.copyright_year || ''}" placeholder="Year (e.g. 2026)" style="background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">
+            <input type="text" id="fm-isbn" value="${fm.isbn || ''}" placeholder="ISBN (e.g. 978-1-958823-01-4)" style="background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">
+          </div>
+        </div>
 
-        <label style="display:flex; align-items:center; gap:6px;">
-          <input type="checkbox" id="fm-dedication" ${fm.include_dedication ? 'checked' : ''}> Dedication Page
-        </label>
-        <input type="text" id="fm-dedication-text" value="${fm.dedication_text || ''}" placeholder="Dedication text..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">
+        <!-- Dedication -->
+        <div class="matter-card">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; margin-bottom:4px; cursor:pointer;">
+            <input type="checkbox" id="fm-dedication" ${fm.include_dedication ? 'checked' : ''}> Dedication Page
+          </label>
+          <input type="text" id="fm-dedication-text" value="${fm.dedication_text || ''}" placeholder="Dedication text..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">
+        </div>
 
-        <label style="display:flex; align-items:center; gap:6px;">
-          <input type="checkbox" id="fm-epigraph" ${fm.include_epigraph ? 'checked' : ''}> Epigraph Page
-        </label>
-        <input type="text" id="fm-epigraph-text" value="${fm.epigraph_text || ''}" placeholder="Epigraph quote..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px; margin-bottom:4px;">
-        <input type="text" id="fm-epigraph-source" value="${fm.epigraph_source || ''}" placeholder="Source attribution..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">
+        <!-- Epigraph -->
+        <div class="matter-card">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; margin-bottom:4px; cursor:pointer;">
+            <input type="checkbox" id="fm-epigraph" ${fm.include_epigraph ? 'checked' : ''}> Epigraph Page
+          </label>
+          <input type="text" id="fm-epigraph-text" value="${fm.epigraph_text || ''}" placeholder="Epigraph quote..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px; margin-bottom:4px;">
+          <input type="text" id="fm-epigraph-source" value="${fm.epigraph_source || ''}" placeholder="Source attribution..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">
+        </div>
 
-        <label style="display:flex; align-items:center; gap:6px;">
-          <input type="checkbox" id="fm-toc" ${fm.include_toc !== false ? 'checked' : ''}> Auto-Calculated Contents (TOC)
-        </label>
+        <!-- TOC -->
+        <div class="matter-card">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; cursor:pointer;">
+            <input type="checkbox" id="fm-toc" ${fm.include_toc !== false ? 'checked' : ''}> Auto-Calculated Contents (TOC)
+          </label>
+        </div>
 
-        <label style="display:flex; align-items:center; gap:6px;">
-          <input type="checkbox" id="fm-acknowledgements" ${fm.include_acknowledgements ? 'checked' : ''}> Acknowledgements
-        </label>
+        <!-- Pre-Book Map Plate -->
+        <div class="matter-card">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; margin-bottom:4px; cursor:pointer;">
+            <input type="checkbox" id="fm-map" ${fm.include_map ? 'checked' : ''}> Pre-Book Map / Territory Plate
+          </label>
+          <input type="text" id="fm-map-title" value="${fm.map_title || ''}" placeholder="Map Title..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px; margin-bottom:4px;">
+          <input type="text" id="fm-map-caption" value="${fm.map_caption || ''}" placeholder="Map Caption..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">
+        </div>
 
-        <label style="display:flex; align-items:center; gap:6px;">
-          <input type="checkbox" id="fm-about-author" ${fm.include_about_author ? 'checked' : ''}> About the Author
-        </label>
+        <!-- Post-Book Appendix -->
+        <div class="matter-card">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; margin-bottom:4px; cursor:pointer;">
+            <input type="checkbox" id="fm-appendix" ${fm.include_appendix ? 'checked' : ''}> Post-Book Historical Appendix
+          </label>
+          <input type="text" id="fm-appendix-title" value="${fm.appendix_title || ''}" placeholder="Appendix Title..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px; margin-bottom:4px;">
+          <textarea id="fm-appendix-text" rows="3" placeholder="Appendix text content..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">${fm.appendix_text || ''}</textarea>
+        </div>
 
-        <label style="display:flex; align-items:center; gap:6px;">
-          <input type="checkbox" id="fm-colophon" ${fm.include_colophon !== false ? 'checked' : ''}> Typesetting Colophon
-        </label>
+        <!-- Post-Book Glossary -->
+        <div class="matter-card">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; margin-bottom:4px; cursor:pointer;">
+            <input type="checkbox" id="fm-glossary" ${fm.include_glossary ? 'checked' : ''}> Post-Book Lexicon / Glossary
+          </label>
+          <input type="text" id="fm-glossary-title" value="${fm.glossary_title || ''}" placeholder="Glossary Title..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">
+        </div>
+
+        <!-- Acknowledgements & Bio -->
+        <div class="matter-card">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; margin-bottom:4px; cursor:pointer;">
+            <input type="checkbox" id="fm-acknowledgements" ${fm.include_acknowledgements ? 'checked' : ''}> Acknowledgements
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; margin-bottom:4px; cursor:pointer;">
+            <input type="checkbox" id="fm-about-author" ${fm.include_about_author ? 'checked' : ''}> About the Author
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; cursor:pointer;">
+            <input type="checkbox" id="fm-colophon" ${fm.include_colophon !== false ? 'checked' : ''}> Typesetting Colophon
+          </label>
+        </div>
       </div>
     </div>
   `;
 }
 
+async function saveMatterSettings() {
+  const updates = {
+    front_back_matter: {
+      include_half_title: document.getElementById("fm-half-title").checked,
+      half_title_text: document.getElementById("fm-half-title-text").value,
+      include_frontispiece: document.getElementById("fm-frontispiece").checked,
+      frontispiece_subtitle: document.getElementById("fm-frontispiece-subtitle").value,
+      include_title_page: document.getElementById("fm-title-page").checked,
+      book_title: document.getElementById("fm-book-title").value,
+      author_name: document.getElementById("fm-author-name").value,
+      include_copyright: document.getElementById("fm-copyright").checked,
+      copyright_year: document.getElementById("fm-copyright-year").value,
+      isbn: document.getElementById("fm-isbn").value,
+      include_dedication: document.getElementById("fm-dedication").checked,
+      dedication_text: document.getElementById("fm-dedication-text").value,
+      include_epigraph: document.getElementById("fm-epigraph").checked,
+      epigraph_text: document.getElementById("fm-epigraph-text").value,
+      epigraph_source: document.getElementById("fm-epigraph-source").value,
+      include_toc: document.getElementById("fm-toc").checked,
+      include_map: document.getElementById("fm-map").checked,
+      map_title: document.getElementById("fm-map-title").value,
+      map_caption: document.getElementById("fm-map-caption").value,
+      include_appendix: document.getElementById("fm-appendix").checked,
+      appendix_title: document.getElementById("fm-appendix-title").value,
+      appendix_text: document.getElementById("fm-appendix-text").value,
+      include_glossary: document.getElementById("fm-glossary").checked,
+      glossary_title: document.getElementById("fm-glossary-title").value,
+      include_acknowledgements: document.getElementById("fm-acknowledgements").checked,
+      include_about_author: document.getElementById("fm-about-author").checked,
+      include_colophon: document.getElementById("fm-colophon").checked,
+    }
+  };
+  showToast("Updating front & back matter...", "info");
+  await dispatchSettingsUpdate(updates);
+  showToast("Front & back matter updated and paginated!", "success");
+}
+
+async function dispatchSettingsUpdate(updates) {
+  const res = await fetchAPI(`/api/project/${state.activeBookId}/settings`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updates)
+  });
+  if (res.status === "success") {
+    state.settings = res.settings;
+    state.pagination = res.pagination;
+    renderSpreadCanvas();
+    renderFilmstrip();
+    renderHeader();
+  }
+}
+
+// ======================================================================
+// 10. RELEASE & EXPORT SUITE (TAB 3)
+// ======================================================================
 function renderExportTab(container) {
   const s = state.settings || { typography: {}, margins: {} };
 
@@ -982,11 +1957,11 @@ function renderExportTab(container) {
       </div>
 
       <div style="font-size:0.73rem; color:var(--text-muted); margin-bottom:12px; background:rgba(0,0,0,0.3); padding:8px; border-radius:4px;">
-        <strong>Active Specifications:</strong><br>
+        <strong>Active Release Specifications:</strong><br>
         • Trim: ${s.trim_width_in || 6.0}" × ${s.trim_height_in || 9.0}"<br>
-        • Margins: Inside Gutter ${s.margins.inside_gutter_in || 0.875}", Outside ${s.margins.outside_margin_in || 0.625}"<br>
-        • Typography: ${s.typography.body_font_name || 'EB Garamond'} (${s.typography.body_font_size_pt || 11}pt / ${s.typography.body_leading_pt || 15}pt)<br>
-        • All exports automatically synced with live inspector!
+        • Margins: Gutter ${s.margin_inside_in || 0.875}", Outside ${s.margin_outside_in || 0.625}"<br>
+        • Typography: ${s.body_font || 'EB Garamond'} (${s.font_size_pt || 11}pt)<br>
+        • Real-time synchronization active across all formats!
       </div>
 
       <button class="btn-export" onclick="exportDocument('pdf')">
@@ -1014,305 +1989,46 @@ function renderExportTab(container) {
   `;
 }
 
-// -------------------------------------------------------------
-// 6. LIVE GEOMETRY UPDATE DISPATCHERS (DEBOUNCED)
-// -------------------------------------------------------------
-let geomDebounce = null;
+async function exportDocument(format) {
+  const bleed = state.showBleed;
+  showToast(`Compiling ${format.toUpperCase()} with live typography & publishing rules...`, "info");
 
-function handleGeometrySlider(field, val, labelId) {
-  document.getElementById(labelId).innerText = parseFloat(val).toFixed(3) + '"';
-  clearTimeout(geomDebounce);
-  geomDebounce = setTimeout(async () => {
-    const updates = { margins: {} };
-    updates.margins[field] = parseFloat(val);
-    await dispatchSettingsUpdate(updates);
-  }, 300);
-}
-
-function handleTypographySlider(field, val, labelId) {
-  const isPt = field.includes("_pt");
-  document.getElementById(labelId).innerText = parseFloat(val).toFixed(isPt ? 1 : 2) + (isPt ? " pt" : '"');
-  clearTimeout(geomDebounce);
-  geomDebounce = setTimeout(async () => {
-    const updates = { typography: {} };
-    updates.typography[field] = parseFloat(val);
-    await dispatchSettingsUpdate(updates);
-  }, 300);
-}
-
-function updateTrimPreset(w, h) {
-  dispatchSettingsUpdate({ trim_width_in: w, trim_height_in: h });
-}
-
-function updatePaperTint(hex) {
-  dispatchSettingsUpdate({ typography: { paper_tint: hex } });
-}
-
-function handleHeaderOverride(txt) {
-  dispatchSettingsUpdate({ typography: { running_header_override: txt } });
-}
-
-async function resetMarginsToDefaults() {
-  await dispatchSettingsUpdate({
-    margins: {
-      inside_gutter_in: 0.875,
-      outside_margin_in: 0.625,
-      top_margin_in: 0.75,
-      bottom_margin_in: 0.875
-    }
-  });
-}
-
-async function saveMatterSettings() {
-  const updates = {
-    front_back_matter: {
-      include_half_title: document.getElementById("fm-half-title").checked,
-      include_frontispiece: document.getElementById("fm-frontispiece").checked,
-      include_title_page: document.getElementById("fm-title-page").checked,
-      include_copyright: document.getElementById("fm-copyright").checked,
-      include_dedication: document.getElementById("fm-dedication").checked,
-      dedication_text: document.getElementById("fm-dedication-text").value,
-      include_epigraph: document.getElementById("fm-epigraph").checked,
-      epigraph_text: document.getElementById("fm-epigraph-text").value,
-      epigraph_source: document.getElementById("fm-epigraph-source").value,
-      include_toc: document.getElementById("fm-toc").checked,
-      include_acknowledgements: document.getElementById("fm-acknowledgements").checked,
-      include_about_author: document.getElementById("fm-about-author").checked,
-      include_colophon: document.getElementById("fm-colophon").checked,
-    }
-  };
-  showToast("Updating front & back matter...", "info");
-  await dispatchSettingsUpdate(updates);
-  showToast("Front & back matter updated and paginated!", "success");
-}
-
-async function dispatchSettingsUpdate(updates) {
-  const res = await fetchAPI(`/api/project/${state.activeBookId}/settings`, {
+  const endpoint = `/api/export/${format}`;
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(updates)
-  });
-  if (res.status === "success") {
-    state.settings = res.settings;
-    state.pagination = res.pagination;
-    renderSpreadCanvas();
-    renderFilmstrip();
-    renderHeader();
-  }
-}
-
-// -------------------------------------------------------------
-// 7. VISUAL PIN-DROPPER CALLOUT STUDIO
-// -------------------------------------------------------------
-function openVisualPinStudio(assetId) {
-  const asset = state.manifest.assets.find(a => a.id === assetId);
-  if (!asset) return;
-
-  state.pinStudioState.assetId = assetId;
-  state.pinStudioState.callouts = JSON.parse(JSON.stringify(asset.vector_callouts || []));
-  state.pinStudioState.activePinIndex = null;
-
-  renderPinStudioModal();
-}
-
-function renderPinStudioModal() {
-  const modal = document.getElementById("modal-container");
-  if (!modal) return;
-
-  const asset = state.manifest.assets.find(a => a.id === state.pinStudioState.assetId);
-  if (!asset) return;
-
-  const callouts = state.pinStudioState.callouts;
-
-  modal.innerHTML = `
-    <div class="modal-overlay" onclick="closeModal(event)">
-      <div class="modal-content" style="width:780px;" onclick="event.stopPropagation()">
-        <div class="modal-header">
-          <h3 style="margin:0; font-size:0.95rem; color:var(--accent-cyan);">
-            📍 Visual Callout Studio — Click Canvas to Drop Pins
-          </h3>
-          <button onclick="closeModal()" style="background:none; border:none; color:#AAA; font-size:1.2rem; cursor:pointer;">&times;</button>
-        </div>
-        <div class="modal-body" style="padding:14px; display:flex; flex-direction:column; gap:12px;">
-          <div style="font-size:0.75rem; color:var(--text-muted);">
-            Click anywhere on the plate to place a precision vector callout pin. Drag pins to reposition.
-          </div>
-
-          <!-- Interactive Pin Canvas -->
-          <div style="text-align:center; background:#000; padding:10px; border-radius:6px; overflow:hidden;">
-            <div id="pin-canvas-wrap" class="pin-canvas-container" onclick="handlePinCanvasClick(event)">
-              <img id="pin-target-img" src="${asset.image_url}" style="max-height:360px; max-width:100%; display:block;" alt="${asset.title}">
-              
-              <!-- Render pins -->
-              ${callouts.map((c, i) => `
-                <div class="pin-marker" 
-                     style="left:${c.x}%; top:${c.y}%;" 
-                     title="${c.label}"
-                     onclick="event.stopPropagation(); selectPin(${i});"
-                     onmousedown="startDraggingPin(event, ${i})">
-                  ${i + 1}
-                  <div class="pin-label-preview">${c.label}</div>
-                </div>
-              `).join("")}
-            </div>
-          </div>
-
-          <!-- Selected Pin Properties Editor -->
-          <div id="pin-editor-panel" style="background:var(--bg-card); padding:10px; border-radius:6px; font-size:0.75rem;">
-            ${renderPinEditorControls()}
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button onclick="closeModal()" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:#FFF; padding:6px 12px; border-radius:4px; cursor:pointer;">Cancel</button>
-          <button onclick="saveVisualPins()" style="background:var(--accent-cyan); color:#000; font-weight:700; border:none; padding:6px 16px; border-radius:4px; cursor:pointer;">Save & Render Vectors</button>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function renderPinEditorControls() {
-  const idx = state.pinStudioState.activePinIndex;
-  const callouts = state.pinStudioState.callouts;
-
-  if (idx === null || !callouts[idx]) {
-    return `<div style="color:var(--text-dim); text-align:center;">Click anywhere on the image above to add a pin, or click an existing pin number to edit.</div>`;
-  }
-
-  const pin = callouts[idx];
-  return `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-      <strong style="color:var(--accent-cyan);">Editing Pin #${idx + 1}</strong>
-      <button onclick="deletePin(${idx})" style="background:#EF4444; color:#FFF; border:none; padding:2px 8px; border-radius:3px; cursor:pointer; font-size:0.7rem;">Delete Pin</button>
-    </div>
-    <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:8px;">
-      <div>
-        <label style="color:var(--text-muted); font-size:0.7rem;">Label Text</label>
-        <input type="text" value="${pin.label}" oninput="updateActivePinProperty('label', this.value)" style="width:100%; padding:5px; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; border-radius:3px;">
-      </div>
-      <div>
-        <label style="color:var(--text-muted); font-size:0.7rem;">Style / Type</label>
-        <select onchange="updateActivePinProperty('type', this.value)" style="width:100%; padding:5px; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; border-radius:3px;">
-          <option value="badge" ${pin.type === 'badge' ? 'selected' : ''}>Pill Badge</option>
-          <option value="box" ${pin.type === 'box' ? 'selected' : ''}>Technical Box</option>
-          <option value="crosshair" ${pin.type === 'crosshair' ? 'selected' : ''}>Crosshair Target</option>
-          <option value="arrow_up" ${pin.type === 'arrow_up' ? 'selected' : ''}>Arrow Up</option>
-          <option value="arrow_down" ${pin.type === 'arrow_down' ? 'selected' : ''}>Arrow Down</option>
-          <option value="arrow_left" ${pin.type === 'arrow_left' ? 'selected' : ''}>Arrow Left</option>
-        </select>
-      </div>
-      <div>
-        <label style="color:var(--text-muted); font-size:0.7rem;">Coordinates</label>
-        <div style="padding:5px; color:var(--accent-gold); font-family:monospace; font-size:0.72rem;">X:${pin.x.toFixed(1)}% Y:${pin.y.toFixed(1)}%</div>
-      </div>
-    </div>
-  `;
-}
-
-function handlePinCanvasClick(event) {
-  const img = document.getElementById("pin-target-img");
-  if (!img) return;
-
-  const rect = img.getBoundingClientRect();
-  const clickX = event.clientX - rect.left;
-  const clickY = event.clientY - rect.top;
-
-  const pctX = Math.max(2, Math.min(98, (clickX / rect.width) * 100));
-  const pctY = Math.max(2, Math.min(98, (clickY / rect.height) * 100));
-
-  const newPin = {
-    label: `FEATURE #${state.pinStudioState.callouts.length + 1}`,
-    x: parseFloat(pctX.toFixed(1)),
-    y: parseFloat(pctY.toFixed(1)),
-    type: "badge"
-  };
-
-  state.pinStudioState.callouts.push(newPin);
-  state.pinStudioState.activePinIndex = state.pinStudioState.callouts.length - 1;
-  renderPinStudioModal();
-}
-
-function selectPin(index) {
-  state.pinStudioState.activePinIndex = index;
-  renderPinStudioModal();
-}
-
-function deletePin(index) {
-  state.pinStudioState.callouts.splice(index, 1);
-  state.pinStudioState.activePinIndex = null;
-  renderPinStudioModal();
-}
-
-function updateActivePinProperty(key, val) {
-  const idx = state.pinStudioState.activePinIndex;
-  if (idx !== null && state.pinStudioState.callouts[idx]) {
-    state.pinStudioState.callouts[idx][key] = val;
-    // Update label preview live without re-rendering whole modal
-    const marker = document.querySelectorAll(".pin-marker")[idx];
-    if (marker) {
-      const preview = marker.querySelector(".pin-label-preview");
-      if (preview && key === "label") preview.innerText = val;
-    }
-  }
-}
-
-function startDraggingPin(event, index) {
-  event.stopPropagation();
-  state.pinStudioState.activePinIndex = index;
-
-  const img = document.getElementById("pin-target-img");
-  if (!img) return;
-
-  const rect = img.getBoundingClientRect();
-
-  function onMouseMove(moveEvent) {
-    const moveX = moveEvent.clientX - rect.left;
-    const moveY = moveEvent.clientY - rect.top;
-    const pctX = Math.max(2, Math.min(98, (moveX / rect.width) * 100));
-    const pctY = Math.max(2, Math.min(98, (moveY / rect.height) * 100));
-
-    state.pinStudioState.callouts[index].x = parseFloat(pctX.toFixed(1));
-    state.pinStudioState.callouts[index].y = parseFloat(pctY.toFixed(1));
-
-    const marker = document.querySelectorAll(".pin-marker")[index];
-    if (marker) {
-      marker.style.left = `${pctX}%`;
-      marker.style.top = `${pctY}%`;
-    }
-  }
-
-  function onMouseUp() {
-    window.removeEventListener("mousemove", onMouseMove);
-    window.removeEventListener("mouseup", onMouseUp);
-    renderPinStudioModal();
-  }
-
-  window.addEventListener("mousemove", onMouseMove);
-  window.addEventListener("mouseup", onMouseUp);
-}
-
-async function saveVisualPins() {
-  const assetId = state.pinStudioState.assetId;
-  const callouts = state.pinStudioState.callouts;
-
-  showToast("Rendering precision vector callout overlay...", "info");
-  const res = await fetchAPI(`/api/manifest/${state.activeBookId}/update-callouts`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ asset_id: assetId, callouts })
+    body: JSON.stringify({ book_id: state.activeBookId, bleed: bleed })
   });
 
-  if (res.status === "success") {
-    showToast("Vector callout overlay rendered and saved!", "success");
-    closeModal();
-    await loadBook(state.activeBookId);
+  if (!res.ok) {
+    showToast(`Failed to export ${format.toUpperCase()}`, "error");
+    return;
   }
+
+  const blob = await res.blob();
+  const filename = format === "all"
+    ? `${state.activeBookId}_ArgonPublishingPackage.zip`
+    : format === "pdf"
+    ? `${state.activeBookId}_print_edition.pdf`
+    : format === "docx"
+    ? `${state.activeBookId}_styled_edition.docx`
+    : `${state.activeBookId}_reflowable_edition.epub`;
+
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+
+  showToast(`${filename} compiled & downloaded successfully!`, "success");
 }
 
-// -------------------------------------------------------------
-// 8. IMAGE PRINT LAB (SPLIT BEFORE/AFTER COMPARISON)
-// -------------------------------------------------------------
+// ======================================================================
+// 11. IMAGE PRINT LAB (SPLIT BEFORE/AFTER COMPARISON)
+// ======================================================================
 function openImageLabModal(assetId) {
   const asset = state.manifest.assets.find(a => a.id === assetId);
   if (!asset) return;
@@ -1413,7 +2129,7 @@ function renderImageLabModal() {
           </div>
         </div>
 
-        <div class="modal-footer">
+        <div class="modal-footer" style="padding:12px 16px; background:rgba(0,0,0,0.3); border-top:1px solid var(--border-subtle); display:flex; justify-content:flex-end; gap:8px;">
           <button onclick="closeModal()" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:#FFF; padding:6px 12px; border-radius:4px; cursor:pointer;">Cancel</button>
           <button onclick="applyImageLabPermanently()" style="background:var(--accent-gold); color:#000; font-weight:700; border:none; padding:6px 16px; border-radius:4px; cursor:pointer;">Apply & Save at 300 DPI</button>
         </div>
@@ -1502,9 +2218,9 @@ async function applyImageLabPermanently() {
   }
 }
 
-// -------------------------------------------------------------
-// 9. EXPORTS & TAILPIECE BALANCING
-// -------------------------------------------------------------
+// ======================================================================
+// 12. TAILPIECE BALANCING & DRAG-AND-DROP RE-ANCHORING
+// ======================================================================
 async function autoInsertTailpiece(pageNumber) {
   showToast(`Inserting thematic tailpiece ornament on page ${pageNumber}...`, "info");
   const res = await fetchAPI("/api/tailpiece/auto-insert", {
@@ -1525,46 +2241,6 @@ async function autoInsertTailpiece(pageNumber) {
   }
 }
 
-async function exportDocument(format) {
-  const bleed = state.showBleed;
-  showToast(`Compiling ${format.toUpperCase()} with live geometry & publishing rules...`, "info");
-
-  const endpoint = `/api/export/${format}`;
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ book_id: state.activeBookId, bleed: bleed })
-  });
-
-  if (!res.ok) {
-    showToast(`Failed to export ${format.toUpperCase()}`, "error");
-    return;
-  }
-
-  const blob = await res.blob();
-  const filename = format === "all"
-    ? `${state.activeBookId}_ArgonPublishingPackage.zip`
-    : format === "pdf"
-    ? `${state.activeBookId}_print_edition.pdf`
-    : format === "docx"
-    ? `${state.activeBookId}_styled_edition.docx`
-    : `${state.activeBookId}_reflowable_edition.epub`;
-
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-
-  showToast(`${filename} compiled & downloaded successfully!`, "success");
-}
-
-// -------------------------------------------------------------
-// 10. DRAG-AND-DROP RE-ANCHORING & FILE UPLOADS
-// -------------------------------------------------------------
 function handleAssetDragStart(event, assetId) {
   event.dataTransfer.setData("text/plain", assetId);
   event.dataTransfer.effectAllowed = "move";
@@ -1656,6 +2332,79 @@ function copyPrompt(assetId, btn) {
   });
 }
 
+function openAddSlotModal() {
+  const modal = document.getElementById("modal-container");
+  if (!modal) return;
+
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="closeModal(event)">
+      <div class="modal-content" style="width:520px;" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3 style="margin:0; font-size:0.95rem; color:var(--accent-gold);">+ Add New Illustration Slot</h3>
+          <button onclick="closeModal()" style="background:none; border:none; color:#AAA; font-size:1.2rem; cursor:pointer;">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:14px; display:flex; flex-direction:column; gap:10px;">
+          <div>
+            <label style="font-size:0.72rem; color:var(--text-muted);">Title</label>
+            <input type="text" id="new-slot-title" placeholder="e.g. The Autopsy Lantern" style="width:100%; padding:6px; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; border-radius:3px;">
+          </div>
+          <div>
+            <label style="font-size:0.72rem; color:var(--text-muted);">Anchor Paragraph ID</label>
+            <input type="text" id="new-slot-anchor" placeholder="e.g. ch01_p02" value="ch01_p02" style="width:100%; padding:6px; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; border-radius:3px;">
+          </div>
+          <div>
+            <label style="font-size:0.72rem; color:var(--text-muted);">Placement</label>
+            <select id="new-slot-placement" style="width:100%; padding:6px; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; border-radius:3px;">
+              <option value="Half-Page Top">Half-Page Top</option>
+              <option value="Full-Page Recto Plate">Full-Page Recto Plate</option>
+              <option value="Full-Page Verso Plate">Full-Page Verso Plate</option>
+              <option value="Full Bleed Plate">Full Bleed Plate</option>
+              <option value="Inline Archival Insert">Inline Archival Insert</option>
+              <option value="Chapter Opener Vignette">Chapter Opener Vignette</option>
+              <option value="Chapter End Tailpiece">Chapter End Tailpiece</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.72rem; color:var(--text-muted);">Generation Prompt</label>
+            <textarea id="new-slot-prompt" rows="3" placeholder="Midjourney / DALL-E prompt..." style="width:100%; padding:6px; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; border-radius:3px;">Atmospheric etching matching book theme</textarea>
+          </div>
+        </div>
+        <div class="modal-footer" style="padding:10px 14px; background:rgba(0,0,0,0.3); border-top:1px solid var(--border-subtle); display:flex; justify-content:flex-end; gap:8px;">
+          <button onclick="closeModal()" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:#FFF; padding:6px 12px; border-radius:4px; cursor:pointer;">Cancel</button>
+          <button onclick="submitNewSlot()" style="background:var(--accent-gold); color:#000; font-weight:700; border:none; padding:6px 16px; border-radius:4px; cursor:pointer;">Add Slot</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function submitNewSlot() {
+  const title = document.getElementById("new-slot-title").value.trim() || "New Illustration";
+  const anchor = document.getElementById("new-slot-anchor").value.trim() || "ch01_p01";
+  const placement = document.getElementById("new-slot-placement").value;
+  const prompt = document.getElementById("new-slot-prompt").value.trim() || "Etching";
+
+  showToast("Adding new planned illustration slot...", "info");
+  const res = await fetchAPI(`/api/manifest/${state.activeBookId}/add-slot`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title,
+      anchor,
+      placement,
+      prompt,
+      caption: `Plate: ${title}`
+    })
+  });
+
+  if (res.status === "success") {
+    showToast("Illustration slot added!", "success");
+    closeModal();
+    await loadBook(state.activeBookId);
+  }
+}
+
+// Navigation & View Helpers
 function nextSpread() {
   if (state.currentSpreadIndex < state.pagination.spreads.length - 1) {
     state.currentSpreadIndex++;
