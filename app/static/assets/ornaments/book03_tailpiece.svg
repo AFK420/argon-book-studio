@@ -1,0 +1,13 @@
+<svg viewBox="0 0 160 80" class="tailpiece-svg" xmlns="http://www.w3.org/2000/svg">
+            <g transform="translate(80, 40)">
+                <!-- Sound baffle diamond grid -->
+                <rect x="-30" y="-18" width="60" height="36" fill="none" stroke="#0F172A" stroke-width="1.2"/>
+                <line x1="-30" y1="-18" x2="30" y2="18" stroke="#38BDF8" stroke-width="0.8"/>
+                <line x1="-30" y1="18" x2="30" y2="-18" stroke="#38BDF8" stroke-width="0.8"/>
+                <line x1="-30" y1="0" x2="30" y2="0" stroke="#0F172A" stroke-width="1"/>
+                <circle cx="0" cy="0" r="6" fill="#0F172A"/>
+                <circle cx="0" cy="0" r="3" fill="#38BDF8"/>
+                <line x1="-50" y1="0" x2="-30" y2="0" stroke="#0F172A" stroke-width="1"/>
+                <line x1="30" y1="0" x2="50" y2="0" stroke="#0F172A" stroke-width="1"/>
+            </g>
+        </svg>

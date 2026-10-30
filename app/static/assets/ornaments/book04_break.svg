@@ -1,0 +1,10 @@
+<svg viewBox="0 0 240 32" class="scene-break-svg" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10,16 Q45,12 80,16 Q100,18 110,12 Q120,4 125,12 Q130,22 140,16 Q175,12 230,16" fill="none" stroke="#2C402E" stroke-width="1.2"/>
+            <!-- Seahorse & botanical bud center -->
+            <g transform="translate(120,16)">
+                <path d="M-8,6 C-12,0 -8,-8 0,-8 C6,-8 8,-3 4,4 C0,10 -4,12 -8,6 Z" fill="#4A6B4E" opacity="0.85"/>
+                <circle cx="-1" cy="-4" r="1.5" fill="#D97706"/>
+                <path d="M4,-4 Q12,-8 10,0 Q8,8 2,10" fill="none" stroke="#D97706" stroke-width="1.2"/>
+                <circle cx="10" cy="0" r="1.5" fill="#2C402E"/>
+            </g>
+        </svg>

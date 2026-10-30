@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Argon Book Studio — Drag-and-Drop Illustrated Novel Typesetting & Publishing Engine</title>
+  
+  <!-- Preload & Google Fonts for 5 Book Theme Profiles -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Oswald:wght@400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  
+  <!-- Studio Stylesheet -->
+  <link rel="stylesheet" href="/static/css/studio.css">
+</head>
+<body>
+
+  <!-- Studio Top Application Header -->
+  <header class="studio-header">
+    <div class="studio-brand">
+      <div class="studio-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+          <path d="M6 6h10"/>
+          <path d="M6 10h10"/>
+          <path d="M6 14h6"/>
+        </svg>
+        ARGON BOOK STUDIO
+        <span class="tag">6×9" ENGINE</span>
+      </div>
+
+      <div style="height:20px; width:1px; background:var(--border-subtle); margin:0 8px;"></div>
+
+      <!-- Book Profile Dropdown Switcher -->
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Theme:</span>
+        <select id="book-profile-select" style="background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-subtle); padding:6px 10px; border-radius:6px; font-size:0.82rem; font-weight:600; cursor:pointer;">
+          <!-- Dynamically populated -->
+        </select>
+      </div>
+
+      <div id="active-profile-indicator" class="active-book-indicator">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+
+    <!-- Right Header Actions -->
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button onclick="document.getElementById('manuscript-file-input').click()" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:var(--text-main); font-size:0.78rem; font-weight:600; padding:6px 12px; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        Import Manuscript (.docx / .md)
+      </button>
+      <input type="file" id="manuscript-file-input" style="display:none;" accept=".md,.docx,.txt">
+
+      <button onclick="exportDocument('all')" class="btn-export-all" style="padding:6px 14px; border-radius:6px; font-size:0.8rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Export Release Bundle
+      </button>
+    </div>
+  </header>
+
+  <!-- 3-Panel Visual Workspace -->
+  <main class="studio-workspace">
+
+    <!-- PANEL 1: MANUSCRIPT & ANCHOR TREE (Left Panel) -->
+    <aside class="side-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6"/>
+            <line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/>
+            <line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+          Manuscript & Anchors
+        </div>
+        
+        <!-- Tab Selector -->
+        <div style="display:flex; background:rgba(0,0,0,0.3); border-radius:4px; padding:2px;">
+          <button id="tab-manifest-btn" onclick="switchTab('manifest')" style="background:none; border:none; color:var(--text-muted); font-size:0.7rem; padding:3px 8px; border-radius:3px; cursor:pointer;" class="active">
+            Slots
+          </button>
+          <button id="tab-tree-btn" onclick="switchTab('tree')" style="background:none; border:none; color:var(--text-muted); font-size:0.7rem; padding:3px 8px; border-radius:3px; cursor:pointer;">
+            Tree
+          </button>
+        </div>
+      </div>
+
+      <div id="left-panel-content" class="panel-scroll-content">
+        <!-- Rendered via app.js -->
+      </div>
+    </aside>
+
+    <!-- PANEL 2: LIVE 2-PAGE SPREAD PREVIEW & CANVAS (Center Panel) -->
+    <section class="canvas-panel">
+      <!-- Toolbar -->
+      <div class="canvas-toolbar">
+        <!-- Spread Navigation -->
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button id="spread-prev-btn" onclick="prevSpread()" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:#FFF; padding:4px 10px; border-radius:4px; font-size:0.75rem; cursor:pointer;">
+            ◀ Prev
+          </button>
+          <span id="spread-indicator" style="font-size:0.78rem; font-weight:600; color:var(--text-main);">
+            Spread 1 of 1
+          </span>
+          <button id="spread-next-btn" onclick="nextSpread()" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:#FFF; padding:4px 10px; border-radius:4px; font-size:0.75rem; cursor:pointer;">
+            Next ▶
+          </button>
+        </div>
+
+        <!-- Margin & Bleed Guides Toggles -->
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button onclick="toggleMargins()" style="background:none; border:1px solid var(--border-subtle); color:var(--accent-gold); font-size:0.72rem; padding:4px 8px; border-radius:4px; cursor:pointer;">
+            ◫ 6×9" Margins Guide (0.875" Inside Gutter)
+          </button>
+          <button onclick="toggleBleed()" style="background:none; border:1px solid var(--border-subtle); color:var(--accent-red); font-size:0.72rem; padding:4px 8px; border-radius:4px; cursor:pointer;">
+            ⧉ +0.125" Bleed Guide
+          </button>
+        </div>
+
+        <!-- Zoom Controls -->
+        <div style="display:flex; align-items:center; gap:4px;">
+          <button onclick="setZoom(0.85)" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:#AAA; padding:3px 7px; border-radius:4px; font-size:0.7rem; cursor:pointer;">85%</button>
+          <button onclick="setZoom(1.0)" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:#FFF; padding:3px 7px; border-radius:4px; font-size:0.7rem; cursor:pointer;">100%</button>
+          <button onclick="setZoom(1.15)" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:#AAA; padding:3px 7px; border-radius:4px; font-size:0.7rem; cursor:pointer;">115%</button>
+        </div>
+      </div>
+
+      <!-- Live Two-Page Spread Viewport -->
+      <div id="spread-viewport" class="canvas-viewport">
+        <!-- Rendered via app.js -->
+      </div>
+
+      <!-- Short Chapter Ending Alert Banner -->
+      <div id="short-ending-banner-wrap">
+        <!-- Rendered conditionally via app.js -->
+      </div>
+    </section>
+
+    <!-- PANEL 3: POST-PROCESSING & EXPORT SUITE (Right Panel) -->
+    <aside class="side-panel right-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+            <polyline points="2 17 12 22 22 17"/>
+            <polyline points="2 12 12 17 22 12"/>
+          </svg>
+          Post-Processing & Export
+        </div>
+      </div>
+
+      <div id="right-panel-content" class="panel-scroll-content">
+        <!-- Rendered via app.js -->
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- Modals Container -->
+  <div id="modal-container"></div>
+
+  <!-- Application Logic -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

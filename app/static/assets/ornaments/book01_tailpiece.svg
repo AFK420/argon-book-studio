@@ -1,0 +1,14 @@
+<svg viewBox="0 0 160 80" class="tailpiece-svg" xmlns="http://www.w3.org/2000/svg">
+            <g transform="translate(80, 40)">
+                <circle cx="0" cy="0" r="14" fill="none" stroke="#1B365D" stroke-width="1.2"/>
+                <circle cx="0" cy="0" r="10" fill="none" stroke="#B8860B" stroke-width="0.8" stroke-dasharray="2,2"/>
+                <!-- Caliper arms -->
+                <path d="M-22,-18 C-10,-5 -5,15 0,26 C5,15 10,-5 22,-18" fill="none" stroke="#1B365D" stroke-width="1.5"/>
+                <circle cx="0" cy="0" r="3" fill="#1B365D"/>
+                <polygon points="0,-30 -4,-22 4,-22" fill="#B8860B"/>
+                <line x1="-50" y1="0" x2="-25" y2="0" stroke="#1B365D" stroke-width="1"/>
+                <line x1="25" y1="0" x2="50" y2="0" stroke="#1B365D" stroke-width="1"/>
+                <circle cx="-55" cy="0" r="2" fill="#B8860B"/>
+                <circle cx="55" cy="0" r="2" fill="#B8860B"/>
+            </g>
+        </svg>

@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Pytest & IDE
+.pytest_cache/
+.vscode/
+.idea/
+*.swp
+*~
+
+# Application generated artifacts & uploads
+uploads/*
+!uploads/.gitkeep
+exports/*.zip
+exports/*.pdf
+exports/*.docx
+exports/*.epub
+!exports/.gitkeep
+tmp_test/

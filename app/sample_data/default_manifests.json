@@ -1,0 +1,243 @@
+{
+  "book01": {
+    "book_id": "book01",
+    "assets": [
+      {
+        "id": "b01_asset_01",
+        "title": "Ratcliffe Highway Assay Laboratory & Water Gate",
+        "anchor": "ch01_p01",
+        "placement": "Chapter Opener Vignette",
+        "prompt": "Victorian gaslamp London wharf at low tide, Wapping Basin lime-washed arches, fog, sleet, moored collier barge, 19th-century silver-plate etching style, fine cross-hatching, rich intaglio ink lines, high detail, architectural engraving --ar 16:9 --no text, blurry",
+        "caption": "Figure 1.1: The Lime-Washed Arches of Wapping Basin at Low Water.",
+        "image_url": "/static/assets/placeholders/book01_vignette.png",
+        "filter_applied": true,
+        "vector_callouts": [
+          { "x": 22, "y": 30, "label": "WAPPING BASIN DERRICK", "type": "badge" },
+          { "x": 74, "y": 68, "label": "LIME-WASHED SLIPWAY ARCH", "type": "arrow_left" }
+        ]
+      },
+      {
+        "id": "b01_asset_02",
+        "title": "Post-Mortem Chemical Assay Apparatus & Alembic",
+        "anchor": "ch01_p06",
+        "placement": "Half-Page Top",
+        "prompt": "Antique brass apothecary scales, glass alembics with copper condenser coils, bone spatulas, labelled reagent vials of antimony and vitriol, laboratory workbench, cyanotype print with silver halide grain, sharp technical diagram aesthetics --ar 3:2 --no modern items",
+        "caption": "Plate I: The Coroner's Reagent Kit and Sublimation Retort.",
+        "image_url": "/static/assets/placeholders/book01_halfpage.png",
+        "filter_applied": true,
+        "vector_callouts": [
+          { "x": 45, "y": 35, "label": "ANTIMONY CONDENSER", "type": "box" },
+          { "x": 80, "y": 72, "label": "BONE SPATULA & VIAL 1887", "type": "arrow_up" }
+        ]
+      },
+      {
+        "id": "b01_asset_03",
+        "title": "The Salt-Cellar Refinery Beneath Orchard Lane",
+        "anchor": "ch02_p01",
+        "placement": "Full-Page Recto Plate",
+        "prompt": "Atmospheric subterranean Victorian brick cellar, rows of bubbling glass retorts in green wicker carboys, glowing charcoal furnace, brass calipers, copper balance scale, amber lantern beam through toxic vapor mist, fine etching, dramatic chiaroscuro --ar 2:3",
+        "caption": "Plate II: The Secret Subterranean Furnace at No. 7 Orchard Lane.",
+        "image_url": "/static/assets/placeholders/book01_fullplate.png",
+        "filter_applied": true,
+        "vector_callouts": [
+          { "x": 50, "y": 20, "label": "CARBOY OF FUMING NITRIC ACID", "type": "box" },
+          { "x": 30, "y": 80, "label": "FURNACE HEARTH #04", "type": "badge" }
+        ]
+      },
+      {
+        "id": "b01_asset_04",
+        "title": "Brass Caliper Assayer's Mark",
+        "anchor": "ch02_p06",
+        "placement": "Chapter End Tailpiece",
+        "prompt": "Ornate brass caliper and assayer gear emblem with diamond geometry, Victorian booktail engraving, clean lines on parchment background --ar 2:1",
+        "caption": "Tailpiece: Official Seal of the Thames Coroner's Assayer.",
+        "image_url": "/static/assets/placeholders/book01_tailpiece.png",
+        "filter_applied": true,
+        "vector_callouts": []
+      }
+    ]
+  },
+  "book02": {
+    "book_id": "book02",
+    "assets": [
+      {
+        "id": "b02_asset_01",
+        "title": "Ghyll Skerries Lighthouse & Dolerite Reefs",
+        "anchor": "ch01_p01",
+        "placement": "Chapter Opener Vignette",
+        "prompt": "Moody Hebridean lighthouse perched on black basalt volcanic pillar, massive Atlantic storm swells crashing against granite foundation slip, charcoal wash and lithograph texture, sharp maritime drawing --ar 16:9",
+        "caption": "Figure 1: Ghyll Skerries Station 04 under Gale-Force Sea Surge.",
+        "image_url": "/static/assets/placeholders/book02_vignette.png",
+        "filter_applied": true,
+        "vector_callouts": [
+          { "x": 30, "y": 25, "label": "LIGHTHOUSE LANTERN DOME", "type": "badge" },
+          { "x": 68, "y": 82, "label": "BASALT DOLERITE REEF", "type": "arrow_left" }
+        ]
+      },
+      {
+        "id": "b02_asset_02",
+        "title": "Torricellian Mercury Column & Pressure Dial",
+        "anchor": "ch01_p04",
+        "placement": "Inline Archival Insert",
+        "prompt": "Close-up technical drawing of a 19th-century marine mercury cistern barometer with vernier scale and brass shock absorbers, charcoal lithograph wash, engineering blueprint clarity --ar 4:3",
+        "caption": "Figure 2: Precision Torricellian Column with Inverted Meniscus.",
+        "image_url": "/static/assets/placeholders/book02_halfpage.png",
+        "filter_applied": true,
+        "vector_callouts": [
+          { "x": 48, "y": 30, "label": "960 hPa CRITICAL THRESHOLD", "type": "box" }
+        ]
+      },
+      {
+        "id": "b02_asset_03",
+        "title": "Subterranean Surge Chamber Bulkhead",
+        "anchor": "ch02_p01",
+        "placement": "Full-Page Recto Plate",
+        "prompt": "Massive cast-iron subterranean sea-surge chamber bulkhead with 24 heavy dog-latches, pressurized bronze gauges, carbide lantern casting dramatic shadows on wet cavern walls, charcoal and lithograph plate --ar 2:3",
+        "caption": "Plate I: The Twenty-Four Dog-Latches of the Atlantic Siphon Chamber.",
+        "image_url": "/static/assets/placeholders/book02_fullplate.png",
+        "filter_applied": true,
+        "vector_callouts": [
+          { "x": 52, "y": 42, "label": "HIGH-PRESSURE BULKHEAD DOOR", "type": "box" },
+          { "x": 20, "y": 85, "label": "HYDROSTATIC EQUALIZER VALVE", "type": "arrow_up" }
+        ]
+      }
+    ]
+  },
+  "book03": {
+    "book_id": "book03",
+    "assets": [
+      {
+        "id": "b03_asset_01",
+        "title": "Anechoic Wedge Array & Bruel & Kjaer Microphone",
+        "anchor": "ch01_p01",
+        "placement": "Chapter Opener Vignette",
+        "prompt": "Deep sound-dampening acoustic fiberglass wedges covering bunker walls, precision laboratory microphone on isolated vibration-damped tripod, blueprint cyanotype duotone, high contrast technical schematic --ar 16:9",
+        "caption": "Fig. 1.0: Calibration Array in Bunker Zero Anechoic Chamber.",
+        "image_url": "/static/assets/placeholders/book03_vignette.png",
+        "filter_applied": true,
+        "vector_callouts": [
+          { "x": 35, "y": 30, "label": "FIBERGLASS BAFFLE MATRIX", "type": "badge" },
+          { "x": 70, "y": 65, "label": "B&K TYPE 4138 TRANSDUCER", "type": "arrow_left" }
+        ]
+      },
+      {
+        "id": "b03_asset_02",
+        "title": "Otari Master Deck & 42.4 Hz Waveform Trace",
+        "anchor": "ch01_p05",
+        "placement": "Half-Page Top",
+        "prompt": "Vintage 1/2-inch studio reel-to-reel magnetic tape deck with dual VU meters, oscilloscope monitor displaying clean sine wave with harmonic sidebands, cyan architectural blueprint halftone styling --ar 3:2",
+        "caption": "Fig. 1.2: Spectrographic Demodulation of Concrete Transmission Signal.",
+        "image_url": "/static/assets/placeholders/book03_halfpage.png",
+        "filter_applied": true,
+        "vector_callouts": [
+          { "x": 50, "y": 40, "label": "42.40 Hz CARRIER LOCK", "type": "box" }
+        ]
+      },
+      {
+        "id": "b03_asset_03",
+        "title": "Seismic Geophone Pedestal in Dead Vault",
+        "anchor": "ch02_p01",
+        "placement": "Full-Page Recto Plate",
+        "prompt": "Dark subterranean research bunker vault, polished black granite seismic pedestal with sealed aluminum telemetry canister and 4 geophone sensors, blue cathode glow, technical architectural drawing --ar 2:3",
+        "caption": "Plate III: Triaxial Geophone Cluster on Isolated Seismic Base.",
+        "image_url": "/static/assets/placeholders/book03_fullplate.png",
+        "filter_applied": true,
+        "vector_callouts": [
+          { "x": 50, "y": 50, "label": "HERMETIC ALUMINUM CYLINDER", "type": "box" },
+          { "x": 25, "y": 75, "label": "GRANITE ISOLATION BED", "type": "badge" }
+        ]
+      }
+    ]
+  },
+  "book04": {
+    "book_id": "book04",
+    "assets": [
+      {
+        "id": "b04_asset_01",
+        "title": "Combahee Marsh & Drowned Cypress Silhouette",
+        "anchor": "ch01_p01",
+        "placement": "Chapter Opener Vignette",
+        "prompt": "Southern gothic lowcountry marsh at sunset, twisted bald cypress trees draped in Spanish moss, glowing amber bioluminescent taproots emerging from dark pluff mud, 1928 sepia botanical plate engraving --ar 16:9",
+        "caption": "Figure 1: Estuarine Stand of Salt-Adapted Cypress at Low Tide.",
+        "image_url": "/static/assets/placeholders/book04_vignette.png",
+        "filter_applied": true,
+        "vector_callouts": [
+          { "x": 40, "y": 30, "label": "DROWNED BUTTRESS", "type": "badge" },
+          { "x": 65, "y": 75, "label": "BIOLUMINESCENT TAPROOT SHEATH", "type": "arrow_up" }
+        ]
+      },
+      {
+        "id": "b04_asset_02",
+        "title": "Microscopic Cross-Section of Aragonite Xylem",
+        "anchor": "ch01_p06",
+        "placement": "Inline Archival Insert",
+        "prompt": "Botanical micro-photograph engraving of wood xylem vascular bundles filled with geometric hexagonal aragonite crystal needles, warm sepia and glowing amber stippling --ar 1:1",
+        "caption": "Plate 14-B: Radial Aragonite Biomineralization inside Vascular Pores.",
+        "image_url": "/static/assets/placeholders/book04_halfpage.png",
+        "filter_applied": true,
+        "vector_callouts": [
+          { "x": 50, "y": 50, "label": "HEXAGONAL ARAGONITE PRISM", "type": "box" }
+        ]
+      },
+      {
+        "id": "b04_asset_03",
+        "title": "Field Electrometer & Root Galvanic Survey Map",
+        "anchor": "ch02_p01",
+        "placement": "Full-Page Recto Plate",
+        "prompt": "1928 field surveyor map of Saint Jude tidal marsh overlaid with hand-inked equipotential voltage contours, galvanized zinc electrodes, antique galvanometer dial, sepia botanical archival plate --ar 2:3",
+        "caption": "Plate IV: Subterranean Galvanic Root Network Survey (October 1928).",
+        "image_url": "/static/assets/placeholders/book04_fullplate.png",
+        "filter_applied": true,
+        "vector_callouts": [
+          { "x": 35, "y": 35, "label": "SURVEY DATUM -412 mV", "type": "badge" },
+          { "x": 70, "y": 60, "label": "COMBAHEE TIDAL CONFLUENCE", "type": "box" }
+        ]
+      }
+    ]
+  },
+  "book05": {
+    "book_id": "book05",
+    "assets": [
+      {
+        "id": "b05_asset_01",
+        "title": "Sun-Dried Clay Tablet with Cuneiform Inscription",
+        "anchor": "ch01_p01",
+        "placement": "Chapter Opener Vignette",
+        "prompt": "Ancient Mesopotamian clay cuneiform tablet held by cotton-gloved hands under archaeometry laboratory examination lamp, micro-grain desert ochre texture, crisp wedge incisions, museum archival photo style --ar 16:9",
+        "caption": "Fig. 1: Clay Tablet C-88 with Erra Cycle Epigraphic Script.",
+        "image_url": "/static/assets/placeholders/book05_vignette.png",
+        "filter_applied": true,
+        "vector_callouts": [
+          { "x": 50, "y": 35, "label": "OBVERSE LINE 01: [an-za-qàr]", "type": "box" }
+        ]
+      },
+      {
+        "id": "b05_asset_02",
+        "title": "Neutron Activation Gamma Spectrum & Europium Peak",
+        "anchor": "ch01_p05",
+        "placement": "Half-Page Top",
+        "prompt": "Archaeometric laboratory spectrometer readout screen showing gamma-ray energy isotope peaks of europium, barium, and lanthanum, desert terracotta and glowing UV gold tones, clean technical graphic --ar 3:2",
+        "caption": "Figure 2: Trace Rare-Earth Isotope Fingerprint (Eu-152 / Th-232).",
+        "image_url": "/static/assets/placeholders/book05_halfpage.png",
+        "filter_applied": true,
+        "vector_callouts": [
+          { "x": 62, "y": 42, "label": "EUROPIUM-152 ANOMALY (3.1 ppm)", "type": "arrow_left" }
+        ]
+      },
+      {
+        "id": "b05_asset_03",
+        "title": "Nineveh Royal Kiln Core & Charred Cedar Sliver",
+        "anchor": "ch02_p01",
+        "placement": "Full-Page Recto Plate",
+        "prompt": "Detailed archaeometric dissection of an ancient ceramic envelope revealing charred Lebanese cedar wood core with tree rings under UV fluorescent illumination, warm desert ochre and amber glow --ar 2:3",
+        "caption": "Plate V: Radiocarbon-Dated Cedar Splinter (730–640 BCE) Extracted from Core.",
+        "image_url": "/static/assets/placeholders/book05_fullplate.png",
+        "filter_applied": true,
+        "vector_callouts": [
+          { "x": 48, "y": 45, "label": "CHARRED CEDRUS LIBANI CORE", "type": "box" },
+          { "x": 25, "y": 78, "label": "CLAY ENVELOPE STRATA", "type": "badge" }
+        ]
+      }
+    ]
+  }
+}

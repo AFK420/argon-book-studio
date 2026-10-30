@@ -1,0 +1,11 @@
+<svg viewBox="0 0 160 80" class="tailpiece-svg" xmlns="http://www.w3.org/2000/svg">
+            <g transform="translate(80, 40)">
+                <rect x="-35" y="-18" width="70" height="36" rx="3" fill="#1E2229" stroke="#00A896" stroke-width="1.2"/>
+                <!-- Oscillating mercury meniscus -->
+                <path d="M-28,4 Q-14,-10 0,2 Q14,14 28,-4" fill="none" stroke="#FFFFFF" stroke-width="1.5"/>
+                <circle cx="0" cy="2" r="3" fill="#00A896"/>
+                <line x1="-55" y1="0" x2="-35" y2="0" stroke="#1E2229" stroke-width="1.5"/>
+                <line x1="35" y1="0" x2="55" y2="0" stroke="#1E2229" stroke-width="1.5"/>
+                <text x="0" y="-8" fill="#A0AEC0" font-family="monospace" font-size="6" text-anchor="middle">982.4 hPa</text>
+            </g>
+        </svg>

@@ -1,0 +1,12 @@
+<svg viewBox="0 0 160 80" class="tailpiece-svg" xmlns="http://www.w3.org/2000/svg">
+            <g transform="translate(80, 40)">
+                <!-- Intertwined botanical tendrils -->
+                <path d="M-40,15 C-25,5 -15,-20 0,-15 C15,-10 25,15 40,5" fill="none" stroke="#2C402E" stroke-width="1.5"/>
+                <path d="M-40,-5 C-25,-15 -15,10 0,5 C15,0 25,-20 40,-15" fill="none" stroke="#4A6B4E" stroke-width="1.2"/>
+                <circle cx="0" cy="-5" r="4" fill="#D97706"/>
+                <circle cx="-18" cy="2" r="2" fill="#2C402E"/>
+                <circle cx="18" cy="-2" r="2" fill="#2C402E"/>
+                <line x1="-55" y1="0" x2="-40" y2="0" stroke="#2C402E" stroke-width="1"/>
+                <line x1="40" y1="0" x2="55" y2="0" stroke="#2C402E" stroke-width="1"/>
+            </g>
+        </svg>

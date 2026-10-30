@@ -1,0 +1,7 @@
+<svg viewBox="0 0 240 32" class="scene-break-svg" xmlns="http://www.w3.org/2000/svg">
+            <line x1="10" y1="16" x2="60" y2="16" stroke="#0F172A" stroke-width="1.2"/>
+            <!-- Sine pulse dampening -->
+            <path d="M60,16 Q72,-4 84,16 Q96,36 108,16 Q118,4 128,16 Q138,26 148,16 Q156,11 164,16 Q172,19 180,16" fill="none" stroke="#0284C7" stroke-width="1.6" stroke-linecap="round"/>
+            <line x1="180" y1="16" x2="230" y2="16" stroke="#0F172A" stroke-width="1.2"/>
+            <text x="120" y="30" fill="#64748B" font-family="monospace" font-size="6" text-anchor="middle">f = 42.40 Hz</text>
+        </svg>
