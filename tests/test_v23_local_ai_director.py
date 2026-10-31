@@ -134,7 +134,7 @@ def test_ai_director_genre_detection_and_heuristics():
             "elements": [{"type": "paragraph", "id": "ch01_p01", "text": "The vitriol burned slowly in the coroner's chamber."}]
         }]
     }
-    res_gothic = ai_director_manager.analyze_manuscript(gothic_sample, book_id="book01", num_illustrations=8)
+    res_gothic = ai_director_manager._analyze_via_heuristics(gothic_sample, book_id="book01", num_illustrations=8)
     assert res_gothic["theme_preset_key"] == "gaslamp_gothic"
     assert len(res_gothic["assets"]) == 8
 
@@ -148,7 +148,7 @@ def test_ai_director_genre_detection_and_heuristics():
             "elements": [{"type": "paragraph", "id": "ch01_p01", "text": "The brass barometer registered 29 inches above the skerry."}]
         }]
     }
-    res_naut = ai_director_manager.analyze_manuscript(nautical_sample, book_id="book02", num_illustrations=8)
+    res_naut = ai_director_manager._analyze_via_heuristics(nautical_sample, book_id="book02", num_illustrations=8)
     assert res_naut["theme_preset_key"] == "chronometric_thriller"
 
     # Test Cold War Acoustic detection
@@ -161,7 +161,7 @@ def test_ai_director_genre_detection_and_heuristics():
             "elements": [{"type": "paragraph", "id": "ch01_p01", "text": "The magnetic tape hiss registered a 400Hz frequency anomaly."}]
         }]
     }
-    res_acoustic = ai_director_manager.analyze_manuscript(acoustic_sample, book_id="book03", num_illustrations=8)
+    res_acoustic = ai_director_manager._analyze_via_heuristics(acoustic_sample, book_id="book03", num_illustrations=8)
     assert res_acoustic["theme_preset_key"] == "acoustic_coldwar"
 
 

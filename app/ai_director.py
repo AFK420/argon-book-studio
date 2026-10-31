@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 DEFAULT_AI_CONFIG = {
     "provider": "ollama",               # "ollama", "openai_compatible", or "offline_heuristic"
     "endpoint_url": "http://localhost:11434",
-    "model": "llama3.1",
+    "model": "qwen2.5:14b",
     "temperature": 0.4,
-    "timeout_sec": 30.0,
+    "timeout_sec": 90.0,
     "auto_detect_models": True
 }
 
