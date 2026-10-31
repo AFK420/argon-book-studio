@@ -284,6 +284,12 @@
             <button id="filter-chip-ready" class="filter-chip" onclick="setQueueFilter('ready')">✓ Ready & Filtered (0)</button>
             <button id="filter-chip-pending" class="filter-chip" onclick="setQueueFilter('pending')">⏳ Needs Artwork (16)</button>
           </div>
+          <div class="batch-upload-actions">
+            <button class="btn-secondary-action" onclick="document.getElementById('step3-batch-upload-input').click()">
+              📦 Batch Upload Folder / Multiple Images
+            </button>
+            <input type="file" id="step3-batch-upload-input" style="display:none;" multiple accept="image/*" onchange="handleStep3BatchUpload(event)">
+          </div>
         </div>
 
         <!-- Cards Grid -->

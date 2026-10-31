@@ -369,7 +369,8 @@ def parse_markdown_manuscript(content: str) -> Dict[str, Any]:
         "author": book_author,
         "chapters": chapters,
         "total_chapters": len(chapters),
-        "total_paragraphs": sum(len(ch["elements"]) for ch in chapters)
+        "total_paragraphs": sum(len(ch["elements"]) for ch in chapters),
+        "total_words": sum(el.get("word_count", len(el.get("text", "").split())) for ch in chapters for el in ch.get("elements", []))
     }
 
 
@@ -550,5 +551,6 @@ def parse_docx_manuscript(file_path: str) -> Dict[str, Any]:
         "author": book_author,
         "chapters": chapters,
         "total_chapters": len(chapters),
-        "total_paragraphs": sum(len(ch["elements"]) for ch in chapters)
+        "total_paragraphs": sum(len(ch["elements"]) for ch in chapters),
+        "total_words": sum(el.get("word_count", len(el.get("text", "").split())) for ch in chapters for el in ch.get("elements", []))
     }

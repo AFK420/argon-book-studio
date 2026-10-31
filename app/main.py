@@ -361,7 +361,16 @@ async def insert_manuscript_element(book_id: str, payload: Dict[str, Any] = Body
         for idx, el in enumerate(elements):
             if el.get("id") == target_id:
                 ch_idx = ch.get("chapter_index", 1)
-                new_id = f"ch{ch_idx:02d}_p{len(elements) + 1:02d}"
+                existing_nums = []
+                for e in elements:
+                    eid = e.get("id", "")
+                    if eid.startswith(f"ch{ch_idx:02d}_p"):
+                        try:
+                            existing_nums.append(int(eid.split("_p")[1]))
+                        except Exception:
+                            pass
+                next_num = (max(existing_nums) + 1) if existing_nums else (len(elements) + 1)
+                new_id = f"ch{ch_idx:02d}_p{next_num:02d}"
                 
                 if elem_type == "paragraph":
                     new_elem = {
@@ -483,6 +492,11 @@ async def merge_manuscript_element(book_id: str, payload: Dict[str, Any] = Body(
                 prev_text = prev_el.get("text", prev_el.get("content", ""))
                 curr_text = el.get("text", el.get("content", ""))
                 combined_text = f"{prev_text}\n\n{curr_text}".strip()
+                
+                prev_html = prev_el.get("formatted_html")
+                curr_html = el.get("formatted_html")
+                if prev_html or curr_html:
+                    prev_el["formatted_html"] = f"{prev_html or prev_text}<br><br>{curr_html or curr_text}"
                 
                 if prev_el.get("type") == "container":
                     prev_el["content"] = combined_text
@@ -660,6 +674,9 @@ async def auto_style_manuscript(book_id: str):
     # 4. Populate Front Matter & Back Matter defaults for this book
     default_matter = generate_front_matter_data(book_id, manuscript_meta=manuscript)
     settings_manager.update_settings(book_id, {"front_back_matter": default_matter})
+    
+    # 5. Bind manifest anchors against the styled manuscript
+    manifest_manager.bind_anchors_to_manuscript(book_id, manuscript)
     
     manifest = manifest_manager.get_book_manifest(book_id)
     settings = settings_manager.get_settings(book_id)
@@ -1063,6 +1080,19 @@ async def import_manifest_endpoint(
     if not raw_data or (isinstance(raw_data, dict) and raw_data.get("use_builtin")) or raw_data == "builtin":
         # Automatically load the built-in 16-asset blueprint for the selected book
         raw_data = manifest_manager.get_book_manifest(book_id)
+    elif isinstance(raw_data, dict):
+        settings_updates = {}
+        if "typography_overrides" in raw_data and isinstance(raw_data["typography_overrides"], dict):
+            settings_updates["typography_overrides"] = raw_data["typography_overrides"]
+        if any(k in raw_data for k in ["front_matter", "back_matter", "front_back_matter"]):
+            fbm = dict(raw_data.get("front_back_matter", {}))
+            if "front_matter" in raw_data and isinstance(raw_data["front_matter"], dict):
+                fbm.update(raw_data["front_matter"])
+            if "back_matter" in raw_data and isinstance(raw_data["back_matter"], dict):
+                fbm.update(raw_data["back_matter"])
+            settings_updates["front_back_matter"] = fbm
+        if settings_updates:
+            settings_manager.update_settings(book_id, settings_updates)
         
     updated_manifest = manifest_manager.import_manifest(book_id, raw_data, manuscript)
     invalidate_pdf_cache(book_id)
@@ -1231,6 +1261,193 @@ async def upload_asset_image(
     }
 
 
+@app.post("/api/assets/batch-upload/{book_id}")
+async def batch_upload_assets(
+    book_id: str,
+    files: List[UploadFile] = File(...)
+):
+    """
+    Batch Image Uploader for Step 3:
+    Uploads multiple image files at once. Matches each filename to an asset slot:
+    - If filename contains "frontispiece": saves frontispiece, updates front matter & processes 300 DPI raster.
+    - If filename contains "map": saves map, updates front matter & processes 300 DPI raster.
+    - Matches asset_id directly (e.g. "b01_asset_01", "asset_01")
+    - Matches slot number (e.g. 01..16, "plate_01", "slot_02", "ch03")
+    - Matches asset title substring
+    - If unmatched, assigns to next available unfilled asset slot in manifest.
+    For each matched asset, saves raw_image_path, runs process_image at 300 DPI with profile filter and frame style,
+    updates manifest, invalidates PDF cache, and returns summary + updated pagination.
+    """
+    import re
+    profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"])
+    manifest = manifest_manager.get_book_manifest(book_id)
+    assets = manifest.get("assets", [])
+    
+    processed = []
+    unmatched = []
+    assigned_asset_ids = set()
+    
+    for f in files:
+        filename = f.filename or "uploaded_image.png"
+        fn_lower = filename.lower()
+        fn_stem = os.path.splitext(fn_lower)[0]
+        
+        # Check if frontispiece
+        if "frontispiece" in fn_stem:
+            disk_path = os.path.join(UPLOADS_DIR, f"{book_id}_frontispiece_{filename}")
+            with open(disk_path, "wb") as buffer:
+                shutil.copyfileobj(f.file, buffer)
+            web_url = f"/uploads/{book_id}_frontispiece_{filename}"
+            dpi300_path = os.path.join(STATIC_DIR, "assets", "placeholders", f"{book_id}_frontispiece_300dpi.png")
+            try:
+                process_image(
+                    input_image_path=disk_path,
+                    output_image_path=dpi300_path,
+                    filter_preset=profile.get("filter_preset", "cyanotype_silver_plate"),
+                    placement_type="Full Bleed Plate",
+                    profile_id=book_id,
+                    target_dpi=300
+                )
+            except Exception:
+                pass
+            settings = settings_manager.get_settings(book_id)
+            fbm = settings.get("front_back_matter", {})
+            fbm["frontispiece_image_url"] = web_url
+            fbm["include_frontispiece"] = True
+            settings_manager.update_settings(book_id, {"front_back_matter": fbm})
+            processed.append({"filename": filename, "type": "frontispiece", "image_url": web_url})
+            continue
+
+        # Check if map
+        if "map" in fn_stem:
+            disk_path = os.path.join(UPLOADS_DIR, f"{book_id}_map_{filename}")
+            with open(disk_path, "wb") as buffer:
+                shutil.copyfileobj(f.file, buffer)
+            web_url = f"/uploads/{book_id}_map_{filename}"
+            dpi300_path = os.path.join(STATIC_DIR, "assets", "placeholders", f"{book_id}_map_300dpi.png")
+            try:
+                process_image(
+                    input_image_path=disk_path,
+                    output_image_path=dpi300_path,
+                    filter_preset=profile.get("filter_preset", "cyanotype_silver_plate"),
+                    placement_type="Full Bleed Plate",
+                    profile_id=book_id,
+                    target_dpi=300
+                )
+            except Exception:
+                pass
+            settings = settings_manager.get_settings(book_id)
+            fbm = settings.get("front_back_matter", {})
+            fbm["map_image_url"] = web_url
+            fbm["include_map"] = True
+            settings_manager.update_settings(book_id, {"front_back_matter": fbm})
+            processed.append({"filename": filename, "type": "map", "image_url": web_url})
+            continue
+
+        # Match to asset slot
+        target_asset = None
+        # 1. Exact or substring asset id
+        for a in assets:
+            aid = a.get("id", "").lower()
+            if aid and (aid == fn_stem or aid in fn_stem):
+                target_asset = a
+                break
+
+        # 2. Number pattern: e.g. "asset_01", "01", "slot_2", "plate-03", "ch04"
+        if not target_asset:
+            nums = re.findall(r'(\d+)', fn_stem)
+            if nums:
+                for n_str in nums:
+                    num_val = int(n_str)
+                    for idx, a in enumerate(assets, 1):
+                        aid = a.get("id", "").lower()
+                        aid_nums = re.findall(r'(\d+)$', aid)
+                        if (aid_nums and int(aid_nums[0]) == num_val) or idx == num_val:
+                            if a.get("id") not in assigned_asset_ids:
+                                target_asset = a
+                                break
+                    if target_asset:
+                        break
+
+        # 3. Title substring
+        if not target_asset:
+            for a in assets:
+                t = a.get("title", "").lower()
+                if len(t) > 3 and t in fn_stem:
+                    if a.get("id") not in assigned_asset_ids:
+                        target_asset = a
+                        break
+
+        # 4. Fallback: first unassigned asset slot
+        if not target_asset:
+            for a in assets:
+                aid = a.get("id")
+                if aid not in assigned_asset_ids and not a.get("raw_image_path"):
+                    target_asset = a
+                    break
+
+        if target_asset:
+            aid = target_asset["id"]
+            assigned_asset_ids.add(aid)
+            temp_upload_path = os.path.join(UPLOADS_DIR, f"raw_{book_id}_{aid}_{filename}")
+            with open(temp_upload_path, "wb") as buffer:
+                shutil.copyfileobj(f.file, buffer)
+
+            filtered_name = f"{aid}_print300.png"
+            out_path = os.path.join(STATIC_DIR, "assets", "placeholders", filtered_name)
+            frame_style = target_asset.get("frame_style", "none")
+            
+            process_image(
+                input_image_path=temp_upload_path,
+                output_image_path=out_path,
+                filter_preset=profile.get("filter_preset", "cyanotype_silver_plate"),
+                placement_type=target_asset.get("placement", "Half-Page Top"),
+                callouts=target_asset.get("vector_callouts", []),
+                profile_id=book_id,
+                frame_style=frame_style,
+                target_dpi=300
+            )
+
+            web_url = f"/static/assets/placeholders/{filtered_name}"
+            manifest_manager.update_asset(book_id, aid, {
+                "image_url": web_url,
+                "raw_image_path": temp_upload_path,
+                "filter_applied": True
+            })
+            processed.append({
+                "filename": filename,
+                "asset_id": aid,
+                "image_url": web_url,
+                "raw_image_path": temp_upload_path
+            })
+        else:
+            unmatched.append(filename)
+
+    invalidate_pdf_cache(book_id)
+    parsed = load_book_manuscript(book_id)
+    updated_manifest = manifest_manager.get_book_manifest(book_id)
+    updated_settings = settings_manager.get_settings(book_id)
+    tailpieces = STATE["auto_tailpieces"].get(book_id, {})
+    pagination = paginate_manuscript(
+        parsed,
+        updated_manifest,
+        book_id,
+        auto_tailpieces=tailpieces,
+        custom_specs=updated_settings,
+        custom_matter=updated_settings.get("front_back_matter")
+    )
+
+    return {
+        "status": "success",
+        "processed_count": len(processed),
+        "unmatched_count": len(unmatched),
+        "processed": processed,
+        "unmatched": unmatched,
+        "manifest": updated_manifest,
+        "pagination": pagination
+    }
+
+
 @app.post("/api/matter/upload-image/{book_id}/{image_type}")
 async def upload_matter_image(
     book_id: str,
@@ -1246,6 +1463,21 @@ async def upload_matter_image(
         shutil.copyfileobj(file.file, buffer)
         
     web_url = f"/uploads/{book_id}_{image_type}_{filename}"
+    
+    # Process 300 DPI version for high-res print export
+    dpi300_path = os.path.join(STATIC_DIR, "assets", "placeholders", f"{book_id}_{image_type}_300dpi.png")
+    profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES.get("book01", {}))
+    try:
+        process_image(
+            input_image_path=disk_path,
+            output_image_path=dpi300_path,
+            filter_preset=profile.get("filter_preset", "cyanotype_silver_plate"),
+            placement_type="Full Bleed Plate",
+            profile_id=book_id,
+            target_dpi=300
+        )
+    except Exception as e:
+        print(f"Warning: could not process 300 DPI matter image: {e}")
     
     settings = settings_manager.get_settings(book_id)
     fbm = settings.get("front_back_matter", {})

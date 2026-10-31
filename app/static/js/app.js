@@ -681,6 +681,44 @@ async function uploadQueueImage(assetId, file) {
   renderStep3();
 }
 
+async function handleStep3BatchUpload(event) {
+  const files = event.target.files;
+  if (!files || files.length === 0) return;
+
+  showToast(`Uploading & processing ${files.length} images at 300 DPI...`, "info");
+  const formData = new FormData();
+  for (let i = 0; i < files.length; i++) {
+    formData.append("files", files[i]);
+  }
+
+  try {
+    const res = await fetch(`/api/assets/batch-upload/${state.activeBookId}`, {
+      method: "POST",
+      body: formData
+    });
+    const data = await res.json();
+    if (data.status === "success") {
+      showToast(`Batch processed: ${data.processed_count} artwork files filtered at 300 DPI!`, "success");
+      if (data.manifest) {
+        state.manifest = data.manifest;
+      }
+      if (data.pagination) {
+        state.pagination = data.pagination;
+      }
+      renderAll();
+      if (state.currentStep === 3) {
+        renderStep3();
+      }
+    } else {
+      showToast(`Batch upload error: ${data.detail || "Failed to process images"}`, "error");
+    }
+  } catch (err) {
+    showToast(`Batch upload failed: ${err.message}`, "error");
+  } finally {
+    event.target.value = "";
+  }
+}
+
 function copyPromptText(text, btn) {
   if (!text) return;
   navigator.clipboard.writeText(text).then(() => {

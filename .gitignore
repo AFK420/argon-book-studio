@@ -31,5 +31,6 @@ tmp_test/
 code_v2.txt
 app/static/assets/placeholders/*_custom_filtered.png
 app/static/assets/placeholders/*_print300.png
+app/static/assets/placeholders/*_300dpi.png
 
 

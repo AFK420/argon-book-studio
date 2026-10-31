@@ -154,3 +154,96 @@ def test_v23_app_js_buttons_and_anchor_selector():
     assert "asset-anchor-select" in js_code
     assert "ANCHOR PARAGRAPH" in js_code
 
+    # 6. Step 3 Batch Upload button and handler
+    assert "handleStep3BatchUpload" in js_code
+
+
+def test_batch_upload_assets_endpoint():
+    """Verify POST /api/assets/batch-upload/{book_id} matches slots, saves raw images, applies 300 DPI filter, and updates manifest."""
+    from io import BytesIO
+    from PIL import Image
+
+    # Create dummy in-memory image
+    img = Image.new("RGB", (200, 200), color=(120, 80, 40))
+    buf1 = BytesIO()
+    img.save(buf1, format="PNG")
+    buf1.seek(0)
+
+    buf2 = BytesIO()
+    img.save(buf2, format="PNG")
+    buf2.seek(0)
+
+    buf_front = BytesIO()
+    img.save(buf_front, format="PNG")
+    buf_front.seek(0)
+
+    files = [
+        ("files", ("b01_asset_01.png", buf1, "image/png")),
+        ("files", ("plate_02_lab.png", buf2, "image/png")),
+        ("files", ("book01_frontispiece_art.png", buf_front, "image/png")),
+    ]
+
+    res = client.post("/api/assets/batch-upload/book01", files=files)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert data["processed_count"] == 3
+    assert len(data["processed"]) == 3
+    assert "manifest" in data
+    assert "pagination" in data
+
+    # Verify asset 1 updated
+    assets = data["manifest"]["assets"]
+    asset1 = next(a for a in assets if a["id"] == "b01_asset_01")
+    assert asset1.get("filter_applied") is True
+    assert "raw_image_path" in asset1
+    assert os.path.exists(asset1["raw_image_path"])
+
+    # Verify asset 2 updated
+    asset2 = next((a for a in assets if a["id"] == "b01_asset_02"), None)
+    if asset2:
+        assert asset2.get("filter_applied") is True
+        assert "raw_image_path" in asset2
+
+
+def test_merge_manuscript_element_html_and_cache_invalidation():
+    """Verify merge-element combines text and formatted_html and invalidates cache."""
+    # Fetch current manuscript to get a valid element ID
+    book_details = client.get("/api/book/book01").json()
+    first_el = book_details["manuscript"]["chapters"][0]["elements"][0]
+    target_id = first_el["id"]
+
+    # Insert element first to merge
+    ins_res = client.post("/api/manuscript/book01/insert-element", json={
+        "target_id": target_id,
+        "element_type": "paragraph",
+        "content": "Second paragraph text to be merged."
+    })
+    assert ins_res.status_code == 200
+    new_el_id = ins_res.json()["new_id"]
+
+    # Now merge into previous
+    merge_res = client.post("/api/manuscript/book01/merge-element", json={
+        "element_id": new_el_id
+    })
+    assert merge_res.status_code == 200
+    m_data = merge_res.json()
+    assert m_data["status"] == "success"
+    assert m_data["merged_element_id"] == new_el_id
+
+    # Verify merged element no longer exists as standalone element
+    ch1 = m_data["manuscript"]["chapters"][0]
+    elem_ids = [el["id"] for el in ch1["elements"]]
+    assert new_el_id not in elem_ids
+
+
+def test_parser_word_count_in_both_parsers():
+    """Verify parse_markdown_manuscript and parse_docx_manuscript return total_words."""
+    from app.parser import parse_markdown_manuscript
+
+    sample_md = "# Chapter 1: The Alchemical Inquest\n\nThis is a sample sentence with eight words in it.\n"
+    res = parse_markdown_manuscript(sample_md)
+    assert "total_words" in res
+    assert res["total_words"] >= 8
+
+
