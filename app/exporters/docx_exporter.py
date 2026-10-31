@@ -65,7 +65,15 @@ def export_docx(
     indent = float(cs.get("typography", {}).get("subsequent_p_indent_in", cs.get("subsequent_p_indent_in", specs["grid_rules"]["subsequent_p_indent_in"])))
     font_name = cs.get("typography", {}).get("body_font_name", profile["body_font_name"])
     body_size = float(cs.get("typography", {}).get("body_font_size_pt", cs.get("body_font_size_pt", 10.5)))
+    line_height = float(cs.get("typography", {}).get("line_height", cs.get("line_height", 1.36)))
+    para_spacing_pt = float(cs.get("typography", {}).get("para_spacing_pt", cs.get("para_spacing_pt", 0.0)))
     
+    b_title = cm.get("book_title") or parsed_book.get("title", profile["title"])
+    b_subtitle = cm.get("book_subtitle") or parsed_book.get("subtitle", profile["subtitle"])
+    b_author = cm.get("author_name") or parsed_book.get("author", profile["author"])
+    b_year = str(cm.get("copyright_year") or "2026")
+    b_isbn = cm.get("isbn") or cm.get("isbn_hardcover") or "978-1-987654-32-1"
+
     doc = docx.Document()
     
     section = doc.sections[0]
@@ -105,7 +113,7 @@ def export_docx(
             p_half = doc.add_paragraph()
             p_half.alignment = WD_ALIGN_PARAGRAPH.CENTER
             p_half.paragraph_format.space_before = Inches(2.5)
-            run_h = p_half.add_run(parsed_book.get("title", profile["title"]).upper())
+            run_h = p_half.add_run((cm.get("half_title_text") or b_title).upper())
             run_h.font.size = Pt(14)
             run_h.font.bold = True
             run_h.font.name = font_name
@@ -115,14 +123,14 @@ def export_docx(
             p_t1 = doc.add_paragraph()
             p_t1.alignment = WD_ALIGN_PARAGRAPH.CENTER
             p_t1.paragraph_format.space_before = Inches(1.5)
-            r_t1 = p_t1.add_run(parsed_book.get("title", profile["title"]))
+            r_t1 = p_t1.add_run(b_title)
             r_t1.font.size = Pt(22)
             r_t1.font.bold = True
             r_t1.font.name = font_name
 
             p_t2 = doc.add_paragraph()
             p_t2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            r_t2 = p_t2.add_run(parsed_book.get("subtitle", profile["subtitle"]))
+            r_t2 = p_t2.add_run(b_subtitle)
             r_t2.font.size = Pt(12)
             r_t2.font.italic = True
             r_t2.font.name = font_name
@@ -136,7 +144,7 @@ def export_docx(
             p_t4 = doc.add_paragraph()
             p_t4.alignment = WD_ALIGN_PARAGRAPH.CENTER
             p_t4.paragraph_format.space_before = Inches(0.8)
-            r_t4 = p_t4.add_run(parsed_book.get("author", profile["author"]))
+            r_t4 = p_t4.add_run(b_author)
             r_t4.font.size = Pt(12)
             r_t4.font.bold = True
             r_t4.font.name = font_name
@@ -151,16 +159,15 @@ def export_docx(
             doc.add_page_break()
 
         if cm.get("include_copyright", True):
-            isbn_hc = cm.get("isbn_hardcover", "978-1-987654-32-1")
             p_c1 = doc.add_paragraph()
             p_c1.paragraph_format.space_before = Inches(4.0)
-            r_c1 = p_c1.add_run(f"{parsed_book.get('title', profile['title'])}\n")
+            r_c1 = p_c1.add_run(f"{b_title}\n")
             r_c1.bold = True
             r_c1.font.size = Pt(9)
             r_c2 = p_c1.add_run(
-                f"Copyright © 2026 by {parsed_book.get('author', profile['author'])}\n"
+                f"Copyright © {b_year} by {b_author}\n"
                 "All rights reserved. First Illustrated Edition.\n"
-                f"ISBN {isbn_hc} (Fine Edition)\n\n"
+                f"ISBN {b_isbn} (Fine Edition)\n\n"
                 f"Typeset in {font_name} on {trim_w:.1f} x {trim_h:.1f}\" signatures."
             )
             r_c2.font.size = Pt(8.5)
@@ -253,7 +260,10 @@ def export_docx(
                 
                 if local_file:
                     try:
-                        p_img.add_run().add_picture(local_file, width=Inches(max(3.0, trim_w - 1.8)))
+                        content_w = max(2.5, trim_w - gutter - outside)
+                        width_pct = float(asset.get("width_pct", 100)) / 100.0
+                        pic_width = Inches(content_w * width_pct)
+                        p_img.add_run().add_picture(local_file, width=pic_width)
                     except Exception:
                         p_img.add_run(f"[ILLUSTRATION: {asset.get('title', '')}]").italic = True
                 else:
@@ -286,8 +296,8 @@ def export_docx(
                 
                 p = doc.add_paragraph()
                 p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-                p.paragraph_format.space_after = Pt(0)
-                p.paragraph_format.line_spacing = 1.25
+                p.paragraph_format.space_after = Pt(para_spacing_pt)
+                p.paragraph_format.line_spacing = line_height
                 if elem.get("page_break_before"):
                     p.paragraph_format.page_break_before = True
                 if elem.get("keep_with_next"):
@@ -365,7 +375,19 @@ def export_docx(
         p_gl.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p_gl.paragraph_format.space_before = Inches(2.0)
         p_gl.add_run(f"{cm.get('glossary_title', 'GLOSSARY')}\n\n").bold = True
-        for g in cm.get("glossary_terms", []):
+        raw_g = cm.get("glossary_terms", [])
+        if isinstance(raw_g, str):
+            g_list = []
+            for l in raw_g.splitlines():
+                if ":" in l:
+                    pts = l.split(":", 1)
+                    g_list.append({"term": pts[0].strip(), "definition": pts[1].strip()})
+                elif "—" in l:
+                    pts = l.split("—", 1)
+                    g_list.append({"term": pts[0].strip(), "definition": pts[1].strip()})
+        else:
+            g_list = raw_g
+        for g in g_list:
             p_gt = doc.add_paragraph()
             p_gt.add_run(f"{g.get('term', '')}: ").bold = True
             p_gt.add_run(g.get("definition", ""))

@@ -42,6 +42,34 @@ TAG_TO_BLOCK_TYPE = {
 }
 
 
+CONTAINER_BLOCK_TYPES = {
+    "audio_transcript", "welsh_slate", "inworld_writ",
+    "archival_journal", "cuneiform_clause", "scientific_formula"
+}
+
+
+def merge_consecutive_containers(elements: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Groups consecutive transcript/cuneiform/writ/slate lines into a single unified container block."""
+    merged: List[Dict[str, Any]] = []
+    for el in elements:
+        btype = el.get("block_type")
+        if merged and btype in CONTAINER_BLOCK_TYPES and merged[-1].get("block_type") == btype:
+            prev = merged[-1]
+            prev["text"] = prev.get("text", "") + "\n" + el.get("text", "")
+            prev["content"] = prev.get("content", "") + "\n" + el.get("content", "")
+            prev_html = prev.get("formatted_html") or prev.get("text", "")
+            curr_html = el.get("formatted_html") or el.get("text", "")
+            prev["formatted_html"] = f"{prev_html}<br>{curr_html}"
+            prev["word_count"] = len(prev["text"].split())
+            if el.get("page_break_before"):
+                prev["page_break_before"] = True
+            if el.get("scene_break_after") and el["scene_break_after"] != "none":
+                prev["scene_break_after"] = el["scene_break_after"]
+        else:
+            merged.append(el)
+    return merged
+
+
 def markdown_inline_to_html(text: str) -> str:
     """Converts inline markdown (bold, italic, sub, sup, code) to safe HTML."""
     escaped = html.escape(text)
@@ -171,7 +199,7 @@ def parse_markdown_manuscript(content: str) -> Dict[str, Any]:
         stripped = line.strip()
 
         # Check for book metadata header at very beginning
-        if not current_chapter and stripped.startswith("# ") and book_title == "Untitled Manuscript":
+        if not current_chapter and stripped.startswith("# ") and not stripped.startswith("# Chapter") and book_title == "Untitled Manuscript":
             book_title = stripped[2:].strip()
             continue
         elif not current_chapter and (
@@ -310,6 +338,9 @@ def parse_markdown_manuscript(content: str) -> Dict[str, Any]:
                 "scene_break_after": "none",
                 "word_count": len(stripped.split())
             })
+
+    for ch in chapters:
+        ch["elements"] = merge_consecutive_containers(ch.get("elements", []))
 
     if not chapters:
         chapters = [{
@@ -489,6 +520,9 @@ def parse_docx_manuscript(file_path: str) -> Dict[str, Any]:
             "scene_break_after": "none",
             "word_count": len(text.split())
         })
+
+    for ch in chapters:
+        ch["elements"] = merge_consecutive_containers(ch.get("elements", []))
 
     if not chapters:
         chapters = [{

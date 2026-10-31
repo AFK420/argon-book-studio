@@ -152,13 +152,20 @@ def paginate_manuscript(
     # FRONT MATTER PAGES
     if include_front_matter:
         # Half-Title
+        # Half-Title
+        b_title = cm.get("book_title") or parsed_book.get("title", profile["title"])
+        b_subtitle = cm.get("book_subtitle") or parsed_book.get("subtitle", profile["subtitle"])
+        b_author = cm.get("author_name") or parsed_book.get("author", profile["author"])
+        b_year = str(cm.get("copyright_year") or "2026")
+        b_isbn = cm.get("isbn") or cm.get("isbn_hardcover") or "978-1-987654-32-1"
+
         if cm.get("include_half_title", True):
             p1 = BookPage(page_number=current_page_num, page_type="front_matter")
             p1.suppress_header = True
             p1.suppress_footer = True
             p1.elements.append({
                 "type": "half_title",
-                "title": parsed_book.get("title", profile["title"])
+                "title": cm.get("half_title_text") or b_title
             })
             pages.append(p1)
             current_page_num += 1
@@ -170,7 +177,9 @@ def paginate_manuscript(
             p2.suppress_footer = True
             p2.elements.append({
                 "type": "frontispiece",
-                "subtitle": parsed_book.get("subtitle", profile["subtitle"]),
+                "title": b_title,
+                "subtitle": cm.get("frontispiece_subtitle") or b_subtitle,
+                "image_url": cm.get("frontispiece_image_url"),
                 "ornament_svg": profile["scene_break_svg"]
             })
             pages.append(p2)
@@ -183,9 +192,9 @@ def paginate_manuscript(
             p3.suppress_footer = True
             p3.elements.append({
                 "type": "title_page",
-                "title": parsed_book.get("title", profile["title"]),
-                "subtitle": parsed_book.get("subtitle", profile["subtitle"]),
-                "author": parsed_book.get("author", profile["author"]),
+                "title": b_title,
+                "subtitle": b_subtitle,
+                "author": b_author,
                 "imprint": cm.get("publisher_imprint", "THE ARGON BOOK STUDIO • PRESS")
             })
             pages.append(p3)
@@ -198,10 +207,10 @@ def paginate_manuscript(
             p4.suppress_footer = True
             p4.elements.append({
                 "type": "copyright_page",
-                "title": parsed_book.get("title", profile["title"]),
-                "author": parsed_book.get("author", profile["author"]),
-                "year": "2026",
-                "isbn": cm.get("isbn_hardcover", "978-1-987654-32-1"),
+                "title": b_title,
+                "author": b_author,
+                "year": b_year,
+                "isbn": b_isbn,
                 "colophon_summary": f"Designed and typeset using the Argon Universal Publishing Engine. Font family: {profile['body_font_name']} and {profile['display_font_name']}."
             })
             pages.append(p4)
@@ -257,6 +266,7 @@ def paginate_manuscript(
                 "type": "map_plate",
                 "title": cm.get("map_title", "Archival Chart & Survey Map"),
                 "caption": cm.get("map_caption", "Hydrographic Soundings & Survey of the Ghyll Skerries."),
+                "image_url": cm.get("map_image_url") or "/static/assets/placeholders/book01_vignette.png",
                 "ornament_svg": profile["scene_break_svg"]
             })
             pages.append(p_map)
@@ -562,10 +572,23 @@ def paginate_manuscript(
         p_glo = BookPage(page_number=current_page_num, page_type="glossary")
         p_glo.suppress_header = True
         p_glo.suppress_footer = True
+        raw_glo = cm.get("glossary_terms", [])
+        if isinstance(raw_glo, str):
+            parsed_glo = []
+            for line in raw_glo.splitlines():
+                if ":" in line:
+                    parts = line.split(":", 1)
+                    parsed_glo.append({"term": parts[0].strip(), "definition": parts[1].strip()})
+                elif "—" in line:
+                    parts = line.split("—", 1)
+                    parsed_glo.append({"term": parts[0].strip(), "definition": parts[1].strip()})
+            glo_terms = parsed_glo
+        else:
+            glo_terms = raw_glo or []
         p_glo.elements.append({
             "type": "glossary",
             "title": cm.get("glossary_title", "Glossary of Technical & In-World Terms"),
-            "terms": cm.get("glossary_terms", [])
+            "terms": glo_terms
         })
         pages.append(p_glo)
         current_page_num += 1
@@ -577,7 +600,7 @@ def paginate_manuscript(
         p_ack.elements.append({
             "type": "acknowledgements",
             "title": "Acknowledgements",
-            "text": cm.get("acknowledgements_text", "")
+            "text": cm.get("acknowledgements_text", "With special gratitude to our epigraphers and archivists.")
         })
         pages.append(p_ack)
         current_page_num += 1
@@ -589,7 +612,7 @@ def paginate_manuscript(
         p_aut.elements.append({
             "type": "about_author",
             "title": "About the Author",
-            "text": cm.get("about_author_text", "")
+            "text": cm.get("about_author_text", "The authors and artists of Argon Book Studio.")
         })
         pages.append(p_aut)
         current_page_num += 1
@@ -600,12 +623,12 @@ def paginate_manuscript(
         colophon_page.suppress_footer = True
         colophon_page.elements.append({
             "type": "colophon",
-            "title": parsed_book.get("title", profile["title"]),
-            "author": parsed_book.get("author", profile["author"]),
+            "title": cm.get("book_title") or parsed_book.get("title", profile["title"]),
+            "author": cm.get("author_name") or parsed_book.get("author", profile["author"]),
             "body_font": profile["body_font_name"],
             "display_font": profile["display_font_name"],
             "printer": "The Argon Studio Desktop Publishing Engine (Python + WeasyPrint/Pandoc)",
-            "specs": f"{trim_w:.1f} x {trim_h:.1f} in, Mirrored Margins ({gutter:.3f}in / {outside:.3f}in)."
+            "specs": cm.get("colophon_text") or f"{trim_w:.1f} x {trim_h:.1f} in, Mirrored Margins ({gutter:.3f}in / {outside:.3f}in)."
         })
         pages.append(colophon_page)
         current_page_num += 1

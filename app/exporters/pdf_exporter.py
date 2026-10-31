@@ -2,22 +2,39 @@
 Argon Book Studio - Print-Ready PDF Exporter.
 Renders book manuscripts with exact book-production rules:
 - Trim Size: configurable (default 6.0 in x 9.0 in) with optional +0.125 in bleed toggle.
-- Mirrored print margins (@page :left inside gutter, outside margin; @page :right inside, outside).
-- Strict widow/orphan control (orphans: 3; widows: 3).
+- Mirrored print margins (inside gutter vs outside margin, top, bottom).
+- Strict widow/orphan control.
 - First paragraph text-indent: 0; subsequent body paragraphs text-indent: 0.25in.
 - Optical margin alignment (hanging-punctuation: first last).
 - Verso running header: Book Title in tracked small-caps.
 - Recto running header: Chapter Number & Title in tracked small-caps.
-- Header/footer suppression on @page :first, front matter, chapter opening pages, full plates, blank pages.
+- Header/footer suppression on front matter, chapter opening pages, full plates, blank pages.
 - Chapter openings with top sinkage.
-- Respects dynamic custom geometry, typography, and extended matter.
+- Headless Chromium/Edge physical page container model (<div class="physical-pdf-page">)
+  driven directly by paginate_manuscript() for 100% WYSIWYG parity.
 """
 
 import os
 import subprocess
-import tempfile
 from typing import Dict, Any, List, Optional
 from app.profiles import BOOK_PROFILES, UNIVERSAL_PUBLISHING_SPECS
+from app.paginator import paginate_manuscript
+
+
+def _resolve_image_src(img_path: str) -> str:
+    if not img_path:
+        return ""
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    root_dir = os.path.abspath(os.path.join(base_dir, ".."))
+    if img_path.startswith("/static/"):
+        local_path = os.path.join(base_dir, img_path.lstrip("/")).replace("\\", "/")
+        return f"file:///{local_path}"
+    elif img_path.startswith("/uploads/"):
+        local_path = os.path.join(root_dir, img_path.lstrip("/")).replace("\\", "/")
+        return f"file:///{local_path}"
+    elif os.path.isabs(img_path) or (len(img_path) > 1 and img_path[1] == ":"):
+        return f"file:///{img_path.replace(chr(92), '/')}"
+    return img_path
 
 
 def generate_pdf_html(
@@ -63,86 +80,32 @@ def generate_pdf_html(
     para_spacing_pt = float(cs.get("typography", {}).get("para_spacing_pt", 0.0))
     letter_spacing_em = float(cs.get("typography", {}).get("letter_spacing_em", 0.0))
 
-    if rh_style == "Hidden":
-        left_top_rule = "@top-center { content: none; } @top-left { content: none; } @top-right { content: none; }"
-        right_top_rule = "@top-center { content: none; } @top-left { content: none; } @top-right { content: none; }"
-    elif rh_style == "Small Caps Outer":
-        left_top_rule = f'@top-left {{ content: "{running_header_text}"; font-family: {body_font}; font-size: 8.5pt; letter-spacing: 0.14em; text-transform: uppercase; }} @top-center {{ content: none; }}'
-        right_top_rule = f'@top-right {{ content: string(chapter-title); font-family: {body_font}; font-size: 8.5pt; letter-spacing: 0.14em; text-transform: uppercase; }} @top-center {{ content: none; }}'
-    elif rh_style == "Rule Underlined":
-        left_top_rule = f'@top-center {{ content: "{running_header_text}"; font-family: {body_font}; font-size: 8.5pt; letter-spacing: 0.14em; text-transform: uppercase; border-bottom: 0.5pt solid #777; padding-bottom: 3pt; }}'
-        right_top_rule = f'@top-center {{ content: string(chapter-title); font-family: {body_font}; font-size: 8.5pt; letter-spacing: 0.14em; text-transform: uppercase; border-bottom: 0.5pt solid #777; padding-bottom: 3pt; }}'
-    else: # Small Caps Centered
-        left_top_rule = f'@top-center {{ content: "{running_header_text}"; font-family: {body_font}; font-size: 8.5pt; letter-spacing: 0.14em; text-transform: uppercase; }}'
-        right_top_rule = f'@top-center {{ content: string(chapter-title); font-family: {body_font}; font-size: 8.5pt; letter-spacing: 0.14em; text-transform: uppercase; }}'
-
     drop_cap_extra = ""
     if drop_cap_style == "Boxed Rule":
         drop_cap_extra = "border: 1px solid #B8860B; padding: 2pt 5pt; background: #FAF6EE; margin-right: 5pt;"
     elif drop_cap_style == "Botanical/Ornate":
         drop_cap_extra = "font-style: italic; font-family: 'Cormorant Garamond', Georgia, serif; color: #2C402E; margin-right: 4pt;"
 
-    assets_by_anchor: Dict[str, List[Dict[str, Any]]] = {}
-    for a in manifest.get("assets", []):
-        assets_by_anchor.setdefault(a.get("anchor", ""), []).append(a)
+    # Run pagination simulation to drive physical page rendering
+    paginated_res = paginate_manuscript(
+        parsed_book,
+        manifest,
+        profile_id,
+        include_front_matter=include_front_matter,
+        custom_specs=cs,
+        custom_matter=cm
+    )
+    pages = paginated_res.get("pages", [])
 
     css = f"""
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&family=Lora:ital,wght@0,400;0,600;1,400&family=Oswald:wght@400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap');
 
     @page {{
         size: {width_in}in {height_in}in;
-        orphans: 3;
-        widows: 3;
-        hanging-punctuation: first last;
         margin: 0;
     }}
 
-    @page :left {{
-        margin-top: {top}in;
-        margin-bottom: {bottom}in;
-        margin-left: {outside}in;
-        margin-right: {gutter}in;
-        {left_top_rule}
-        @bottom-center {{
-            content: counter(page);
-            font-family: {body_font};
-            font-size: 8.5pt;
-        }}
-    }}
-
-    @page :right {{
-        margin-top: {top}in;
-        margin-bottom: {bottom}in;
-        margin-left: {gutter}in;
-        margin-right: {outside}in;
-        {right_top_rule}
-        @bottom-center {{
-            content: counter(page);
-            font-family: {body_font};
-            font-size: 8.5pt;
-        }}
-    }}
-
-    @page chapter-page {{
-        margin-top: {top}in;
-        margin-bottom: {bottom}in;
-        @top-center {{ content: none; }}
-        @bottom-center {{ content: counter(page); }}
-    }}
-
-    @page no-header-footer {{
-        margin: {top}in {outside}in {bottom}in {gutter}in;
-        @top-center {{ content: none; }}
-        @bottom-center {{ content: none; }}
-    }}
-
-    @page full-bleed-plate {{
-        margin: 0;
-        @top-center {{ content: none; }}
-        @bottom-center {{ content: none; }}
-    }}
-
-    body {{
+    html, body {{
         margin: 0;
         padding: 0;
         font-family: {body_font};
@@ -151,61 +114,89 @@ def generate_pdf_html(
         color: #1a1a1a;
         background-color: #fff;
         text-rendering: optimizeLegibility;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }}
 
-    .suppress-all {{
-        page: no-header-footer;
-        page-break-before: always;
+    .physical-pdf-page {{
+        width: {width_in}in;
+        height: {height_in}in;
         page-break-after: always;
-    }}
-
-    .chapter-start {{
-        page: chapter-page;
-        page-break-before: always;
-        padding-top: {sinkage}in;
-        string-set: chapter-title attr(data-chapter-title);
-    }}
-
-    .full-plate-page {{
-        page: full-bleed-plate;
-        page-break-before: always;
-        page-break-after: always;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+        break-after: page;
+        position: relative;
         box-sizing: border-box;
-        padding: 0.5in;
+        overflow: hidden;
+        background-color: {paper_tint or '#fff'};
     }}
 
-    .full-plate-page img {{
-        max-width: 95%;
-        max-height: 80%;
-        object-fit: contain;
-        border: 1px solid #333;
+    .physical-pdf-page.page-verso {{
+        padding-top: {top}in;
+        padding-bottom: {bottom}in;
+        padding-left: {outside}in;
+        padding-right: {gutter}in;
     }}
 
-    .plate-caption {{
-        margin-top: 14pt;
+    .physical-pdf-page.page-recto {{
+        padding-top: {top}in;
+        padding-bottom: {bottom}in;
+        padding-left: {gutter}in;
+        padding-right: {outside}in;
+    }}
+
+    .physical-pdf-page.page-full-plate {{
+        padding: 0 !important;
+    }}
+
+    .pdf-running-header {{
+        position: absolute;
+        top: {top * 0.35}in;
+        height: {top * 0.55}in;
+        line-height: {top * 0.55}in;
         font-family: {body_font};
-        font-size: 9pt;
-        font-style: italic;
+        font-size: 8.5pt;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #555;
+        box-sizing: border-box;
+    }}
+
+    .page-verso .pdf-running-header {{
+        left: {outside}in;
+        right: {gutter}in;
+    }}
+
+    .page-recto .pdf-running-header {{
+        left: {gutter}in;
+        right: {outside}in;
+    }}
+
+    .pdf-running-footer {{
+        position: absolute;
+        bottom: {bottom * 0.35}in;
+        left: 0;
+        right: 0;
         text-align: center;
-        color: #333;
+        font-family: {body_font};
+        font-size: 8.5pt;
+        color: #555;
+    }}
+
+    .physical-pdf-page-content {{
+        width: 100%;
+        height: 100%;
+        box-sizing: border-box;
     }}
 
     p {{
-        margin: 0 0 0 0;
+        margin: 0 0 {para_spacing_pt}pt 0;
         text-indent: {indent}in;
-        text-align: justify;
+        text-align: {'justify' if justify_text else 'left'};
+        hyphens: {'auto' if hyphenation else 'none'};
+        -webkit-hyphens: {'auto' if hyphenation else 'none'};
+        letter-spacing: {letter_spacing_em}em;
     }}
 
-    p.indent-zero,
-    .chapter-start > p:first-of-type,
-    .scene-break-div + p,
-    .custom-container + p,
-    .inline-plate-div + p {{
+    p.indent-zero {{
         text-indent: 0 !important;
     }}
 
@@ -233,7 +224,7 @@ def generate_pdf_html(
 
     .chapter-ornament {{
         text-align: center;
-        margin: 12pt 0 24pt 0;
+        margin: 10pt 0 18pt 0;
     }}
 
     .chapter-ornament svg {{
@@ -243,7 +234,7 @@ def generate_pdf_html(
 
     .scene-break-div {{
         text-align: center;
-        margin: 18pt 0;
+        margin: 16pt 0;
     }}
 
     .scene-break-div svg {{
@@ -253,7 +244,7 @@ def generate_pdf_html(
 
     .tailpiece-div {{
         text-align: center;
-        margin: 28pt 0 10pt 0;
+        margin: 24pt 0 10pt 0;
     }}
 
     .tailpiece-div svg {{
@@ -288,15 +279,15 @@ def generate_pdf_html(
         outline: 1px solid #B8860B;
         outline-offset: 2px;
         background: #FBF8F1;
-        padding: 12pt 16pt;
-        margin: 16pt 0;
+        padding: 10pt 14pt;
+        margin: 14pt 0;
         font-family: 'EB Garamond', Georgia, serif;
     }}
 
     .sensory-draw {{
         border-left: 3.5px solid #B8860B;
-        padding: 8pt 16pt;
-        margin: 16pt 18pt;
+        padding: 8pt 14pt;
+        margin: 14pt 16pt;
         font-style: italic;
         background: #FDFBF7;
     }}
@@ -305,15 +296,15 @@ def generate_pdf_html(
         background: #1E2229;
         color: #F8FAFC;
         border-left: 4px solid #00A896;
-        padding: 14pt 18pt;
-        margin: 16pt 0;
+        padding: 12pt 16pt;
+        margin: 14pt 0;
     }}
 
     .telemetry-equation, .scientific-formula, .scientific_formula {{
         border: 1.5px solid #4A5568;
         background: #F5F6F8;
-        padding: 12pt 16pt;
-        margin: 16pt 0;
+        padding: 10pt 14pt;
+        margin: 14pt 0;
         text-align: center;
         font-family: 'JetBrains Mono', monospace;
     }}
@@ -322,61 +313,37 @@ def generate_pdf_html(
         background: #0F172A;
         color: #38BDF8;
         border-left: 5px solid #0284C7;
-        padding: 12pt 16pt;
-        margin: 16pt 0;
-        font-family: 'JetBrains Mono', monospace;
-    }}
-
-    .fsk-payload {{
-        border: 1px dashed #334155;
-        background: #1E293B;
-        color: #E2E8F0;
         padding: 10pt 14pt;
         margin: 14pt 0;
-        font-family: monospace;
+        font-family: 'JetBrains Mono', monospace;
     }}
 
     .pelham-journal, .archival-journal, .archival_journal {{
         border: 1px solid #4A6B4E;
         background: #FCFAF2;
-        padding: 14pt 18pt;
-        margin: 16pt 0;
+        padding: 12pt 16pt;
+        margin: 14pt 0;
         border-left: 4px solid #2C402E;
         font-style: italic;
-    }}
-
-    .oscilloscope-readout {{
-        border: 1px solid #D97706;
-        background: #FFFBEB;
-        padding: 12pt 14pt;
-        margin: 14pt 0;
-        font-family: monospace;
     }}
 
     .cuneiform-tablet, .cuneiform-clause, .cuneiform_clause {{
         border: 2px solid #8C4A28;
         background: #FAF6EE;
-        padding: 12pt 16pt;
-        margin: 16pt 0;
-    }}
-
-    .cedar-sliver {{
-        border-left: 4px solid #C98A2C;
-        background: #FDF9F3;
         padding: 10pt 14pt;
         margin: 14pt 0;
     }}
 
     .frame-thin_ink_border {{
         border: 1.5px solid #1A202C !important;
-        padding: 4px;
+        padding: 3px;
         background: #FFF;
     }}
 
     .frame-double_brass_frame {{
         border: 2px solid #1A202C !important;
         outline: 1.5px solid #B8860B !important;
-        outline-offset: 4px !important;
+        outline-offset: 3px !important;
         padding: 2px;
         background: #FFF;
     }}
@@ -384,76 +351,315 @@ def generate_pdf_html(
     .frame-blueprint_grid_frame {{
         border: 2px solid #00A896 !important;
         outline: 1px dashed #38BDF8 !important;
-        outline-offset: 4px !important;
+        outline-offset: 3px !important;
         padding: 2px;
         background: #FFF;
     }}
 
     .frame-rounded_slate {{
         border: 3px solid #334155 !important;
-        border-radius: 8px !important;
+        border-radius: 6px !important;
         padding: 2px;
         background: #FFF;
     }}
 
     .inline-plate-div {{
-        margin: 16pt 0;
         text-align: center;
         page-break-inside: avoid;
     }}
 
-    .inline-plate-div img {{
-        max-width: 100%;
-        max-height: 3.5in;
-        border: 1px solid #444;
-    }}
-
-    .half-title-page, .title-page, .colophon-page {{
-        text-align: center;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        box-sizing: border-box;
-    }}
-
-    .title-page h1 {{
-        font-family: {display_font};
-        font-size: 26pt;
-        color: {accent_color};
-        margin-bottom: 8pt;
-    }}
-
-    .title-page h2 {{
+    .plate-caption {{
+        margin-top: 8pt;
         font-family: {body_font};
-        font-size: 13pt;
+        font-size: 8.5pt;
         font-style: italic;
-        font-weight: 400;
-        margin-bottom: 40pt;
-    }}
-
-    .title-page .author {{
-        font-family: {display_font};
-        font-size: 12pt;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        margin-bottom: 60pt;
-    }}
-
-    .title-page .imprint {{
-        font-family: {display_font};
-        font-size: 9pt;
-        letter-spacing: 0.16em;
-        color: #666;
+        text-align: center;
+        color: #444;
     }}
 
     .toc-entry {{
         display: flex;
         justify-content: space-between;
         margin-bottom: 8pt;
-        font-size: 10.5pt;
+        font-size: 10pt;
     }}
     """
+
+    body_pages_html = ""
+
+    for page in pages:
+        p_num = page.get("page_number", 1)
+        is_verso = page.get("is_verso", False)
+        page_type = page.get("page_type", "body")
+        suppress_header = page.get("suppress_header", False) or (rh_style == "Hidden")
+        suppress_footer = page.get("suppress_footer", False)
+        
+        page_cls = "page-verso" if is_verso else "page-recto"
+        if page_type == "full_plate":
+            page_cls += " page-full-plate"
+
+        # Running header resolution
+        if is_verso:
+            h_text = page.get("running_header_text") or running_header_text
+        else:
+            ch_n = page.get("chapter_number")
+            ch_t = page.get("chapter_title")
+            if ch_n and ch_t:
+                h_text = f"CHAPTER {ch_n} • {ch_t.upper()}"
+            else:
+                h_text = page.get("running_header_text") or running_header_text
+
+        h_align = "text-align: center;"
+        if rh_style == "Small Caps Outer":
+            h_align = "text-align: left;" if is_verso else "text-align: right;"
+        
+        h_border = "border-bottom: 0.5pt solid #777; padding-bottom: 2pt;" if rh_style == "Rule Underlined" else ""
+
+        header_markup = ""
+        if not suppress_header and h_text.strip():
+            header_markup = f'<div class="pdf-running-header" style="{h_align} {h_border}">{h_text}</div>'
+
+        footer_markup = ""
+        if not suppress_footer:
+            footer_markup = f'<div class="pdf-running-footer">{p_num}</div>'
+
+        # Render page elements
+        elem_markup = ""
+        for elem in page.get("elements", []):
+            etype = elem.get("type", "")
+            
+            if etype == "chapter_header":
+                c_num = elem.get("number", "")
+                c_title = elem.get("title", "")
+                ornament = elem.get("ornament_svg") or profile["scene_break_svg"]
+                elem_markup += f"""
+                <div class="chapter-start-header" style="padding-top: {sinkage}in;">
+                    <div class="chapter-num-label">Chapter {c_num}</div>
+                    <h1 class="chapter-title">{c_title}</h1>
+                    <div class="chapter-ornament">{ornament}</div>
+                </div>
+                """
+            elif etype == "paragraph":
+                btype = elem.get("block_type", "body")
+                is_first = elem.get("is_first", False)
+                has_drop = elem.get("has_drop_cap", False)
+                p_text = elem.get("html") or elem.get("text", "")
+                if btype == "chapter_subtitle":
+                    elem_markup += f'<div class="chapter-subtitle">{p_text}</div>\n'
+                else:
+                    cls_list = []
+                    if is_first:
+                        cls_list.append("indent-zero")
+                    if has_drop and drop_cap_enabled and drop_cap_style != "None":
+                        cls_list.append("has-drop-cap")
+                    cls_attr = f' class="{" ".join(cls_list)}"' if cls_list else ""
+                    elem_markup += f'<p{cls_attr}>{p_text}</p>\n'
+            elif etype == "container":
+                btype = elem.get("block_type", "container")
+                tag = elem.get("tag", btype.replace("_", "-"))
+                c_text = elem.get("html") or elem.get("content", "").replace("\n", "<br>")
+                elem_markup += f'<div class="custom-container {tag}">{c_text}</div>\n'
+            elif etype == "scene_break":
+                svg = elem.get("svg") or profile["scene_break_svg"]
+                elem_markup += f'<div class="scene-break-div">{svg}</div>\n'
+            elif etype == "tailpiece_ornament":
+                svg = elem.get("svg") or profile["tailpiece_svg"]
+                elem_markup += f'<div class="tailpiece-div">{svg}</div>\n'
+            elif etype == "illustration":
+                asset = elem.get("asset", {})
+                placement = elem.get("placement", asset.get("placement", "Inline Centered"))
+                img_src = _resolve_image_src(asset.get("image_url", ""))
+                caption = asset.get("caption", asset.get("caption_text", ""))
+                caption_pos = asset.get("caption_position", "below")
+                frame_style = asset.get("frame_style", "none")
+                frame_cls = f"frame-{frame_style}" if frame_style and frame_style != "none" else ""
+                w_pct = asset.get("width_pct", 100)
+                max_h = asset.get("max_height_in", 3.5)
+                m_top = asset.get("margin_top_pt", 12.0)
+                m_bottom = asset.get("margin_bottom_pt", 12.0)
+                
+                cap_html = f'<div class="plate-caption">{caption}</div>' if (caption and caption_pos != "hidden") else ""
+                
+                if placement in ["Full-Page Recto Plate", "Full-Page Verso Plate", "Full Bleed Plate"]:
+                    elem_markup += f"""
+                    <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; box-sizing:border-box; padding:0.4in;">
+                        {cap_html if caption_pos == 'above' else ''}
+                        <img src="{img_src}" class="{frame_cls}" style="max-width:{w_pct}%; max-height:{max_h}in; object-fit:contain;" alt="{asset.get('title', '')}">
+                        {cap_html if caption_pos == 'below' else ''}
+                    </div>
+                    """
+                else:
+                    elem_markup += f"""
+                    <div class="inline-plate-div" style="margin-top:{m_top}pt; margin-bottom:{m_bottom}pt;">
+                        {cap_html if caption_pos == 'above' else ''}
+                        <img src="{img_src}" class="{frame_cls}" style="width:{w_pct}%; max-height:{max_h}in; object-fit:contain;" alt="{asset.get('title', '')}">
+                        {cap_html if caption_pos == 'below' else ''}
+                    </div>
+                    """
+            elif etype == "half_title":
+                title_val = elem.get("title", "")
+                elem_markup += f"""
+                <div style="text-align:center; padding-top:2.8in;">
+                    <h2 style="font-family:{display_font}; font-size:16pt; letter-spacing:0.14em; text-transform:uppercase; color:{accent_color};">
+                        {title_val}
+                    </h2>
+                </div>
+                """
+            elif etype == "frontispiece":
+                img_u = elem.get("image_url")
+                sub_t = elem.get("subtitle", "")
+                if img_u:
+                    f_src = _resolve_image_src(img_u)
+                    art_box = f'<img src="{f_src}" style="max-width:85%; max-height:4.2in; object-fit:contain; border:1px solid #444;" alt="Frontispiece">'
+                else:
+                    art_box = f'<div style="margin-bottom:20pt;">{elem.get("svg") or profile["scene_break_svg"]}</div>'
+                elem_markup += f"""
+                <div style="text-align:center; padding-top:2.2in;">
+                    {art_box}
+                    <p class="indent-zero" style="font-style:italic; font-size:9.5pt; color:#555; margin-top:14pt;">
+                        {sub_t}
+                    </p>
+                </div>
+                """
+            elif etype == "title_page":
+                impr = elem.get("imprint") or cm.get("publisher_imprint", "THE ARGON BOOK STUDIO • FINE TYPESETTING")
+                elem_markup += f"""
+                <div style="text-align:center; padding-top:1.4in;">
+                    <h1 style="font-family:{display_font}; font-size:24pt; color:{accent_color}; margin-bottom:8pt; text-transform:uppercase;">{elem.get('title', '')}</h1>
+                    <h2 style="font-family:{body_font}; font-size:12.5pt; font-style:italic; font-weight:400; margin-bottom:32pt;">{elem.get('subtitle', '')}</h2>
+                    <div style="margin:18pt 0;">{profile['scene_break_svg']}</div>
+                    <div style="font-family:{display_font}; font-size:11.5pt; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:50pt;">{elem.get('author', '')}</div>
+                    <div style="font-family:{display_font}; font-size:8.5pt; letter-spacing:0.16em; color:#666; margin-top:1.0in;">
+                        {impr}
+                    </div>
+                </div>
+                """
+            elif etype == "copyright":
+                isbn_val = elem.get("isbn") or cm.get("isbn_hardcover", "978-1-987654-32-1")
+                isbn_ep = cm.get("isbn_epub", "978-1-987654-33-8")
+                elem_markup += f"""
+                <div style="font-size:8.5pt; line-height:12.5pt; color:#444; padding-top:4.5in;">
+                    <p class="indent-zero"><strong>{elem.get('title', '')}</strong></p>
+                    <p class="indent-zero">Copyright © {elem.get('year', '2026')} by {elem.get('author', '')}</p>
+                    <p class="indent-zero" style="margin-top:8pt;">All rights reserved. First Illustrated Collector's Edition.</p>
+                    <p class="indent-zero">ISBN {isbn_val} (Fine Hardcover)</p>
+                    <p class="indent-zero">ISBN {isbn_ep} (EPUB 3 Edition)</p>
+                </div>
+                """
+            elif etype == "map_plate":
+                img_u = elem.get("image_url")
+                m_title = elem.get("title", "Archival Chart & Survey Map")
+                m_cap = elem.get("caption", "Hydrographic Soundings & Survey of the Ghyll Skerries.")
+                if img_u:
+                    m_src = _resolve_image_src(img_u)
+                    m_box = f'<img src="{m_src}" style="max-width:90%; max-height:3.6in; object-fit:contain; border:1.5px solid #444;" alt="Map Plate">'
+                else:
+                    m_box = f'<div style="margin:20pt auto; width:85%; height:2.8in; border:1.5px solid #444; background:#FAF7F0; display:flex; align-items:center; justify-content:center;">{elem.get("svg") or profile["scene_break_svg"]}</div>'
+                elem_markup += f"""
+                <div style="text-align:center; padding-top:1.8in;">
+                    <h2 style="font-family:{display_font}; font-size:13pt; letter-spacing:0.14em; text-transform:uppercase; margin-bottom:12pt;">
+                        {m_title}
+                    </h2>
+                    {m_box}
+                    <p class="indent-zero" style="font-style:italic; font-size:8.5pt; color:#555; margin-top:10pt;">
+                        {m_cap}
+                    </p>
+                </div>
+                """
+            elif etype == "dedication":
+                elem_markup += f"""
+                <div style="text-align:center; padding-top:3.2in; font-style:italic;">
+                    <p class="indent-zero" style="font-size:11pt; color:#333;">{elem.get('text', '')}</p>
+                </div>
+                """
+            elif etype == "epigraph":
+                elem_markup += f"""
+                <div style="text-align:center; padding-top:3.2in;">
+                    <p class="indent-zero" style="font-size:11pt; font-style:italic; color:#333;">"{elem.get('text', '')}"</p>
+                    <p class="indent-zero" style="font-size:8.5pt; margin-top:10pt; color:#666;">{elem.get('source', '')}</p>
+                </div>
+                """
+            elif etype == "toc":
+                toc_rows = ""
+                for ch in elem.get("chapters", []):
+                    toc_rows += f"""
+                    <div class="toc-entry">
+                        <span><strong>Chapter {ch.get('chapter_number', '')}</strong> — {ch.get('title', '')}</span>
+                    </div>
+                    """
+                elem_markup += f"""
+                <div style="padding-top:1.4in;">
+                    <h2 style="font-family:{display_font}; font-size:13pt; letter-spacing:0.16em; text-align:center; text-transform:uppercase; margin-bottom:20pt;">
+                        Contents
+                    </h2>
+                    {toc_rows}
+                </div>
+                """
+            elif etype == "appendix":
+                elem_markup += f"""
+                <div style="padding-top:1.6in; text-align:left;">
+                    <h2 style="font-family:{display_font}; font-size:13pt; letter-spacing:0.14em; text-transform:uppercase; margin-bottom:14pt; text-align:center;">
+                        {elem.get('title', 'Appendix')}
+                    </h2>
+                    <div style="font-family:'JetBrains Mono', monospace; font-size:8.5pt; line-height:14pt; background:#F8FAFC; border:1px solid #CBD5E1; padding:12pt 16pt; margin:0 auto; max-width:4.8in;">
+                        {elem.get('text', '').replace(chr(10), '<br>')}
+                    </div>
+                </div>
+                """
+            elif etype == "glossary":
+                g_html = ""
+                for g in elem.get("terms", []):
+                    g_html += f"<p class='indent-zero' style='margin-bottom:8pt;'><strong>{g.get('term', '')}</strong> — {g.get('definition', '')}</p>"
+                elem_markup += f"""
+                <div style="padding-top:1.6in;">
+                    <h2 style="font-family:{display_font}; font-size:13pt; letter-spacing:0.14em; text-transform:uppercase; margin-bottom:16pt; text-align:center;">
+                        {elem.get('title', 'Glossary')}
+                    </h2>
+                    <div style="font-size:8.5pt; line-height:13pt; max-width:4.8in; margin:0 auto;">
+                        {g_html}
+                    </div>
+                </div>
+                """
+            elif etype == "acknowledgements":
+                elem_markup += f"""
+                <div style="padding-top:1.8in; text-align:center;">
+                    <h2 style="font-family:{display_font}; font-size:13pt; letter-spacing:0.16em; text-transform:uppercase; margin-bottom:16pt;">{elem.get('title', 'Acknowledgements')}</h2>
+                    <p class="indent-zero" style="max-width:4.5in; margin:0 auto; line-height:1.5;">{elem.get('text', '')}</p>
+                </div>
+                """
+            elif etype == "about_author":
+                elem_markup += f"""
+                <div style="padding-top:1.8in; text-align:center;">
+                    <h2 style="font-family:{display_font}; font-size:13pt; letter-spacing:0.16em; text-transform:uppercase; margin-bottom:16pt;">{elem.get('title', 'About the Author')}</h2>
+                    <p class="indent-zero" style="max-width:4.5in; margin:0 auto; line-height:1.5;">{elem.get('text', '')}</p>
+                </div>
+                """
+            elif etype == "colophon":
+                c_body = elem.get("specs") or cm.get("colophon_text") or (
+                    f"This volume was typeset and produced using the Argon Book Studio Desktop Publishing Engine. "
+                    f"Layout adheres to {width_in:.1f} x {height_in:.1f} inch book signatures with mirrored gutter margins ({gutter}in inside, {outside}in outside)."
+                )
+                elem_markup += f"""
+                <div style="padding-top:2.2in; font-size:8.5pt; line-height:13.5pt; color:#333; text-align:center;">
+                    <h3 style="font-family:{display_font}; font-size:10.5pt; letter-spacing:0.16em; text-transform:uppercase; margin-bottom:12pt; color:{accent_color};">
+                        Colophon
+                    </h3>
+                    <p class="indent-zero" style="max-width:4.2in; margin:0 auto; text-align:center;">
+                        {c_body}
+                    </p>
+                    <div style="margin-top:20pt;">{profile['tailpiece_svg']}</div>
+                </div>
+                """
+
+        body_pages_html += f"""
+        <div class="physical-pdf-page {page_cls}">
+            {header_markup}
+            <div class="physical-pdf-page-content">
+                {elem_markup}
+            </div>
+            {footer_markup}
+        </div>
+        """
 
     html = f"""<!DOCTYPE html>
     <html lang="en">
@@ -463,237 +669,10 @@ def generate_pdf_html(
         <style>{css}</style>
     </head>
     <body>
+        {body_pages_html}
+    </body>
+    </html>
     """
-
-    # FRONT MATTER
-    if include_front_matter:
-        if cm.get("include_half_title", True):
-            html += f"""
-            <div class="suppress-all half-title-page">
-                <h2 style="font-family: {display_font}; font-size: 16pt; letter-spacing: 0.14em; text-transform: uppercase; margin-top: 3in;">
-                    {parsed_book.get('title', profile['title'])}
-                </h2>
-            </div>
-            """
-
-        if cm.get("include_frontispiece", True):
-            html += f"""
-            <div class="suppress-all" style="text-align: center; padding-top: 3.2in;">
-                <div style="margin-bottom: 20pt;">{profile['scene_break_svg']}</div>
-                <p style="text-indent: 0; font-style: italic; font-size: 10pt; color: #555;">
-                    {parsed_book.get('subtitle', profile['subtitle'])}
-                </p>
-            </div>
-            """
-
-        if cm.get("include_title_page", True):
-            imprint_txt = cm.get("publisher_imprint", "THE ARGON BOOK STUDIO • FINE TYPESETTING")
-            html += f"""
-            <div class="suppress-all title-page">
-                <div style="margin-top: 1.5in;">
-                    <h1>{parsed_book.get('title', profile['title'])}</h1>
-                    <h2>{parsed_book.get('subtitle', profile['subtitle'])}</h2>
-                    <div style="margin: 20pt 0;">{profile['scene_break_svg']}</div>
-                    <div class="author">{parsed_book.get('author', profile['author'])}</div>
-                    <div class="imprint" style="margin-top: 1.5in;">
-                        {imprint_txt}
-                    </div>
-                </div>
-            </div>
-            """
-
-        if cm.get("include_copyright", True):
-            isbn_hc = cm.get("isbn_hardcover", "978-1-987654-32-1")
-            isbn_ep = cm.get("isbn_epub", "978-1-987654-33-8")
-            html += f"""
-            <div class="suppress-all" style="font-size: 8.5pt; line-height: 12.5pt; color: #444; padding-top: 4.8in;">
-                <p class="indent-zero"><strong>{parsed_book.get('title', profile['title'])}</strong></p>
-                <p class="indent-zero">Copyright © 2026 by {parsed_book.get('author', profile['author'])}</p>
-                <p class="indent-zero" style="margin-top: 8pt;">All rights reserved. First Illustrated Collector's Edition.</p>
-                <p class="indent-zero">ISBN {isbn_hc} (Fine Hardcover)</p>
-                <p class="indent-zero">ISBN {isbn_ep} (EPUB 3 Edition)</p>
-            </div>
-            """
-
-        if cm.get("include_dedication", False):
-            html += f"""
-            <div class="suppress-all" style="text-align: center; padding-top: 3.5in; font-style: italic;">
-                <p class="indent-zero" style="font-size: 11pt; color: #333;">{cm.get('dedication_text', '')}</p>
-            </div>
-            """
-
-        if cm.get("include_epigraph", False):
-            html += f"""
-            <div class="suppress-all" style="text-align: center; padding-top: 3.5in;">
-                <p class="indent-zero" style="font-size: 11pt; font-style: italic; color: #333;">"{cm.get('epigraph_text', '')}"</p>
-                <p class="indent-zero" style="font-size: 9pt; margin-top: 10pt; color: #666;">{cm.get('epigraph_source', '')}</p>
-            </div>
-            """
-
-        if cm.get("include_toc", True):
-            html += f"""
-            <div class="suppress-all" style="padding-top: 1.5in;">
-                <h2 style="font-family: {display_font}; font-size: 14pt; letter-spacing: 0.16em; text-align: center; text-transform: uppercase; margin-bottom: 24pt;">
-                    Contents
-                </h2>
-            """
-            for ch in parsed_book.get("chapters", []):
-                html += f"""
-                <div class="toc-entry">
-                    <span><strong>Chapter {ch.get('chapter_number', '')}</strong> — {ch.get('title', '')}</span>
-                </div>
-                """
-            html += "</div>"
-
-        if cm.get("include_map", False):
-            html += f"""
-            <div class="suppress-all" style="text-align: center; padding-top: 2.2in;">
-                <h2 style="font-family: {display_font}; font-size: 14pt; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 12pt;">
-                    {cm.get('map_title', 'Archival Chart & Survey Map')}
-                </h2>
-                <div style="margin: 20pt auto; width: 85%; height: 2.8in; border: 1.5px solid #444; background: #FAF7F0; display: flex; align-items: center; justify-content: center;">
-                    {profile['scene_break_svg']}
-                </div>
-                <p style="text-indent: 0; font-style: italic; font-size: 9pt; color: #555;">
-                    {cm.get('map_caption', 'Hydrographic Soundings & Survey of the Ghyll Skerries.')}
-                </p>
-            </div>
-            """
-
-    # BODY CHAPTERS
-    for ch_idx, chapter in enumerate(parsed_book.get("chapters", [])):
-        ch_num = chapter.get("chapter_number", str(ch_idx + 1))
-        ch_title = chapter.get("title", "")
-        
-        html += f"""
-        <div class="chapter-start" data-chapter-title="CHAPTER {ch_num} • {ch_title.upper()}">
-            <div class="chapter-num-label">Chapter {ch_num}</div>
-            <h1 class="chapter-title">{ch_title}</h1>
-            <div class="chapter-ornament">{profile['scene_break_svg']}</div>
-        """
-        
-        first_p_done = False
-        elements = chapter.get("elements", [])
-        
-        for elem in elements:
-            elem_id = elem.get("id", "")
-            elem_type = elem.get("type", "paragraph")
-            btype = elem.get("block_type", "body")
-            pb_style = ' style="page-break-before: always;"' if elem.get("page_break_before") else ""
-            
-            for asset in assets_by_anchor.get(elem_id, []):
-                placement = asset.get("placement", "")
-                img_path = asset.get("image_url", "")
-                caption = asset.get("caption", "")
-                frame_cls = f"frame-{asset.get('frame_style', 'none')}" if asset.get("frame_style") and asset.get("frame_style") != "none" else ""
-                
-                if img_path.startswith("/static/"):
-                    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-                    local_path = os.path.join(base_dir, img_path.lstrip("/")).replace("\\", "/")
-                    img_src = f"file:///{local_path}"
-                else:
-                    img_src = img_path
-                    
-                if placement in ["Full-Page Recto Plate", "Full-Page Verso Plate", "Full Bleed Plate"]:
-                    html += f"""
-                    </div>
-                    <div class="full-plate-page">
-                        <img src="{img_src}" class="{frame_cls}" alt="{asset.get('title', '')}">
-                        <div class="plate-caption">{caption}</div>
-                    </div>
-                    <div style="page-break-before: always; string-set: chapter-title 'CHAPTER {ch_num} • {ch_title.upper()}';">
-                    """
-                else:
-                    html += f"""
-                    <div class="inline-plate-div">
-                        <img src="{img_src}" class="{frame_cls}" alt="{asset.get('title', '')}">
-                        <div class="plate-caption">{caption}</div>
-                    </div>
-                    """
-
-            f_html = elem.get("formatted_html") or elem.get("text", "")
-            if btype == "chapter_subtitle":
-                html += f'<div class="chapter-subtitle"{pb_style}>{f_html}</div>\n'
-            elif btype in ["inworld_writ", "welsh_slate", "audio_transcript", "archival_journal", "scientific_formula", "cuneiform_clause"] or elem_type == "container":
-                tag = elem.get("tag", btype.replace("_", "-"))
-                content = f_html or elem.get("content", "").replace("\n", "<br>")
-                html += f'<div class="custom-container {tag}"{pb_style}>{content}</div>\n'
-            elif elem_type == "scene_break":
-                html += f'<div class="scene-break-div"{pb_style}>{profile["scene_break_svg"]}</div>\n'
-            else:
-                is_first = elem.get("is_first_after_break", False) or not first_p_done
-                drop_cls = "has-drop-cap" if (drop_cap_enabled and drop_cap_style != "None" and not first_p_done) else ""
-                cls = f"indent-zero {drop_cls}".strip() if (is_first or not first_p_done) else ""
-                html += f'<p class="{cls}"{pb_style}>{f_html}</p>\n'
-                first_p_done = True
-
-        html += f"""
-            <div class="tailpiece-div">{profile['tailpiece_svg']}</div>
-        </div>
-        """
-
-    # BACK MATTER
-    if cm.get("include_appendix", False):
-        html += f"""
-        <div class="suppress-all" style="padding-top: 1.8in; text-align: left;">
-            <h2 style="font-family: {display_font}; font-size: 14pt; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 16pt; text-align: center;">
-                {cm.get('appendix_title', 'Appendix: Forensic Telemetry')}
-            </h2>
-            <div style="font-family: 'JetBrains Mono', monospace; font-size: 8.5pt; line-height: 14pt; background: #F8FAFC; border: 1px solid #CBD5E1; padding: 14pt 18pt; margin: 0 auto; max-width: 4.8in;">
-                {cm.get('appendix_text', '').replace(chr(10), '<br>')}
-            </div>
-        </div>
-        """
-
-    if cm.get("include_glossary", False):
-        terms_html = ""
-        for g in cm.get("glossary_terms", []):
-            terms_html += f"<p style='text-indent:0; margin-bottom:8pt;'><strong>{g.get('term', '')}</strong> — {g.get('definition', '')}</p>"
-        html += f"""
-        <div class="suppress-all" style="padding-top: 1.8in;">
-            <h2 style="font-family: {display_font}; font-size: 14pt; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 18pt; text-align: center;">
-                {cm.get('glossary_title', 'Glossary of In-World Terms')}
-            </h2>
-            <div style="font-size: 9pt; line-height: 13.5pt; max-width: 4.8in; margin: 0 auto;">
-                {terms_html}
-            </div>
-        </div>
-        """
-
-    if cm.get("include_acknowledgements", False):
-        html += f"""
-        <div class="suppress-all" style="padding-top: 2.0in; text-align: center;">
-            <h2 style="font-family: {display_font}; font-size: 14pt; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 18pt;">Acknowledgements</h2>
-            <p class="indent-zero" style="max-width: 4.5in; margin: 0 auto; line-height: 1.5;">{cm.get('acknowledgements_text', '')}</p>
-        </div>
-        """
-
-    if cm.get("include_about_author", False):
-        html += f"""
-        <div class="suppress-all" style="padding-top: 2.0in; text-align: center;">
-            <h2 style="font-family: {display_font}; font-size: 14pt; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 18pt;">About the Author</h2>
-            <p class="indent-zero" style="max-width: 4.5in; margin: 0 auto; line-height: 1.5;">{cm.get('about_author_text', '')}</p>
-        </div>
-        """
-
-    if cm.get("include_colophon", True):
-        colophon_body = cm.get("colophon_text") or (
-            f"This volume was typeset and produced using the Argon Book Studio Desktop Publishing Engine. "
-            f"Layout adheres to {width_in:.1f} x {height_in:.1f} inch book signatures with mirrored gutter margins ({gutter}in inside, {outside}in outside)."
-        )
-        html += f"""
-        <div class="suppress-all colophon-page" style="padding-top: 2.5in; font-size: 9pt; line-height: 14pt; color: #333; text-align: center;">
-            <h3 style="font-family: {display_font}; font-size: 11pt; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 14pt; color: {accent_color};">
-                Colophon
-            </h3>
-            <p class="indent-zero" style="max-width: 4.2in; margin: 0 auto; text-align: center;">
-                {colophon_body}
-            </p>
-            <div style="margin-top: 24pt;">{profile['tailpiece_svg']}</div>
-        </div>
-        """
-
-    html += "</body></html>"
     return html
 
 
@@ -722,7 +701,9 @@ def export_pdf(
 
     edge_paths = [
         r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
     ]
     edge_exe = next((p for p in edge_paths if os.path.exists(p)), None)
 
@@ -739,9 +720,12 @@ def export_pdf(
             "--no-pdf-header-footer",
             abs_html
         ]
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=45)
         if os.path.exists(temp_html_path):
-            os.remove(temp_html_path)
+            try:
+                os.remove(temp_html_path)
+            except Exception:
+                pass
         if os.path.exists(abs_pdf):
             return abs_pdf
 

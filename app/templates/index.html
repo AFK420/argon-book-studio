@@ -81,13 +81,21 @@
           Manuscript & Slots
         </div>
         
-        <div style="display:flex; background:rgba(0,0,0,0.3); border-radius:4px; padding:2px;">
+        <div style="display:flex; align-items:center; background:rgba(0,0,0,0.3); border-radius:4px; padding:2px; gap:4px;">
           <button id="tab-manifest-btn" onclick="switchTab('manifest')" style="background:none; border:none; color:var(--text-muted); font-size:0.7rem; padding:3px 8px; border-radius:3px; cursor:pointer;" class="active">
             Slots
           </button>
           <button id="tab-tree-btn" onclick="switchTab('tree')" style="background:none; border:none; color:var(--text-muted); font-size:0.7rem; padding:3px 8px; border-radius:3px; cursor:pointer;">
             Tree
           </button>
+          <div style="height:12px; width:1px; background:var(--border-subtle); margin:0 2px;"></div>
+          <button onclick="document.getElementById('manifest-file-input').click()" title="Import Manifest (.json)" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:var(--accent-gold); font-size:0.68rem; font-weight:600; padding:2px 6px; border-radius:3px; cursor:pointer; display:flex; align-items:center; gap:3px;">
+            📥 Import
+          </button>
+          <button onclick="exportManifest()" title="Export Manifest (.json)" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:var(--accent-cyan); font-size:0.68rem; font-weight:600; padding:2px 6px; border-radius:3px; cursor:pointer; display:flex; align-items:center; gap:3px;">
+            📤 Export
+          </button>
+          <input type="file" id="manifest-file-input" style="display:none;" accept=".json">
         </div>
       </div>
 

@@ -26,23 +26,53 @@ def generate_front_matter_data(
     meta = manuscript_meta or {}
     cm = custom_matter or {}
     
-    title = meta.get("title") or profile["title"]
-    subtitle = meta.get("subtitle") or profile["subtitle"]
-    author = meta.get("author") or profile["author"]
+    title = cm.get("book_title") or meta.get("title") or profile["title"]
+    subtitle = cm.get("book_subtitle") or meta.get("subtitle") or profile["subtitle"]
+    author = cm.get("author_name") or meta.get("author") or profile["author"]
     
     imprint = cm.get("publisher_imprint", "THE ARGON BOOK STUDIO • PRESS")
     city = cm.get("city", "London & San Francisco")
-    isbn_hardcover = cm.get("isbn_hardcover", "978-1-954321-01-9")
+    isbn_val = cm.get("isbn") or cm.get("isbn_hardcover") or "978-1-954321-01-9"
+    isbn_hardcover = isbn_val
     isbn_epub = cm.get("isbn_epub", "978-1-954321-02-6")
+    year = str(cm.get("copyright_year") or "2026")
+
+    raw_glossary = cm.get("glossary_terms")
+    if isinstance(raw_glossary, str):
+        parsed_terms = []
+        for line in raw_glossary.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if ":" in line:
+                parts = line.split(":", 1)
+                parsed_terms.append({"term": parts[0].strip(), "definition": parts[1].strip()})
+            elif "—" in line:
+                parts = line.split("—", 1)
+                parsed_terms.append({"term": parts[0].strip(), "definition": parts[1].strip()})
+            elif "-" in line:
+                parts = line.split("-", 1)
+                parsed_terms.append({"term": parts[0].strip(), "definition": parts[1].strip()})
+            else:
+                parsed_terms.append({"term": line, "definition": ""})
+        glossary_terms = parsed_terms
+    elif isinstance(raw_glossary, list):
+        glossary_terms = raw_glossary
+    else:
+        glossary_terms = [
+            {"term": "Barometer Skerry", "definition": "A sub-surface basalt reef producing localized micro-baric fluctuations."},
+            {"term": "Vesper Draw", "definition": "An occult sensory distillation utilizing mercury and sea-salt."}
+        ]
     
     return {
         "half_title": {
-            "title": title,
+            "title": cm.get("half_title_text") or title,
             "enabled": cm.get("include_half_title", True)
         },
         "frontispiece": {
             "title": title,
-            "subtitle": subtitle,
+            "subtitle": cm.get("frontispiece_subtitle") or subtitle,
+            "image_url": cm.get("frontispiece_image_url"),
             "ornament_svg": profile["scene_break_svg"],
             "enabled": cm.get("include_frontispiece", True)
         },
@@ -58,9 +88,10 @@ def generate_front_matter_data(
         "copyright_page": {
             "title": title,
             "author": author,
-            "year": "2026",
+            "year": year,
             "publisher": imprint,
             "isbn_hardcover": isbn_hardcover,
+            "isbn": isbn_val,
             "isbn_epub": isbn_epub,
             "notice": "All rights reserved. No part of this publication may be reproduced, stored in a retrieval system, or transmitted in any form without prior permission of the publisher.",
             "colophon_summary": f"Typeset in 6.0 x 9.0 in format. Body typeface: {profile['body_font_name']} ({profile['body_font_size']}/{profile['body_leading']}). Display typeface: {profile['display_font_name']}.",
@@ -82,6 +113,7 @@ def generate_front_matter_data(
         "map_plate": {
             "title": cm.get("map_title", "Archival Chart & Survey Map"),
             "caption": cm.get("map_caption", "Hydrographic Soundings & Survey of the Ghyll Skerries."),
+            "image_url": cm.get("map_image_url") or "/static/assets/placeholders/book01_vignette.png",
             "ornament_svg": profile["scene_break_svg"],
             "enabled": cm.get("include_map", False)
         },
@@ -92,10 +124,7 @@ def generate_front_matter_data(
         },
         "glossary": {
             "title": cm.get("glossary_title", "Glossary of Technical & In-World Terms"),
-            "terms": cm.get("glossary_terms", [
-                {"term": "Barometer Skerry", "definition": "A sub-surface basalt reef producing localized micro-baric fluctuations."},
-                {"term": "Vesper Draw", "definition": "An occult sensory distillation utilizing mercury and sea-salt."}
-            ]),
+            "terms": glossary_terms,
             "enabled": cm.get("include_glossary", False)
         },
         "acknowledgements": {

@@ -186,6 +186,44 @@ function setupHeaderListeners() {
       }
     });
   }
+
+  const manifestInput = document.getElementById("manifest-file-input");
+  if (manifestInput) {
+    manifestInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      await importManifestFile(file);
+      manifestInput.value = "";
+    });
+  }
+}
+
+async function importManifestFile(file) {
+  if (!file) return;
+  const formData = new FormData();
+  formData.append("file", file);
+  try {
+    showToast("Importing manifest JSON...", "info");
+    const res = await fetch(`/api/manifest/${state.activeBookId}/import`, {
+      method: "POST",
+      body: formData
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Manifest import failed" }));
+      throw new Error(err.detail || "Manifest import failed");
+    }
+    const data = await res.json();
+    showToast("Manifest imported successfully!", "success");
+    await loadBook(state.activeBookId);
+  } catch (err) {
+    console.error("Error importing manifest:", err);
+    showToast(err.message, "error");
+  }
+}
+
+function exportManifest() {
+  showToast("Downloading manifest JSON...", "info");
+  window.location.href = `/api/manifest/${state.activeBookId}/export`;
 }
 
 function setViewMode(mode) {
@@ -892,13 +930,55 @@ function openParagraphInspector(elementId) {
           </div>
         </div>
 
-        <div class="modal-footer" style="padding:12px 16px; background:rgba(0,0,0,0.3); border-top:1px solid var(--border-subtle); display:flex; justify-content:flex-end; gap:8px;">
-          <button onclick="closeModal()" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:#FFF; padding:6px 14px; border-radius:4px; cursor:pointer; font-size:0.75rem;">Cancel</button>
-          <button onclick="saveParagraphInspector('${elementId}')" style="background:var(--accent-gold); color:#000; font-weight:700; border:none; padding:6px 18px; border-radius:4px; cursor:pointer; font-size:0.78rem;">Save & Re-Paginate</button>
+        <div class="modal-footer" style="padding:12px 16px; background:rgba(0,0,0,0.3); border-top:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <div style="display:flex; gap:8px;">
+            <button onclick="mergeElement('${elementId}')" style="background:rgba(56,189,248,0.15); border:1px solid var(--accent-cyan); color:var(--accent-cyan); padding:6px 12px; border-radius:4px; cursor:pointer; font-size:0.75rem; font-weight:600;">⫘ Merge With Previous Block</button>
+            <button onclick="deleteElement('${elementId}')" style="background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#EF4444; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:0.75rem; font-weight:600;">🗑 Delete Element</button>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button onclick="closeModal()" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:#FFF; padding:6px 14px; border-radius:4px; cursor:pointer; font-size:0.75rem;">Cancel</button>
+            <button onclick="saveParagraphInspector('${elementId}')" style="background:var(--accent-gold); color:#000; font-weight:700; border:none; padding:6px 18px; border-radius:4px; cursor:pointer; font-size:0.78rem;">Save & Re-Paginate</button>
+          </div>
         </div>
       </div>
     </div>
   `;
+}
+
+async function mergeElement(elementId) {
+  if (!confirm("Are you sure you want to merge this block with the previous block?")) return;
+  try {
+    showToast("Merging with previous block...", "info");
+    const res = await fetchAPI(`/api/manuscript/${state.activeBookId}/merge-element`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ element_id: elementId })
+    });
+    if (res.status === "success") {
+      showToast("Block merged successfully!", "success");
+      closeModal();
+      await loadBook(state.activeBookId);
+    }
+  } catch (err) {
+    console.error("Error merging block:", err);
+  }
+}
+
+async function deleteElement(elementId) {
+  if (!confirm("Are you sure you want to delete this element from the manuscript?")) return;
+  try {
+    showToast("Deleting element...", "info");
+    const res = await fetchAPI(`/api/manuscript/${state.activeBookId}/delete-element/${elementId}`, {
+      method: "DELETE"
+    });
+    if (res.status === "success") {
+      showToast("Element deleted successfully!", "success");
+      closeModal();
+      await loadBook(state.activeBookId);
+    }
+  } catch (err) {
+    console.error("Error deleting element:", err);
+  }
 }
 
 async function saveParagraphInspector(elementId) {
@@ -1124,13 +1204,33 @@ function openAssetInspector(assetId) {
           </div>
         </div>
 
-        <div class="modal-footer" style="padding:12px 16px; background:rgba(0,0,0,0.3); border-top:1px solid var(--border-subtle); display:flex; justify-content:flex-end; gap:8px;">
-          <button onclick="closeModal()" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:#FFF; padding:6px 14px; border-radius:4px; cursor:pointer; font-size:0.75rem;">Cancel</button>
-          <button onclick="saveAssetInspector('${asset.id}')" style="background:var(--accent-gold); color:#000; font-weight:700; border:none; padding:6px 18px; border-radius:4px; cursor:pointer; font-size:0.78rem;">Save Plate Settings</button>
+        <div class="modal-footer" style="padding:12px 16px; background:rgba(0,0,0,0.3); border-top:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <button onclick="deleteIllustrationSlot('${asset.id}')" style="background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#EF4444; padding:6px 14px; border-radius:4px; cursor:pointer; font-size:0.75rem; font-weight:600;">🗑 Delete Slot</button>
+          <div style="display:flex; gap:8px;">
+            <button onclick="closeModal()" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:#FFF; padding:6px 14px; border-radius:4px; cursor:pointer; font-size:0.75rem;">Cancel</button>
+            <button onclick="saveAssetInspector('${asset.id}')" style="background:var(--accent-gold); color:#000; font-weight:700; border:none; padding:6px 18px; border-radius:4px; cursor:pointer; font-size:0.78rem;">Save Plate Settings</button>
+          </div>
         </div>
       </div>
     </div>
   `;
+}
+
+async function deleteIllustrationSlot(assetId) {
+  if (!confirm(`Are you sure you want to delete illustration slot "${assetId}"?`)) return;
+  try {
+    showToast("Deleting illustration slot...", "info");
+    const res = await fetchAPI(`/api/manifest/${state.activeBookId}/delete-slot/${assetId}`, {
+      method: "DELETE"
+    });
+    if (res.status === "success") {
+      showToast("Illustration slot deleted successfully!", "success");
+      closeModal();
+      await loadBook(state.activeBookId);
+    }
+  } catch (err) {
+    console.error("Error deleting slot:", err);
+  }
 }
 
 async function saveAssetInspector(assetId) {
@@ -1775,6 +1875,10 @@ async function resetTypographyToDefaults() {
 function renderFrontMatterTab(container) {
   const fm = state.settings?.front_back_matter || {};
 
+  const glossaryRaw = typeof fm.glossary_terms === "string"
+    ? fm.glossary_terms
+    : (Array.isArray(fm.glossary_terms) ? fm.glossary_terms.map(g => (g.term + ": " + g.definition)).join("\n") : "");
+
   container.innerHTML = `
     <div class="section-block">
       <div class="section-title">
@@ -1796,7 +1900,14 @@ function renderFrontMatterTab(container) {
           <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; margin-bottom:4px; cursor:pointer;">
             <input type="checkbox" id="fm-frontispiece" ${fm.include_frontispiece !== false ? 'checked' : ''}> Frontispiece Ornament Plate
           </label>
-          <input type="text" id="fm-frontispiece-subtitle" value="${fm.frontispiece_subtitle || ''}" placeholder="Frontispiece subtitle..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">
+          <input type="text" id="fm-frontispiece-subtitle" value="${fm.frontispiece_subtitle || ''}" placeholder="Frontispiece subtitle..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px; margin-bottom:6px;">
+          <input type="file" id="fm-frontispiece-file" style="display:none;" accept="image/*" onchange="uploadMatterImage('frontispiece', this.files[0])">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+            <button type="button" onclick="document.getElementById('fm-frontispiece-file').click()" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:var(--accent-gold); font-size:0.7rem; font-weight:600; padding:3px 8px; border-radius:3px; cursor:pointer;">
+              🖼️ Upload Frontispiece Art
+            </button>
+            ${fm.frontispiece_image_url ? `<span style="font-size:0.68rem; color:var(--accent-cyan); display:flex; align-items:center; gap:4px;"><img src="${fm.frontispiece_image_url}" style="height:22px; border-radius:2px; border:1px solid #555;"> Active</span>` : '<span style="font-size:0.68rem; color:#666;">Procedural SVG Ornament</span>'}
+          </div>
         </div>
 
         <!-- Title Page -->
@@ -1851,7 +1962,14 @@ function renderFrontMatterTab(container) {
             <input type="checkbox" id="fm-map" ${fm.include_map ? 'checked' : ''}> Pre-Book Map / Territory Plate
           </label>
           <input type="text" id="fm-map-title" value="${fm.map_title || ''}" placeholder="Map Title..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px; margin-bottom:4px;">
-          <input type="text" id="fm-map-caption" value="${fm.map_caption || ''}" placeholder="Map Caption..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">
+          <input type="text" id="fm-map-caption" value="${fm.map_caption || ''}" placeholder="Map Caption..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px; margin-bottom:6px;">
+          <input type="file" id="fm-map-file" style="display:none;" accept="image/*" onchange="uploadMatterImage('map', this.files[0])">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+            <button type="button" onclick="document.getElementById('fm-map-file').click()" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:var(--accent-cyan); font-size:0.7rem; font-weight:600; padding:3px 8px; border-radius:3px; cursor:pointer;">
+              🗺️ Upload Territory Map Art
+            </button>
+            ${fm.map_image_url ? `<span style="font-size:0.68rem; color:var(--accent-cyan); display:flex; align-items:center; gap:4px;"><img src="${fm.map_image_url}" style="height:22px; border-radius:2px; border:1px solid #555;"> Active</span>` : '<span style="font-size:0.68rem; color:#666;">Procedural Cartography Grid</span>'}
+          </div>
         </div>
 
         <!-- Post-Book Appendix -->
@@ -1868,33 +1986,70 @@ function renderFrontMatterTab(container) {
           <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; margin-bottom:4px; cursor:pointer;">
             <input type="checkbox" id="fm-glossary" ${fm.include_glossary ? 'checked' : ''}> Post-Book Lexicon / Glossary
           </label>
-          <input type="text" id="fm-glossary-title" value="${fm.glossary_title || ''}" placeholder="Glossary Title..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">
+          <input type="text" id="fm-glossary-title" value="${fm.glossary_title || ''}" placeholder="Glossary Title..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px; margin-bottom:4px;">
+          <textarea id="fm-glossary-terms" rows="4" placeholder="Term: Definition (one per line)..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">${glossaryRaw}</textarea>
         </div>
 
-        <!-- Acknowledgements & Bio -->
+        <!-- Acknowledgements -->
         <div class="matter-card">
           <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; margin-bottom:4px; cursor:pointer;">
             <input type="checkbox" id="fm-acknowledgements" ${fm.include_acknowledgements ? 'checked' : ''}> Acknowledgements
           </label>
+          <textarea id="fm-acknowledgements-text" rows="3" placeholder="Acknowledgements text..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">${fm.acknowledgements_text || ''}</textarea>
+        </div>
+
+        <!-- About the Author -->
+        <div class="matter-card">
           <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; margin-bottom:4px; cursor:pointer;">
             <input type="checkbox" id="fm-about-author" ${fm.include_about_author ? 'checked' : ''}> About the Author
           </label>
-          <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; cursor:pointer;">
+          <textarea id="fm-about-author-text" rows="3" placeholder="Author biography..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">${fm.about_author_text || ''}</textarea>
+        </div>
+
+        <!-- Typesetting Colophon -->
+        <div class="matter-card">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:700; color:#FFF; margin-bottom:4px; cursor:pointer;">
             <input type="checkbox" id="fm-colophon" ${fm.include_colophon !== false ? 'checked' : ''}> Typesetting Colophon
           </label>
+          <textarea id="fm-colophon-text" rows="3" placeholder="Colophon text..." style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:4px; border-radius:3px;">${fm.colophon_text || ''}</textarea>
         </div>
       </div>
     </div>
   `;
 }
 
+async function uploadMatterImage(imageType, file) {
+  if (!file) return;
+  const formData = new FormData();
+  formData.append("file", file);
+  try {
+    showToast(`Uploading ${imageType} artwork...`, "info");
+    const res = await fetch(`/api/matter/upload-image/${state.activeBookId}/${imageType}`, {
+      method: "POST",
+      body: formData
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+      throw new Error(err.detail || "Upload failed");
+    }
+    const data = await res.json();
+    showToast(`${imageType.toUpperCase()} artwork uploaded and wired!`, "success");
+    await loadBook(state.activeBookId);
+  } catch (err) {
+    console.error(`Error uploading ${imageType}:`, err);
+    showToast(err.message, "error");
+  }
+}
+
 async function saveMatterSettings() {
+  const fmCurrent = state.settings?.front_back_matter || {};
   const updates = {
     front_back_matter: {
       include_half_title: document.getElementById("fm-half-title").checked,
       half_title_text: document.getElementById("fm-half-title-text").value,
       include_frontispiece: document.getElementById("fm-frontispiece").checked,
       frontispiece_subtitle: document.getElementById("fm-frontispiece-subtitle").value,
+      frontispiece_image_url: fmCurrent.frontispiece_image_url || "",
       include_title_page: document.getElementById("fm-title-page").checked,
       book_title: document.getElementById("fm-book-title").value,
       author_name: document.getElementById("fm-author-name").value,
@@ -1910,14 +2065,19 @@ async function saveMatterSettings() {
       include_map: document.getElementById("fm-map").checked,
       map_title: document.getElementById("fm-map-title").value,
       map_caption: document.getElementById("fm-map-caption").value,
+      map_image_url: fmCurrent.map_image_url || "",
       include_appendix: document.getElementById("fm-appendix").checked,
       appendix_title: document.getElementById("fm-appendix-title").value,
       appendix_text: document.getElementById("fm-appendix-text").value,
       include_glossary: document.getElementById("fm-glossary").checked,
       glossary_title: document.getElementById("fm-glossary-title").value,
+      glossary_terms: document.getElementById("fm-glossary-terms").value,
       include_acknowledgements: document.getElementById("fm-acknowledgements").checked,
+      acknowledgements_text: document.getElementById("fm-acknowledgements-text").value,
       include_about_author: document.getElementById("fm-about-author").checked,
+      about_author_text: document.getElementById("fm-about-author-text").value,
       include_colophon: document.getElementById("fm-colophon").checked,
+      colophon_text: document.getElementById("fm-colophon-text").value,
     }
   };
   showToast("Updating front & back matter...", "info");

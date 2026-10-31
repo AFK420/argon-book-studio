@@ -13,6 +13,19 @@ from ebooklib import epub
 from app.profiles import BOOK_PROFILES
 
 
+def resolve_local_image_path(img_url: str) -> Optional[str]:
+    if not img_url:
+        return None
+    if img_url.startswith("/static/"):
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        cand = os.path.join(base_dir, img_url.lstrip("/")).replace("/", "\\")
+        if os.path.exists(cand):
+            return cand
+    elif os.path.exists(img_url):
+        return img_url
+    return None
+
+
 def export_epub(
     parsed_book: Dict[str, Any],
     manifest: Dict[str, Any],
@@ -30,12 +43,16 @@ def export_epub(
     brass_accent = cs.get("typography", {}).get("brass_accent", profile["brass_accent"])
     font_name = cs.get("typography", {}).get("body_font_name", profile["body_font_name"])
     
+    b_title = cm.get("book_title") or parsed_book.get("title", profile["title"])
+    b_subtitle = cm.get("book_subtitle") or parsed_book.get("subtitle", profile["subtitle"])
+    b_author = cm.get("author_name") or parsed_book.get("author", profile["author"])
+
     book = epub.EpubBook()
     
     book.set_identifier(f"argon-studio-{profile_id}-2026")
-    book.set_title(parsed_book.get("title", profile["title"]))
+    book.set_title(b_title)
     book.set_language("en")
-    book.add_author(parsed_book.get("author", profile["author"]))
+    book.add_author(b_author)
     
     style = f"""
     @namespace epub "http://www.idpf.org/2007/ops";
@@ -164,6 +181,31 @@ def export_epub(
     )
     book.add_item(css_item)
 
+    # Embed Illustration Assets into EPUB package
+    added_images: Dict[str, str] = {}
+    for a in manifest.get("assets", []):
+        aid = a.get("id")
+        raw_p = a.get("raw_image_path")
+        img_url = a.get("image_url", "")
+        loc = resolve_local_image_path(img_url) or (raw_p if raw_p and os.path.exists(raw_p) else None)
+        if loc and os.path.exists(loc):
+            ext = os.path.splitext(loc)[1].lower()
+            m_type = "image/png" if ext == ".png" else "image/jpeg"
+            epub_file_name = f"images/{aid}{ext}"
+            try:
+                with open(loc, "rb") as f_img:
+                    img_bytes = f_img.read()
+                epub_img = epub.EpubItem(
+                    uid=f"img_{aid}",
+                    file_name=epub_file_name,
+                    media_type=m_type,
+                    content=img_bytes
+                )
+                book.add_item(epub_img)
+                added_images[aid] = epub_file_name
+            except Exception:
+                pass
+
     assets_by_anchor: Dict[str, List[Dict[str, Any]]] = {}
     for a in manifest.get("assets", []):
         assets_by_anchor.setdefault(a.get("anchor", ""), []).append(a)
@@ -176,9 +218,9 @@ def export_epub(
         imprint_txt = cm.get("publisher_imprint", "THE ARGON BOOK STUDIO • FINE EDITIONS")
         title_html = f"""
         <div class="title-screen">
-            <h1 style="font-size: 2em; margin-bottom: 0.3em; color: {accent_color};">{parsed_book.get('title', profile['title'])}</h1>
-            <p style="font-style: italic; margin-bottom: 2em; color: #555;">{parsed_book.get('subtitle', profile['subtitle'])}</p>
-            <p style="font-weight: bold; letter-spacing: 0.1em; text-transform: uppercase;">{parsed_book.get('author', profile['author'])}</p>
+            <h1 style="font-size: 2em; margin-bottom: 0.3em; color: {accent_color};">{b_title}</h1>
+            <p style="font-style: italic; margin-bottom: 2em; color: #555;">{b_subtitle}</p>
+            <p style="font-weight: bold; letter-spacing: 0.1em; text-transform: uppercase;">{b_author}</p>
             <p style="margin-top: 3em; font-size: 0.8em; color: #777;">{imprint_txt}</p>
         </div>
         """
@@ -187,6 +229,30 @@ def export_epub(
         c_title.add_item(css_item)
         book.add_item(c_title)
         spine.append(c_title)
+
+        if cm.get("include_frontispiece", True):
+            front_loc = resolve_local_image_path(cm.get("frontispiece_image_url", ""))
+            front_img_tag = ""
+            if front_loc and os.path.exists(front_loc):
+                f_ext = os.path.splitext(front_loc)[1].lower()
+                f_name = f"images/frontispiece{f_ext}"
+                with open(front_loc, "rb") as f_front:
+                    f_bytes = f_front.read()
+                f_item = epub.EpubItem(uid="img_frontispiece", file_name=f_name, media_type="image/png" if f_ext == ".png" else "image/jpeg", content=f_bytes)
+                book.add_item(f_item)
+                front_img_tag = f'<div style="text-align:center; margin:1.5em 0;"><img src="{f_name}" style="max-width:90%; height:auto;" alt="Frontispiece"/></div>'
+
+            front_html = f"""
+            <div style="text-align:center; margin-top:20%;">
+                {front_img_tag}
+                <p style="font-style:italic; color:#666;">{cm.get('frontispiece_subtitle') or b_subtitle}</p>
+            </div>
+            """
+            c_front = epub.EpubHtml(title="Frontispiece", file_name="frontispiece.xhtml", lang="en")
+            c_front.content = front_html
+            c_front.add_item(css_item)
+            book.add_item(c_front)
+            spine.append(c_front)
 
         if cm.get("include_dedication", False):
             ded_html = f"""
@@ -214,9 +280,21 @@ def export_epub(
             spine.append(c_epi)
 
         if cm.get("include_map", False):
+            map_loc = resolve_local_image_path(cm.get("map_image_url", ""))
+            map_img_tag = ""
+            if map_loc and os.path.exists(map_loc):
+                m_ext = os.path.splitext(map_loc)[1].lower()
+                m_name = f"images/map_plate{m_ext}"
+                with open(map_loc, "rb") as f_map:
+                    m_bytes = f_map.read()
+                m_item = epub.EpubItem(uid="img_map_plate", file_name=m_name, media_type="image/png" if m_ext == ".png" else "image/jpeg", content=m_bytes)
+                book.add_item(m_item)
+                map_img_tag = f'<div style="text-align:center; margin:1.5em 0;"><img src="{m_name}" style="max-width:90%; height:auto;" alt="Survey Map"/></div>'
+
             map_html = f"""
-            <div style="text-align:center; margin-top:20%;">
+            <div style="text-align:center; margin-top:15%;">
                 <h2>{cm.get('map_title', 'Archival Survey Map')}</h2>
+                {map_img_tag}
                 <p style="font-style:italic; color:#666; margin-top:1em;">{cm.get('map_caption', 'Hydrographic Soundings & Survey of the Ghyll Skerries.')}</p>
             </div>
             """
@@ -245,12 +323,22 @@ def export_epub(
             f_html = elem.get("formatted_html") or elem.get("text", "")
             
             for asset in assets_by_anchor.get(elem_id, []):
+                aid = asset.get("id")
                 caption = asset.get("caption", "")
-                ch_html += f"""
-                <div class="illustration-block">
-                    <p class="caption"><strong>[Plate: {asset.get('title', '')}]</strong><br>{caption}</p>
-                </div>
-                """
+                img_rel = added_images.get(aid)
+                if img_rel:
+                    ch_html += f"""
+                    <div class="illustration-block">
+                        <img src="{img_rel}" alt="{asset.get('title', '')}" style="max-width:100%; height:auto; display:block; margin:0 auto;"/>
+                        {f'<p class="caption">{caption}</p>' if caption else ''}
+                    </div>
+                    """
+                else:
+                    ch_html += f"""
+                    <div class="illustration-block">
+                        <p class="caption"><strong>[Plate: {asset.get('title', '')}]</strong><br>{caption}</p>
+                    </div>
+                    """
 
             if btype == "chapter_subtitle":
                 ch_html += f'<div class="chapter-subtitle" style="text-align:center; font-weight:bold; letter-spacing:0.15em; text-transform:uppercase; margin:1em 0;">{f_html}</div>\n'
@@ -287,7 +375,19 @@ def export_epub(
         spine.append(c_app)
 
     if cm.get("include_glossary", False):
-        glo_body = "".join(f"<p><strong>{g.get('term', '')}</strong> — {g.get('definition', '')}</p>" for g in cm.get("glossary_terms", []))
+        raw_glo = cm.get("glossary_terms", [])
+        if isinstance(raw_glo, str):
+            g_list = []
+            for l in raw_glo.splitlines():
+                if ":" in l:
+                    pts = l.split(":", 1)
+                    g_list.append({"term": pts[0].strip(), "definition": pts[1].strip()})
+                elif "—" in l:
+                    pts = l.split("—", 1)
+                    g_list.append({"term": pts[0].strip(), "definition": pts[1].strip()})
+        else:
+            g_list = raw_glo or []
+        glo_body = "".join(f"<p><strong>{g.get('term', '')}</strong> — {g.get('definition', '')}</p>" for g in g_list)
         glo_html = f"""
         <div style="margin-top:15%;">
             <h2 style="text-align:center; text-transform:uppercase;">{cm.get('glossary_title', 'Glossary')}</h2>
