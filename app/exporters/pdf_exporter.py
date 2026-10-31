@@ -429,7 +429,7 @@ def generate_pdf_html(
             etype = elem.get("type", "")
             
             if etype == "chapter_header":
-                c_num = elem.get("number", "")
+                c_num = elem.get("chapter_number") or elem.get("number", "")
                 c_title = elem.get("title", "")
                 ornament = elem.get("ornament_svg") or profile["scene_break_svg"]
                 elem_markup += f"""
@@ -441,9 +441,9 @@ def generate_pdf_html(
                 """
             elif etype == "paragraph":
                 btype = elem.get("block_type", "body")
-                is_first = elem.get("is_first", False)
-                has_drop = elem.get("has_drop_cap", False)
-                p_text = elem.get("html") or elem.get("text", "")
+                is_first = elem.get("is_first_after_break") or elem.get("is_first", False)
+                has_drop = elem.get("has_drop_cap", False) or (is_first and page_type == "chapter_opener")
+                p_text = elem.get("formatted_html") or elem.get("html") or elem.get("text", "")
                 if btype == "chapter_subtitle":
                     elem_markup += f'<div class="chapter-subtitle">{p_text}</div>\n'
                 else:
@@ -457,7 +457,7 @@ def generate_pdf_html(
             elif etype == "container":
                 btype = elem.get("block_type", "container")
                 tag = elem.get("tag", btype.replace("_", "-"))
-                c_text = elem.get("html") or elem.get("content", "").replace("\n", "<br>")
+                c_text = elem.get("formatted_html") or elem.get("html") or elem.get("content", "").replace("\n", "<br>")
                 elem_markup += f'<div class="custom-container {tag}">{c_text}</div>\n'
             elif etype == "scene_break":
                 svg = elem.get("svg") or profile["scene_break_svg"]
@@ -485,6 +485,20 @@ def generate_pdf_html(
                     <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; box-sizing:border-box; padding:0.4in;">
                         {cap_html if caption_pos == 'above' else ''}
                         <img src="{img_src}" class="{frame_cls}" style="max-width:{w_pct}%; max-height:{max_h}in; object-fit:contain;" alt="{asset.get('title', '')}">
+                        {cap_html if caption_pos == 'below' else ''}
+                    </div>
+                    """
+                elif placement == "Chapter End Tailpiece":
+                    elem_markup += f"""
+                    <div class="tailpiece-div" style="margin-top:20pt; margin-bottom:10pt;">
+                        <img src="{img_src}" class="{frame_cls}" style="max-width:40%; max-height:1.5in; object-fit:contain;" alt="{asset.get('title', '')}">
+                        {cap_html if caption_pos == 'below' else ''}
+                    </div>
+                    """
+                elif placement == "Chapter Opener Vignette":
+                    elem_markup += f"""
+                    <div class="chapter-ornament" style="margin:12pt 0;">
+                        <img src="{img_src}" class="{frame_cls}" style="max-width:50%; max-height:1.8in; object-fit:contain;" alt="{asset.get('title', '')}">
                         {cap_html if caption_pos == 'below' else ''}
                     </div>
                     """
@@ -534,7 +548,7 @@ def generate_pdf_html(
                     </div>
                 </div>
                 """
-            elif etype == "copyright":
+            elif etype in ["copyright", "copyright_page"]:
                 isbn_val = elem.get("isbn") or cm.get("isbn_hardcover", "978-1-987654-32-1")
                 isbn_ep = cm.get("isbn_epub", "978-1-987654-33-8")
                 elem_markup += f"""
@@ -579,12 +593,13 @@ def generate_pdf_html(
                     <p class="indent-zero" style="font-size:8.5pt; margin-top:10pt; color:#666;">{elem.get('source', '')}</p>
                 </div>
                 """
-            elif etype == "toc":
+            elif etype in ["toc", "table_of_contents"]:
                 toc_rows = ""
                 for ch in elem.get("chapters", []):
+                    ch_num_val = ch.get("chapter_number") or ch.get("number", "")
                     toc_rows += f"""
                     <div class="toc-entry">
-                        <span><strong>Chapter {ch.get('chapter_number', '')}</strong> — {ch.get('title', '')}</span>
+                        <span><strong>Chapter {ch_num_val}</strong> — {ch.get('title', '')}</span>
                     </div>
                     """
                 elem_markup += f"""

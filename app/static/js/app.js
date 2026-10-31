@@ -300,39 +300,44 @@ function renderWizardStep() {
 // --- STEP 1: THEME & MANUSCRIPT UPLOAD ---
 const BOOK_PROFILE_DETAILS = {
   book01: {
-    title: "Cormac Vane: The Alchemical Inquest",
-    genre: "Gaslamp Forensic Alchemy",
+    title: "The Last Forty Minutes of Cormac Vane",
+    subtitle: "A Speculative Forensic Mystery",
+    genre: "Gaslamp Forensic / Victorian Occult Mystery",
     fonts: "Cinzel & EB Garamond",
-    colors: ["#1B365D", "#D97706", "#FAF7F0"],
+    colors: ["#1B365D", "#B8860B", "#FBF8F1"],
     containers: "Inquest Writs & Sensory Draws"
   },
   book02: {
     title: "The Fourteen-Hour Barometer",
-    genre: "Chronometric Island Thriller",
+    subtitle: "A Chronometric Island Thriller and Speculative Romance",
+    genre: "Chronometric Island Thriller / Meteorological Mystery",
     fonts: "Oswald & Lora",
     colors: ["#1E2229", "#00A896", "#F5F6F8"],
     containers: "Welsh Slate & Telemetry Equations"
   },
   book03: {
     title: "The Dead-Room Transcripts",
-    genre: "Cold War Signal Polyphony",
-    fonts: "JetBrains Mono & Baskerville",
-    colors: ["#12151A", "#38BDF8", "#D97706"],
-    containers: "DAW Audio Transcripts & FSK Telemetry"
+    subtitle: "A Locked-Room Mystery and Acoustic Forensic Thriller",
+    genre: "Acoustic Locked-Room Mystery / Sonic Espionage",
+    fonts: "JetBrains Mono & Source Serif 4",
+    colors: ["#0F172A", "#38BDF8", "#F8FAFC"],
+    containers: "DAW Audio Transcripts & FSK Payloads"
   },
   book04: {
     title: "The Salt Orchard of Saint Jude",
-    genre: "Tide-Marsh Folk Ecocriticism",
+    subtitle: "An Ecological & Institutional Gothic Mystery",
+    genre: "Ecological Southern Gothic / Lowcountry Bioluminescence",
     fonts: "Cormorant Garamond & Crimson Pro",
-    colors: ["#222E26", "#D4A373", "#E8DCC4"],
+    colors: ["#2C402E", "#D97706", "#FCFAF2"],
     containers: "Pelham Ledgers & Archival Journals"
   },
   book05: {
-    title: "Provenance of Ashes",
-    genre: "Cuneiform Antiquities Heist",
+    title: "The Provenance of Ashes",
+    subtitle: "An Epigraphic Crime & Field Excavation Thriller",
+    genre: "Cuneiform Antiquities Heist / Archaeometric Crime",
     fonts: "Cinzel Decorative & Source Serif 4",
-    colors: ["#2A1B18", "#C2593F", "#D97706"],
-    containers: "Cuneiform Tablets & Assur Writs"
+    colors: ["#5A2A18", "#C98A2C", "#FAF6EE"],
+    containers: "Cuneiform Tablets & Cedar Note Blocks"
   }
 };
 
@@ -792,7 +797,22 @@ function setViewMode(mode) {
   state.viewMode = mode;
   document.getElementById("view-mode-html-btn")?.classList.toggle("active", mode === "html");
   document.getElementById("view-mode-pdf-btn")?.classList.toggle("active", mode === "pdf");
+  document.getElementById("wview-mode-html-btn")?.classList.toggle("active", mode === "html");
+  document.getElementById("wview-mode-pdf-btn")?.classList.toggle("active", mode === "pdf");
   renderSpreadCanvas();
+}
+
+// Wrapper aliases for backward compatibility and step-3 action triggers
+function openPlateInspector(assetId) {
+  openAssetInspector(assetId);
+}
+
+function openFilterLab(assetId) {
+  openImageLabModal(assetId);
+}
+
+function openPinStudio(assetId) {
+  openVisualPinStudio(assetId);
 }
 
 // ======================================================================

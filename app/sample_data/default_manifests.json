@@ -19,8 +19,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 40,
-            "y": 30,
+            "x": 40.0,
+            "y": 30.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "RATCLIFFE HIGHWAY ASSAY ",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b01_asset_01",
+        "anchor_text": "ch01_p01",
+        "chapter": 1,
+        "caption_text": "Figure 1.1: Lime-Washed Arches of Wapping Basin.",
+        "filter_preset": "cyanotype_silver_plate",
+        "callouts": [
+          {
+            "x": 40.0,
+            "y": 30.0,
+            "target_x": null,
+            "target_y": null,
             "label": "RATCLIFFE HIGHWAY ASSAY ",
             "type": "box"
           }
@@ -41,7 +58,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b01_asset_02",
+        "anchor_text": "ch01_p03",
+        "chapter": 1,
+        "caption_text": "Plate I: The Coroner's Reagent Kit and Sublimation Retort.",
+        "filter_preset": "cyanotype_silver_plate",
+        "callouts": []
       },
       {
         "id": "b01_asset_03",
@@ -60,8 +83,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 46,
-            "y": 38,
+            "x": 46.0,
+            "y": 38.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "LIME-WASHED WHARF SLIPWA",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b01_asset_03",
+        "anchor_text": "ch01_p06",
+        "chapter": 1,
+        "caption_text": "Figure 1.2: Timber Derrick on Wapping Slipway.",
+        "filter_preset": "cyanotype_silver_plate",
+        "callouts": [
+          {
+            "x": 46.0,
+            "y": 38.0,
+            "target_x": null,
+            "target_y": null,
             "label": "LIME-WASHED WHARF SLIPWA",
             "type": "box"
           }
@@ -82,7 +122,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b01_asset_04",
+        "anchor_text": "ch01_p08",
+        "chapter": 1,
+        "caption_text": "Document 1: Parish of St. John Inquest Warrant.",
+        "filter_preset": "cyanotype_silver_plate",
+        "callouts": []
       },
       {
         "id": "b01_asset_05",
@@ -101,8 +147,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 52,
-            "y": 46,
+            "x": 52.0,
+            "y": 46.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "VESPER SENSORY PERCEPTIO",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b01_asset_05",
+        "anchor_text": "ch01_p10",
+        "chapter": 1,
+        "caption_text": "Figure 1.3: Sensory Trace Gradient at 15:42 GMT.",
+        "filter_preset": "cyanotype_silver_plate",
+        "callouts": [
+          {
+            "x": 52.0,
+            "y": 46.0,
+            "target_x": null,
+            "target_y": null,
             "label": "VESPER SENSORY PERCEPTIO",
             "type": "box"
           }
@@ -123,7 +186,13 @@
         "max_height_in": 7.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b01_asset_06",
+        "anchor_text": "ch01_p12",
+        "chapter": 1,
+        "caption_text": "Plate II: Low-Water Silt Beds below Shadwell Spire.",
+        "filter_preset": "cyanotype_silver_plate",
+        "callouts": []
       },
       {
         "id": "b01_asset_07",
@@ -142,8 +211,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 58,
-            "y": 54,
+            "x": 58.0,
+            "y": 54.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "HORN-HANDLED MAGNIFIER",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b01_asset_07",
+        "anchor_text": "ch01_p14",
+        "chapter": 1,
+        "caption_text": "Figure 1.4: Assay Glass and Reagent Crystals.",
+        "filter_preset": "cyanotype_silver_plate",
+        "callouts": [
+          {
+            "x": 58.0,
+            "y": 54.0,
+            "target_x": null,
+            "target_y": null,
             "label": "HORN-HANDLED MAGNIFIER",
             "type": "box"
           }
@@ -164,7 +250,13 @@
         "max_height_in": 7.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b01_asset_08",
+        "anchor_text": "ch02_p01",
+        "chapter": 2,
+        "caption_text": "Plate III: Secret Furnace Cellar below Shadwell.",
+        "filter_preset": "cyanotype_silver_plate",
+        "callouts": []
       },
       {
         "id": "b01_asset_09",
@@ -183,8 +275,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 64,
-            "y": 62,
+            "x": 64.0,
+            "y": 62.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "ALEMBIC RETORTS IN GREEN",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b01_asset_09",
+        "anchor_text": "ch02_p03",
+        "chapter": 2,
+        "caption_text": "Figure 2.1: Fuming Nitric Carboys and Lead Condenser.",
+        "filter_preset": "cyanotype_silver_plate",
+        "callouts": [
+          {
+            "x": 64.0,
+            "y": 62.0,
+            "target_x": null,
+            "target_y": null,
             "label": "ALEMBIC RETORTS IN GREEN",
             "type": "box"
           }
@@ -205,7 +314,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b01_asset_10",
+        "anchor_text": "ch02_p05",
+        "chapter": 2,
+        "caption_text": "Figure 2.2: Assay Scale Balanced at One-Tenth Grain.",
+        "filter_preset": "cyanotype_silver_plate",
+        "callouts": []
       },
       {
         "id": "b01_asset_11",
@@ -224,8 +339,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 70,
-            "y": 70,
+            "x": 70.0,
+            "y": 70.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "LATIN MARROW LEDGER BOUN",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b01_asset_11",
+        "anchor_text": "ch02_p07",
+        "chapter": 2,
+        "caption_text": "Plate IV: The 1887 Apothecary's Marrow Register.",
+        "filter_preset": "cyanotype_silver_plate",
+        "callouts": [
+          {
+            "x": 70.0,
+            "y": 70.0,
+            "target_x": null,
+            "target_y": null,
             "label": "LATIN MARROW LEDGER BOUN",
             "type": "box"
           }
@@ -246,7 +378,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b01_asset_12",
+        "anchor_text": "ch02_p09",
+        "chapter": 2,
+        "caption_text": "Figure 2.3: Atmospheric Smog across the Docks.",
+        "filter_preset": "cyanotype_silver_plate",
+        "callouts": []
       },
       {
         "id": "b01_asset_13",
@@ -265,8 +403,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 76,
-            "y": 33,
+            "x": 76.0,
+            "y": 33.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "ST. JOHN PARISH MORTUARY",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b01_asset_13",
+        "anchor_text": "ch02_p11",
+        "chapter": 2,
+        "caption_text": "Plate V: Slate Embalming Beds and Vitriol Cistern.",
+        "filter_preset": "cyanotype_silver_plate",
+        "callouts": [
+          {
+            "x": 76.0,
+            "y": 33.0,
+            "target_x": null,
+            "target_y": null,
             "label": "ST. JOHN PARISH MORTUARY",
             "type": "box"
           }
@@ -287,7 +442,13 @@
         "max_height_in": 7.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b01_asset_14",
+        "anchor_text": "ch02_p13",
+        "chapter": 2,
+        "caption_text": "Figure 2.4: Micro-Assay of Efflorescent Crusts.",
+        "filter_preset": "cyanotype_silver_plate",
+        "callouts": []
       },
       {
         "id": "b01_asset_15",
@@ -306,8 +467,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 42,
-            "y": 41,
+            "x": 42.0,
+            "y": 41.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "UNDERGROUND LABORATORY A",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b01_asset_15",
+        "anchor_text": "ch02_p15",
+        "chapter": 2,
+        "caption_text": "Plan I: Section View of Orchard Lane Slipway Flue.",
+        "filter_preset": "cyanotype_silver_plate",
+        "callouts": [
+          {
+            "x": 42.0,
+            "y": 41.0,
+            "target_x": null,
+            "target_y": null,
             "label": "UNDERGROUND LABORATORY A",
             "type": "box"
           }
@@ -328,7 +506,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b01_asset_16",
+        "anchor_text": "ch02_p17",
+        "chapter": 2,
+        "caption_text": "Tailpiece: The Guild of Assay Mark.",
+        "filter_preset": "cyanotype_silver_plate",
+        "callouts": []
       }
     ]
   },
@@ -352,8 +536,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 40,
-            "y": 30,
+            "x": 40.0,
+            "y": 30.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "GHYLL SKERRIES LIGHTHOUS",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b02_asset_01",
+        "anchor_text": "ch01_p01",
+        "chapter": 1,
+        "caption_text": "Figure 1: Ghyll Skerries Station under Surge.",
+        "filter_preset": "charcoal_lithograph",
+        "callouts": [
+          {
+            "x": 40.0,
+            "y": 30.0,
+            "target_x": null,
+            "target_y": null,
             "label": "GHYLL SKERRIES LIGHTHOUS",
             "type": "box"
           }
@@ -374,7 +575,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b02_asset_02",
+        "anchor_text": "ch01_p03",
+        "chapter": 1,
+        "caption_text": "Figure 2: Precision Torricellian Column with Meniscus.",
+        "filter_preset": "charcoal_lithograph",
+        "callouts": []
       },
       {
         "id": "b02_asset_03",
@@ -393,8 +600,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 46,
-            "y": 38,
+            "x": 46.0,
+            "y": 38.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "SUBTERRANEAN SURGE CHAMB",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b02_asset_03",
+        "anchor_text": "ch01_p06",
+        "chapter": 1,
+        "caption_text": "Plate I: The Twenty-Four Dog-Latches.",
+        "filter_preset": "charcoal_lithograph",
+        "callouts": [
+          {
+            "x": 46.0,
+            "y": 38.0,
+            "target_x": null,
+            "target_y": null,
             "label": "SUBTERRANEAN SURGE CHAMB",
             "type": "box"
           }
@@ -415,7 +639,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b02_asset_04",
+        "anchor_text": "ch01_p08",
+        "chapter": 1,
+        "caption_text": "Figure 3: Marine Chronometer Escapement.",
+        "filter_preset": "charcoal_lithograph",
+        "callouts": []
       },
       {
         "id": "b02_asset_05",
@@ -434,8 +664,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 52,
-            "y": 46,
+            "x": 52.0,
+            "y": 46.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "GRANITE ISLAND RELIEF CH",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b02_asset_05",
+        "anchor_text": "ch01_p10",
+        "chapter": 1,
+        "caption_text": "Plate II: Admiralty Soundings of North Minch Reefs.",
+        "filter_preset": "charcoal_lithograph",
+        "callouts": [
+          {
+            "x": 52.0,
+            "y": 46.0,
+            "target_x": null,
+            "target_y": null,
             "label": "GRANITE ISLAND RELIEF CH",
             "type": "box"
           }
@@ -456,7 +703,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b02_asset_06",
+        "anchor_text": "ch01_p12",
+        "chapter": 1,
+        "caption_text": "Figure 4: Piezoelectric Surge Sensor.",
+        "filter_preset": "charcoal_lithograph",
+        "callouts": []
       },
       {
         "id": "b02_asset_07",
@@ -475,8 +728,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 58,
-            "y": 54,
+            "x": 58.0,
+            "y": 54.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "BASALT SLATE MESSAGE TAB",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b02_asset_07",
+        "anchor_text": "ch01_p14",
+        "chapter": 1,
+        "caption_text": "Document 1: Welsh Basalt Slate Log at 04:00.",
+        "filter_preset": "charcoal_lithograph",
+        "callouts": [
+          {
+            "x": 58.0,
+            "y": 54.0,
+            "target_x": null,
+            "target_y": null,
             "label": "BASALT SLATE MESSAGE TAB",
             "type": "box"
           }
@@ -497,7 +767,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b02_asset_08",
+        "anchor_text": "ch02_p01",
+        "chapter": 2,
+        "caption_text": "Figure 5: Pneumatic Alarm Flue Mechanism.",
+        "filter_preset": "charcoal_lithograph",
+        "callouts": []
       },
       {
         "id": "b02_asset_09",
@@ -516,8 +792,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 64,
-            "y": 62,
+            "x": 64.0,
+            "y": 62.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "BAROGRAPH DRUM CHART WIT",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b02_asset_09",
+        "anchor_text": "ch02_p03",
+        "chapter": 2,
+        "caption_text": "Figure 6: Ink Barograph Trace during Gale-Force Drop.",
+        "filter_preset": "charcoal_lithograph",
+        "callouts": [
+          {
+            "x": 64.0,
+            "y": 62.0,
+            "target_x": null,
+            "target_y": null,
             "label": "BAROGRAPH DRUM CHART WIT",
             "type": "box"
           }
@@ -538,7 +831,13 @@
         "max_height_in": 7.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b02_asset_10",
+        "anchor_text": "ch02_p05",
+        "chapter": 2,
+        "caption_text": "Plate III: Hydrostatic Relief Spillway.",
+        "filter_preset": "charcoal_lithograph",
+        "callouts": []
       },
       {
         "id": "b02_asset_11",
@@ -557,8 +856,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 70,
-            "y": 70,
+            "x": 70.0,
+            "y": 70.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "BRASS VERNIER DEPTH GAUG",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b02_asset_11",
+        "anchor_text": "ch02_p07",
+        "chapter": 2,
+        "caption_text": "Figure 7: Spring-Tide Depth Calibration Rod.",
+        "filter_preset": "charcoal_lithograph",
+        "callouts": [
+          {
+            "x": 70.0,
+            "y": 70.0,
+            "target_x": null,
+            "target_y": null,
             "label": "BRASS VERNIER DEPTH GAUG",
             "type": "box"
           }
@@ -579,7 +895,13 @@
         "max_height_in": 7.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b02_asset_12",
+        "anchor_text": "ch02_p09",
+        "chapter": 2,
+        "caption_text": "Plate IV: High-Pressure Submerged Vault.",
+        "filter_preset": "charcoal_lithograph",
+        "callouts": []
       },
       {
         "id": "b02_asset_13",
@@ -598,8 +920,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 76,
-            "y": 33,
+            "x": 76.0,
+            "y": 33.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "LIGHTHOUSE KEEPER'S LOGB",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b02_asset_13",
+        "anchor_text": "ch02_p11",
+        "chapter": 2,
+        "caption_text": "Document 2: Dr. Maren's Log of Barometric Anomaly.",
+        "filter_preset": "charcoal_lithograph",
+        "callouts": [
+          {
+            "x": 76.0,
+            "y": 33.0,
+            "target_x": null,
+            "target_y": null,
             "label": "LIGHTHOUSE KEEPER'S LOGB",
             "type": "box"
           }
@@ -620,7 +959,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b02_asset_14",
+        "anchor_text": "ch02_p13",
+        "chapter": 2,
+        "caption_text": "Figure 8: Hermetic Mercury Trap Details.",
+        "filter_preset": "charcoal_lithograph",
+        "callouts": []
       },
       {
         "id": "b02_asset_15",
@@ -639,8 +984,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 42,
-            "y": 41,
+            "x": 42.0,
+            "y": 41.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "HYDRODYNAMIC WATER-GATE ",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b02_asset_15",
+        "anchor_text": "ch02_p15",
+        "chapter": 2,
+        "caption_text": "Plate V: Counterweighted Tidal Sluice Gate.",
+        "filter_preset": "charcoal_lithograph",
+        "callouts": [
+          {
+            "x": 42.0,
+            "y": 41.0,
+            "target_x": null,
+            "target_y": null,
             "label": "HYDRODYNAMIC WATER-GATE ",
             "type": "box"
           }
@@ -661,7 +1023,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b02_asset_16",
+        "anchor_text": "ch02_p17",
+        "chapter": 2,
+        "caption_text": "Tailpiece: Skerries Chronometric Station Seal.",
+        "filter_preset": "charcoal_lithograph",
+        "callouts": []
       }
     ]
   },
@@ -685,8 +1053,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 40,
-            "y": 30,
+            "x": 40.0,
+            "y": 30.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "ANECHOIC WEDGE ARRAY",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b03_asset_01",
+        "anchor_text": "ch01_p01",
+        "chapter": 1,
+        "caption_text": "Figure 1: Bunker Anechoic Array.",
+        "filter_preset": "blueprint_halftone",
+        "callouts": [
+          {
+            "x": 40.0,
+            "y": 30.0,
+            "target_x": null,
+            "target_y": null,
             "label": "ANECHOIC WEDGE ARRAY",
             "type": "box"
           }
@@ -707,7 +1092,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b03_asset_02",
+        "anchor_text": "ch01_p03",
+        "chapter": 1,
+        "caption_text": "Figure 2: Waveform Demodulation.",
+        "filter_preset": "blueprint_halftone",
+        "callouts": []
       },
       {
         "id": "b03_asset_03",
@@ -726,8 +1117,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 46,
-            "y": 38,
+            "x": 46.0,
+            "y": 38.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "SEISMIC GEOPHONE PEDESTA",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b03_asset_03",
+        "anchor_text": "ch01_p06",
+        "chapter": 1,
+        "caption_text": "Plate I: Geophone Cluster Base.",
+        "filter_preset": "blueprint_halftone",
+        "callouts": [
+          {
+            "x": 46.0,
+            "y": 38.0,
+            "target_x": null,
+            "target_y": null,
             "label": "SEISMIC GEOPHONE PEDESTA",
             "type": "box"
           }
@@ -748,7 +1156,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b03_asset_04",
+        "anchor_text": "ch01_p08",
+        "chapter": 1,
+        "caption_text": "Figure 3: Frequency Shift Keying Matrix.",
+        "filter_preset": "blueprint_halftone",
+        "callouts": []
       },
       {
         "id": "b03_asset_05",
@@ -767,8 +1181,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 52,
-            "y": 46,
+            "x": 52.0,
+            "y": 46.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "ACOUSTIC SPECTROGRAM OF ",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b03_asset_05",
+        "anchor_text": "ch01_p10",
+        "chapter": 1,
+        "caption_text": "Plate II: Water-Fall FFT Spectrogram.",
+        "filter_preset": "blueprint_halftone",
+        "callouts": [
+          {
+            "x": 52.0,
+            "y": 46.0,
+            "target_x": null,
+            "target_y": null,
             "label": "ACOUSTIC SPECTROGRAM OF ",
             "type": "box"
           }
@@ -789,7 +1220,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b03_asset_06",
+        "anchor_text": "ch01_p12",
+        "chapter": 1,
+        "caption_text": "Figure 4: Harmonic Resonance Peak.",
+        "filter_preset": "blueprint_halftone",
+        "callouts": []
       },
       {
         "id": "b03_asset_07",
@@ -808,8 +1245,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 58,
-            "y": 54,
+            "x": 58.0,
+            "y": 54.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "TAPE SPLICING BLOCK",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b03_asset_07",
+        "anchor_text": "ch01_p14",
+        "chapter": 1,
+        "caption_text": "Figure 5: 1/2-Inch Studio Splice Guide.",
+        "filter_preset": "blueprint_halftone",
+        "callouts": [
+          {
+            "x": 58.0,
+            "y": 54.0,
+            "target_x": null,
+            "target_y": null,
             "label": "TAPE SPLICING BLOCK",
             "type": "box"
           }
@@ -830,7 +1284,13 @@
         "max_height_in": 7.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b03_asset_08",
+        "anchor_text": "ch02_p01",
+        "chapter": 2,
+        "caption_text": "Plate III: Perimeter Hydrophone Cable Route.",
+        "filter_preset": "blueprint_halftone",
+        "callouts": []
       },
       {
         "id": "b03_asset_09",
@@ -849,8 +1309,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 64,
-            "y": 62,
+            "x": 64.0,
+            "y": 62.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "PIEZO CERAMIC SENSOR EMB",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b03_asset_09",
+        "anchor_text": "ch02_p03",
+        "chapter": 2,
+        "caption_text": "Figure 6: Core-Drilled Strain Gauge.",
+        "filter_preset": "blueprint_halftone",
+        "callouts": [
+          {
+            "x": 64.0,
+            "y": 62.0,
+            "target_x": null,
+            "target_y": null,
             "label": "PIEZO CERAMIC SENSOR EMB",
             "type": "box"
           }
@@ -871,7 +1348,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b03_asset_10",
+        "anchor_text": "ch02_p05",
+        "chapter": 2,
+        "caption_text": "Figure 7: High-Speed Ink Galvanometer.",
+        "filter_preset": "blueprint_halftone",
+        "callouts": []
       },
       {
         "id": "b03_asset_11",
@@ -890,8 +1373,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 70,
-            "y": 70,
+            "x": 70.0,
+            "y": 70.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "SIGNAL INTERCEPT LOG SHE",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b03_asset_11",
+        "anchor_text": "ch02_p07",
+        "chapter": 2,
+        "caption_text": "Document 1: DAW Intercept Channel 4 Log.",
+        "filter_preset": "blueprint_halftone",
+        "callouts": [
+          {
+            "x": 70.0,
+            "y": 70.0,
+            "target_x": null,
+            "target_y": null,
             "label": "SIGNAL INTERCEPT LOG SHE",
             "type": "box"
           }
@@ -912,7 +1412,13 @@
         "max_height_in": 7.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b03_asset_12",
+        "anchor_text": "ch02_p09",
+        "chapter": 2,
+        "caption_text": "Plate IV: Isolated Signal Processing Stack.",
+        "filter_preset": "blueprint_halftone",
+        "callouts": []
       },
       {
         "id": "b03_asset_13",
@@ -931,8 +1437,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 76,
-            "y": 33,
+            "x": 76.0,
+            "y": 33.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "FREQUENCY GENERATOR DIAL",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b03_asset_13",
+        "anchor_text": "ch02_p11",
+        "chapter": 2,
+        "caption_text": "Figure 8: Precision Sine Oscillator Dial.",
+        "filter_preset": "blueprint_halftone",
+        "callouts": [
+          {
+            "x": 76.0,
+            "y": 33.0,
+            "target_x": null,
+            "target_y": null,
             "label": "FREQUENCY GENERATOR DIAL",
             "type": "box"
           }
@@ -953,7 +1476,13 @@
         "max_height_in": 7.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b03_asset_14",
+        "anchor_text": "ch02_p13",
+        "chapter": 2,
+        "caption_text": "Plate V: Acoustic Transmission Loss Chart.",
+        "filter_preset": "blueprint_halftone",
+        "callouts": []
       },
       {
         "id": "b03_asset_15",
@@ -972,8 +1501,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 42,
-            "y": 41,
+            "x": 42.0,
+            "y": 41.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "MAGNETIC TAPE REEL WITH ",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b03_asset_15",
+        "anchor_text": "ch02_p15",
+        "chapter": 2,
+        "caption_text": "Figure 9: Master Reel Index Hub.",
+        "filter_preset": "blueprint_halftone",
+        "callouts": [
+          {
+            "x": 42.0,
+            "y": 41.0,
+            "target_x": null,
+            "target_y": null,
             "label": "MAGNETIC TAPE REEL WITH ",
             "type": "box"
           }
@@ -994,7 +1540,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b03_asset_16",
+        "anchor_text": "ch02_p17",
+        "chapter": 2,
+        "caption_text": "Tailpiece: Station Zero Broadcast Mark.",
+        "filter_preset": "blueprint_halftone",
+        "callouts": []
       }
     ]
   },
@@ -1018,8 +1570,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 40,
-            "y": 30,
+            "x": 40.0,
+            "y": 30.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "COMBAHEE MARSH",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b04_asset_01",
+        "anchor_text": "ch01_p01",
+        "chapter": 1,
+        "caption_text": "Figure 1: Estuarine Stand of Salt Cypress.",
+        "filter_preset": "sepia_bioluminescent_amber",
+        "callouts": [
+          {
+            "x": 40.0,
+            "y": 30.0,
+            "target_x": null,
+            "target_y": null,
             "label": "COMBAHEE MARSH",
             "type": "box"
           }
@@ -1040,7 +1609,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b04_asset_02",
+        "anchor_text": "ch01_p03",
+        "chapter": 1,
+        "caption_text": "Figure 2: Radial Biomineralization inside Vascular Pores.",
+        "filter_preset": "sepia_bioluminescent_amber",
+        "callouts": []
       },
       {
         "id": "b04_asset_03",
@@ -1059,8 +1634,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 46,
-            "y": 38,
+            "x": 46.0,
+            "y": 38.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "FIELD ELECTROMETER",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b04_asset_03",
+        "anchor_text": "ch01_p06",
+        "chapter": 1,
+        "caption_text": "Plate I: Galvanic Root Network Survey (1928).",
+        "filter_preset": "sepia_bioluminescent_amber",
+        "callouts": [
+          {
+            "x": 46.0,
+            "y": 38.0,
+            "target_x": null,
+            "target_y": null,
             "label": "FIELD ELECTROMETER",
             "type": "box"
           }
@@ -1081,7 +1673,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b04_asset_04",
+        "anchor_text": "ch01_p08",
+        "chapter": 1,
+        "caption_text": "Figure 3: Field Herbarium Press & Zinc Tags.",
+        "filter_preset": "sepia_bioluminescent_amber",
+        "callouts": []
       },
       {
         "id": "b04_asset_05",
@@ -1100,8 +1698,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 52,
-            "y": 46,
+            "x": 52.0,
+            "y": 46.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "TIDAL INUNDATION HYDROGR",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b04_asset_05",
+        "anchor_text": "ch01_p10",
+        "chapter": 1,
+        "caption_text": "Plate II: Semi-Diurnal Tide Curves in Marsh.",
+        "filter_preset": "sepia_bioluminescent_amber",
+        "callouts": [
+          {
+            "x": 52.0,
+            "y": 46.0,
+            "target_x": null,
+            "target_y": null,
             "label": "TIDAL INUNDATION HYDROGR",
             "type": "box"
           }
@@ -1122,7 +1737,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b04_asset_06",
+        "anchor_text": "ch01_p12",
+        "chapter": 1,
+        "caption_text": "Figure 4: Hexagonal Aragonite Needles on Trunk.",
+        "filter_preset": "sepia_bioluminescent_amber",
+        "callouts": []
       },
       {
         "id": "b04_asset_07",
@@ -1141,8 +1762,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 58,
-            "y": 54,
+            "x": 58.0,
+            "y": 54.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "PELHAM'S FIELD JOURNAL W",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b04_asset_07",
+        "anchor_text": "ch01_p14",
+        "chapter": 1,
+        "caption_text": "Document 1: October 1928 Ledger Notes.",
+        "filter_preset": "sepia_bioluminescent_amber",
+        "callouts": [
+          {
+            "x": 58.0,
+            "y": 54.0,
+            "target_x": null,
+            "target_y": null,
             "label": "PELHAM'S FIELD JOURNAL W",
             "type": "box"
           }
@@ -1163,7 +1801,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b04_asset_08",
+        "anchor_text": "ch02_p01",
+        "chapter": 2,
+        "caption_text": "Figure 5: Weathered Heart-Pine Trunk Water-Gate.",
+        "filter_preset": "sepia_bioluminescent_amber",
+        "callouts": []
       },
       {
         "id": "b04_asset_09",
@@ -1182,8 +1826,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 64,
-            "y": 62,
+            "x": 64.0,
+            "y": 62.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "SALINITY REFRACTOMETER",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b04_asset_09",
+        "anchor_text": "ch02_p03",
+        "chapter": 2,
+        "caption_text": "Figure 6: Optical Refractometer and Estuary Samples.",
+        "filter_preset": "sepia_bioluminescent_amber",
+        "callouts": [
+          {
+            "x": 64.0,
+            "y": 62.0,
+            "target_x": null,
+            "target_y": null,
             "label": "SALINITY REFRACTOMETER",
             "type": "box"
           }
@@ -1204,7 +1865,13 @@
         "max_height_in": 7.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b04_asset_10",
+        "anchor_text": "ch02_p05",
+        "chapter": 2,
+        "caption_text": "Plate III: Pluff Mud Flats at Neap Tide.",
+        "filter_preset": "sepia_bioluminescent_amber",
+        "callouts": []
       },
       {
         "id": "b04_asset_11",
@@ -1223,8 +1890,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 70,
-            "y": 70,
+            "x": 70.0,
+            "y": 70.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "CALVANIC COPPER-ZINC PRO",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b04_asset_11",
+        "anchor_text": "ch02_p07",
+        "chapter": 2,
+        "caption_text": "Figure 7: Differential Soil Potential Probes.",
+        "filter_preset": "sepia_bioluminescent_amber",
+        "callouts": [
+          {
+            "x": 70.0,
+            "y": 70.0,
+            "target_x": null,
+            "target_y": null,
             "label": "CALVANIC COPPER-ZINC PRO",
             "type": "box"
           }
@@ -1245,7 +1929,13 @@
         "max_height_in": 7.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b04_asset_12",
+        "anchor_text": "ch02_p09",
+        "chapter": 2,
+        "caption_text": "Plate IV: Foliar Salt Glands under 100x Magnification.",
+        "filter_preset": "sepia_bioluminescent_amber",
+        "callouts": []
       },
       {
         "id": "b04_asset_13",
@@ -1264,8 +1954,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 76,
-            "y": 33,
+            "x": 76.0,
+            "y": 33.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "OLD SURVEYOR'S PLAT OF S",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b04_asset_13",
+        "anchor_text": "ch02_p11",
+        "chapter": 2,
+        "caption_text": "Document 2: Boundary Plat Showing Rice Dykes.",
+        "filter_preset": "sepia_bioluminescent_amber",
+        "callouts": [
+          {
+            "x": 76.0,
+            "y": 33.0,
+            "target_x": null,
+            "target_y": null,
             "label": "OLD SURVEYOR'S PLAT OF S",
             "type": "box"
           }
@@ -1286,7 +1993,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b04_asset_14",
+        "anchor_text": "ch02_p13",
+        "chapter": 2,
+        "caption_text": "Figure 8: Micro-Stratigraphy of Estuary Mud.",
+        "filter_preset": "sepia_bioluminescent_amber",
+        "callouts": []
       },
       {
         "id": "b04_asset_15",
@@ -1305,8 +2018,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 42,
-            "y": 41,
+            "x": 42.0,
+            "y": 41.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "BIOLUMINESCENT ROOT SYST",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b04_asset_15",
+        "anchor_text": "ch02_p15",
+        "chapter": 2,
+        "caption_text": "Plate V: Phosphorescent Root Network at Midnight.",
+        "filter_preset": "sepia_bioluminescent_amber",
+        "callouts": [
+          {
+            "x": 42.0,
+            "y": 41.0,
+            "target_x": null,
+            "target_y": null,
             "label": "BIOLUMINESCENT ROOT SYST",
             "type": "box"
           }
@@ -1327,7 +2057,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b04_asset_16",
+        "anchor_text": "ch02_p17",
+        "chapter": 2,
+        "caption_text": "Tailpiece: The Salt Orchard Woodcut Emblem.",
+        "filter_preset": "sepia_bioluminescent_amber",
+        "callouts": []
       }
     ]
   },
@@ -1351,8 +2087,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 40,
-            "y": 30,
+            "x": 40.0,
+            "y": 30.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "SUN-DRIED CLAY TABLET WI",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b05_asset_01",
+        "anchor_text": "ch01_p01",
+        "chapter": 1,
+        "caption_text": "Figure 1: Tablet C-88 with Erra Cycle.",
+        "filter_preset": "desert_ochre_uv",
+        "callouts": [
+          {
+            "x": 40.0,
+            "y": 30.0,
+            "target_x": null,
+            "target_y": null,
             "label": "SUN-DRIED CLAY TABLET WI",
             "type": "box"
           }
@@ -1373,7 +2126,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b05_asset_02",
+        "anchor_text": "ch01_p03",
+        "chapter": 1,
+        "caption_text": "Figure 2: Rare-Earth Isotope Fingerprint.",
+        "filter_preset": "desert_ochre_uv",
+        "callouts": []
       },
       {
         "id": "b05_asset_03",
@@ -1392,8 +2151,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 46,
-            "y": 38,
+            "x": 46.0,
+            "y": 38.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "NINEVEH ROYAL KILN CORE",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b05_asset_03",
+        "anchor_text": "ch01_p06",
+        "chapter": 1,
+        "caption_text": "Plate I: Radiocarbon-Dated Cedar Splinter.",
+        "filter_preset": "desert_ochre_uv",
+        "callouts": [
+          {
+            "x": 46.0,
+            "y": 38.0,
+            "target_x": null,
+            "target_y": null,
             "label": "NINEVEH ROYAL KILN CORE",
             "type": "box"
           }
@@ -1414,7 +2190,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b05_asset_04",
+        "anchor_text": "ch01_p08",
+        "chapter": 1,
+        "caption_text": "Figure 3: Hematite Seal Rollout on Clay.",
+        "filter_preset": "desert_ochre_uv",
+        "callouts": []
       },
       {
         "id": "b05_asset_05",
@@ -1433,8 +2215,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 52,
-            "y": 46,
+            "x": 52.0,
+            "y": 46.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "ANTIQUITIES VAULT SECURI",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b05_asset_05",
+        "anchor_text": "ch01_p10",
+        "chapter": 1,
+        "caption_text": "Plate II: Floorplan of the Pergamos Wing Vault.",
+        "filter_preset": "desert_ochre_uv",
+        "callouts": [
+          {
+            "x": 52.0,
+            "y": 46.0,
+            "target_x": null,
+            "target_y": null,
             "label": "ANTIQUITIES VAULT SECURI",
             "type": "box"
           }
@@ -1455,7 +2254,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b05_asset_06",
+        "anchor_text": "ch01_p12",
+        "chapter": 1,
+        "caption_text": "Figure 4: Reed Stylus Angle of Inscription.",
+        "filter_preset": "desert_ochre_uv",
+        "callouts": []
       },
       {
         "id": "b05_asset_07",
@@ -1474,8 +2279,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 58,
-            "y": 54,
+            "x": 58.0,
+            "y": 54.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "X-RAY FLUORESCENCE SPECT",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b05_asset_07",
+        "anchor_text": "ch01_p14",
+        "chapter": 1,
+        "caption_text": "Figure 5: Elemental Copper Analysis of Glaze.",
+        "filter_preset": "desert_ochre_uv",
+        "callouts": [
+          {
+            "x": 58.0,
+            "y": 54.0,
+            "target_x": null,
+            "target_y": null,
             "label": "X-RAY FLUORESCENCE SPECT",
             "type": "box"
           }
@@ -1496,7 +2318,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b05_asset_08",
+        "anchor_text": "ch02_p01",
+        "chapter": 2,
+        "caption_text": "Figure 6: Cobalt-Glazed Relief Brick with Dragon.",
+        "filter_preset": "desert_ochre_uv",
+        "callouts": []
       },
       {
         "id": "b05_asset_09",
@@ -1515,8 +2343,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 64,
-            "y": 62,
+            "x": 64.0,
+            "y": 62.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "DIAMOND CORE DRILL BIT W",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b05_asset_09",
+        "anchor_text": "ch02_p03",
+        "chapter": 2,
+        "caption_text": "Figure 7: Forensic Sampling Drill Assembly.",
+        "filter_preset": "desert_ochre_uv",
+        "callouts": [
+          {
+            "x": 64.0,
+            "y": 62.0,
+            "target_x": null,
+            "target_y": null,
             "label": "DIAMOND CORE DRILL BIT W",
             "type": "box"
           }
@@ -1537,7 +2382,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b05_asset_10",
+        "anchor_text": "ch02_p05",
+        "chapter": 2,
+        "caption_text": "Figure 8: Glow-Curve Dating Profile (700 BCE).",
+        "filter_preset": "desert_ochre_uv",
+        "callouts": []
       },
       {
         "id": "b05_asset_11",
@@ -1556,8 +2407,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 70,
-            "y": 70,
+            "x": 70.0,
+            "y": 70.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "CUNEIFORM LEGAL CONTRACT",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b05_asset_11",
+        "anchor_text": "ch02_p07",
+        "chapter": 2,
+        "caption_text": "Document 1: Sealed Neo-Babylonian Promissory Note.",
+        "filter_preset": "desert_ochre_uv",
+        "callouts": [
+          {
+            "x": 70.0,
+            "y": 70.0,
+            "target_x": null,
+            "target_y": null,
             "label": "CUNEIFORM LEGAL CONTRACT",
             "type": "box"
           }
@@ -1578,7 +2446,13 @@
         "max_height_in": 7.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b05_asset_12",
+        "anchor_text": "ch02_p09",
+        "chapter": 2,
+        "caption_text": "Plate III: Conservation Bench with Solvent Vials.",
+        "filter_preset": "desert_ochre_uv",
+        "callouts": []
       },
       {
         "id": "b05_asset_13",
@@ -1597,8 +2471,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 76,
-            "y": 33,
+            "x": 76.0,
+            "y": 33.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "ASSYRIAN CUNEIFORM ROYAL",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b05_asset_13",
+        "anchor_text": "ch02_p11",
+        "chapter": 2,
+        "caption_text": "Plate IV: Ashurbanipal Library Tablet Colophon.",
+        "filter_preset": "desert_ochre_uv",
+        "callouts": [
+          {
+            "x": 76.0,
+            "y": 33.0,
+            "target_x": null,
+            "target_y": null,
             "label": "ASSYRIAN CUNEIFORM ROYAL",
             "type": "box"
           }
@@ -1619,7 +2510,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b05_asset_14",
+        "anchor_text": "ch02_p13",
+        "chapter": 2,
+        "caption_text": "Figure 9: Tomographic Slice Showing Hollow Core.",
+        "filter_preset": "desert_ochre_uv",
+        "callouts": []
       },
       {
         "id": "b05_asset_15",
@@ -1638,8 +2535,25 @@
         "margin_bottom_pt": 12,
         "vector_callouts": [
           {
-            "x": 42,
-            "y": 41,
+            "x": 42.0,
+            "y": 41.0,
+            "target_x": null,
+            "target_y": null,
+            "label": "ANTIQUE BRASS CALIPER ME",
+            "type": "box"
+          }
+        ],
+        "asset_id": "b05_asset_15",
+        "anchor_text": "ch02_p15",
+        "chapter": 2,
+        "caption_text": "Plate V: Precision Micrometer Inspection of Tablet.",
+        "filter_preset": "desert_ochre_uv",
+        "callouts": [
+          {
+            "x": 42.0,
+            "y": 41.0,
+            "target_x": null,
+            "target_y": null,
             "label": "ANTIQUE BRASS CALIPER ME",
             "type": "box"
           }
@@ -1660,7 +2574,13 @@
         "max_height_in": 4.0,
         "margin_top_pt": 6,
         "margin_bottom_pt": 12,
-        "vector_callouts": []
+        "vector_callouts": [],
+        "asset_id": "b05_asset_16",
+        "anchor_text": "ch02_p17",
+        "chapter": 2,
+        "caption_text": "Tailpiece: Royal Ashur Seal Tailpiece.",
+        "filter_preset": "desert_ochre_uv",
+        "callouts": []
       }
     ]
   }

@@ -295,6 +295,7 @@ def paginate_manuscript(
         cur_page.elements.append({
             "type": "chapter_header",
             "chapter_number": ch_num,
+            "number": ch_num,
             "title": ch_title,
             "sinkage_in": sinkage,
             "ornament_svg": profile["scene_break_svg"]
@@ -306,6 +307,7 @@ def paginate_manuscript(
 
         ch_anchors = [elem.get("id") for elem in chapter.get("elements", [])]
         first_anchor = ch_anchors[0] if ch_anchors else f"ch{ch_idx+1:02d}_p01"
+        drop_cap_assigned = False
         
         for asset in assets_by_anchor.get(first_anchor, []):
             if asset.get("placement") == "Chapter Opener Vignette":
@@ -338,7 +340,7 @@ def paginate_manuscript(
             # Check for anchored illustrations
             for asset in assets_by_anchor.get(elem_id, []):
                 placement = asset.get("placement", "Inline Archival Insert")
-                if placement == "Chapter Opener Vignette":
+                if placement in ["Chapter Opener Vignette", "Chapter End Tailpiece"]:
                     continue
                 elif placement in ["Full-Page Recto Plate", "Full Bleed Plate"]:
                     # Must be placed on a Recto (odd) page
@@ -417,8 +419,37 @@ def paginate_manuscript(
                     pages.append(cur_page)
                     current_page_num += 1
                     continue
-                elif placement in ["Half-Page Top", "Half-Page Bottom"]:
-                    if cur_page_lines + 14 > page_capacity:
+                elif placement == "Half-Page Top":
+                    if cur_page_lines + 14 > page_capacity and cur_page.elements:
+                        cur_page = BookPage(page_number=current_page_num, page_type="body")
+                        cur_page.chapter_title = ch_title
+                        cur_page.chapter_number = ch_num
+                        cur_page.book_title = parsed_book.get("title", profile["short_title"])
+                        cur_page.running_header_text = (
+                            profile["short_title"].upper() if cur_page.is_verso else f"CHAPTER {ch_num} • {ch_title.upper()}"
+                        )
+                        cur_page_lines = 0
+                        page_capacity = lines_per_full_page
+                        pages.append(cur_page)
+                        current_page_num += 1
+                    ill_elem = {
+                        "type": "illustration",
+                        "placement": "Half-Page Top",
+                        "asset": asset
+                    }
+                    if cur_page.page_type == "chapter_opener":
+                        insert_pos = 1
+                        for idx, el in enumerate(cur_page.elements):
+                            if el.get("type") in ["chapter_header", "illustration"]:
+                                insert_pos = idx + 1
+                        cur_page.elements.insert(insert_pos, ill_elem)
+                    else:
+                        cur_page.elements.insert(0, ill_elem)
+                    cur_page.has_plate = True
+                    cur_page_lines += 14
+                    continue
+                elif placement == "Half-Page Bottom":
+                    if cur_page_lines + 14 > page_capacity and cur_page.elements:
                         cur_page = BookPage(page_number=current_page_num, page_type="body")
                         cur_page.chapter_title = ch_title
                         cur_page.chapter_number = ch_num
@@ -432,7 +463,7 @@ def paginate_manuscript(
                         current_page_num += 1
                     cur_page.elements.append({
                         "type": "illustration",
-                        "placement": placement,
+                        "placement": "Half-Page Bottom",
                         "asset": asset
                     })
                     cur_page.has_plate = True
@@ -489,6 +520,13 @@ def paginate_manuscript(
                 pages.append(cur_page)
                 current_page_num += 1
 
+            is_first = elem.get("is_first_after_break", elem.get("is_first", False))
+            has_drop = elem.get("has_drop_cap", False)
+            if not drop_cap_assigned and btype in ["body", "body_first"] and elem_type == "paragraph":
+                has_drop = True
+                is_first = True
+                drop_cap_assigned = True
+
             if elem_type == "scene_break":
                 cur_page.elements.append({
                     "id": elem_id,
@@ -521,7 +559,9 @@ def paginate_manuscript(
                     "text": raw_text,
                     "content": raw_text,
                     "formatted_html": f_html,
-                    "is_first_after_break": elem.get("is_first_after_break", False),
+                    "is_first_after_break": is_first,
+                    "is_first": is_first,
+                    "has_drop_cap": has_drop,
                     "estimated_lines": est_lines,
                     "page_break_before": elem.get("page_break_before", False),
                     "keep_with_next": elem.get("keep_with_next", False),
@@ -544,10 +584,31 @@ def paginate_manuscript(
         cur_page.total_lines = cur_page_lines
         cur_page.is_chapter_end = True
         
+        # Check for Chapter End Tailpiece asset
+        chapter_num_int = ch_idx + 1
+        tailpiece_asset = None
+        for a in manifest.get("assets", []):
+            if a.get("placement") == "Chapter End Tailpiece":
+                ch_val = a.get("chapter", 0)
+                try:
+                    ch_val = int(ch_val)
+                except (ValueError, TypeError):
+                    ch_val = 0
+                if ch_val == chapter_num_int or a.get("anchor") == f"ch{chapter_num_int:02d}_end" or (ch_anchors and a.get("anchor") == ch_anchors[-1]):
+                    tailpiece_asset = a
+                    break
+        if tailpiece_asset:
+            cur_page.has_tailpiece = True
+            cur_page.elements.append({
+                "type": "illustration",
+                "placement": "Chapter End Tailpiece",
+                "asset": tailpiece_asset
+            })
+
         threshold = specs["grid_rules"]["short_ending_threshold_lines"]
         if cur_page_lines < threshold:
             cur_page.short_ending = True
-            if auto_tailpieces.get(cur_page.page_number, False):
+            if auto_tailpieces.get(cur_page.page_number, False) and not cur_page.has_tailpiece:
                 cur_page.has_tailpiece = True
                 cur_page.elements.append({
                     "type": "tailpiece_ornament",

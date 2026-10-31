@@ -318,12 +318,34 @@ def render_vector_callouts(image: Image.Image, callouts: List[Dict[str, Any]], p
             font = ImageFont.load_default()
 
     for c in callouts:
-        x_pct = float(c.get("x_pct", c.get("x", 50)))
-        y_pct = float(c.get("y_pct", c.get("y", 50)))
+        raw_x = c.get("x_pct")
+        if raw_x is None:
+            raw_x = c.get("x")
+        if raw_x is None:
+            raw_x = 50
+        x_pct = float(raw_x)
+
+        raw_y = c.get("y_pct")
+        if raw_y is None:
+            raw_y = c.get("y")
+        if raw_y is None:
+            raw_y = 50
+        y_pct = float(raw_y)
         
-        has_target = ("target_x_pct" in c or "target_x" in c)
-        tx_pct = float(c.get("target_x_pct", c.get("target_x", x_pct)))
-        ty_pct = float(c.get("target_y_pct", c.get("target_y", y_pct)))
+        has_target = (c.get("target_x_pct") is not None or c.get("target_x") is not None)
+        raw_tx = c.get("target_x_pct")
+        if raw_tx is None:
+            raw_tx = c.get("target_x")
+        if raw_tx is None:
+            raw_tx = x_pct
+        tx_pct = float(raw_tx)
+
+        raw_ty = c.get("target_y_pct")
+        if raw_ty is None:
+            raw_ty = c.get("target_y")
+        if raw_ty is None:
+            raw_ty = y_pct
+        ty_pct = float(raw_ty)
         
         label = str(c.get("text", c.get("label", ""))).strip().upper()
         c_type = str(c.get("style", c.get("type", "badge"))).lower()

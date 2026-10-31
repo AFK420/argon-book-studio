@@ -1100,6 +1100,30 @@ async def export_manifest_endpoint(book_id: str):
     )
 
 
+@app.post("/api/manifest/{book_id}/bind-anchors")
+async def bind_anchors_endpoint(book_id: str):
+    manuscript = load_book_manuscript(book_id)
+    bound_count = manifest_manager.bind_anchors_to_manuscript(book_id, manuscript)
+    invalidate_pdf_cache(book_id)
+    updated_manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
+    tailpieces = STATE["auto_tailpieces"].get(book_id, {})
+    pagination = paginate_manuscript(
+        manuscript,
+        updated_manifest,
+        book_id,
+        auto_tailpieces=tailpieces,
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
+    return {
+        "status": "success",
+        "bound_count": bound_count,
+        "manifest": updated_manifest,
+        "pagination": pagination
+    }
+
+
 # ======================================================================
 # LIVE PRINT PDF RASTER PREVIEW (PYMUPDF)
 # ======================================================================
