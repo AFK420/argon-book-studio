@@ -31,6 +31,7 @@ from app.filters import (
 )
 from app.paginator import paginate_manuscript
 from app.front_back_matter import generate_front_matter_data
+from app.ai_director import ai_director_manager
 from app.exporters.pdf_exporter import export_pdf
 from app.exporters.docx_exporter import export_docx
 from app.exporters.epub_exporter import export_epub
@@ -699,6 +700,125 @@ async def auto_style_manuscript(book_id: str):
         "detected_containers": detected_containers,
         "total_chapters": manuscript.get("total_chapters", len(manuscript.get("chapters", []))),
         "total_words": manuscript.get("total_words", 0)
+    }
+
+
+# ======================================================================
+# LOCAL AI BOOK ART DIRECTOR & AUTONOMOUS LAYOUT SUITE
+# ======================================================================
+
+@app.get("/api/ai/status")
+async def get_ai_status():
+    """Checks connection to local LLM server (Ollama / OpenAI-compatible) and returns status."""
+    conn = ai_director_manager.check_connection()
+    config = ai_director_manager.get_config()
+    return {
+        "status": "success",
+        "connection": conn,
+        "config": config
+    }
+
+
+@app.post("/api/ai/configure")
+async def configure_ai_director(payload: Dict[str, Any] = Body(...)):
+    """Updates Local AI Director settings (endpoint URL, selected model, timeout)."""
+    updated = ai_director_manager.update_config(payload)
+    conn = ai_director_manager.check_connection()
+    return {
+        "status": "success",
+        "config": updated,
+        "connection": conn
+    }
+
+
+@app.post("/api/ai/analyze/{book_id}")
+async def analyze_manuscript_ai(
+    book_id: str,
+    payload: Optional[Dict[str, Any]] = Body(None)
+):
+    """
+    Runs the Local AI Art Director:
+    - Scans manuscript chapters and themes.
+    - Generates complete typography, mandatory pages, and 16 illustration scene prompts anchored to paragraphs.
+    """
+    p = payload or {}
+    num_illustrations = int(p.get("num_illustrations", 16))
+    user_prompt_override = p.get("prompt_override")
+    
+    manuscript = load_book_manuscript(book_id)
+    blueprint = ai_director_manager.analyze_manuscript(
+        manuscript=manuscript,
+        book_id=book_id,
+        num_illustrations=num_illustrations,
+        user_prompt_override=user_prompt_override
+    )
+    
+    return {
+        "status": "success",
+        "book_id": book_id,
+        "blueprint": blueprint
+    }
+
+
+@app.post("/api/ai/apply/{book_id}")
+async def apply_ai_blueprint(
+    book_id: str,
+    payload: Optional[Dict[str, Any]] = Body(None)
+):
+    """
+    Applies the proposed AI Blueprint to the book:
+    1. Updates typography & geometry settings.
+    2. Updates front/back matter (mandatory pages).
+    3. Replaces / synchronizes manifest assets with AI-discovered visual anchors.
+    4. Invalidates PDF cache & repaginates.
+    """
+    p = payload or {}
+    blueprint = p.get("blueprint")
+    manuscript = load_book_manuscript(book_id)
+    
+    # If no blueprint supplied in payload, analyze live
+    if not blueprint:
+        blueprint = ai_director_manager.analyze_manuscript(
+            manuscript=manuscript,
+            book_id=book_id,
+            num_illustrations=int(p.get("num_illustrations", 16))
+        )
+        
+    # 1. Apply Typography Overrides & Front/Back Matter to settings
+    settings_updates = {}
+    if "typography_overrides" in blueprint:
+        settings_updates["typography"] = blueprint["typography_overrides"]
+    if "front_back_matter" in blueprint:
+        settings_updates["front_back_matter"] = blueprint["front_back_matter"]
+    if settings_updates:
+        settings_manager.update_settings(book_id, settings_updates)
+        
+    # 2. Update Book Manifest with AI Illustration Assets
+    if "assets" in blueprint and blueprint["assets"]:
+        manifest_manager.import_manifest(book_id, {"assets": blueprint["assets"]}, manuscript)
+        manifest_manager.bind_anchors_to_manuscript(book_id, manuscript)
+        
+    invalidate_pdf_cache(book_id)
+    
+    updated_manifest = manifest_manager.get_book_manifest(book_id)
+    updated_settings = settings_manager.get_settings(book_id)
+    tailpieces = STATE["auto_tailpieces"].get(book_id, {})
+    pagination = paginate_manuscript(
+        manuscript,
+        updated_manifest,
+        book_id,
+        auto_tailpieces=tailpieces,
+        custom_specs=updated_settings,
+        custom_matter=updated_settings.get("front_back_matter")
+    )
+    
+    return {
+        "status": "success",
+        "book_id": book_id,
+        "blueprint": blueprint,
+        "manifest": updated_manifest,
+        "settings": updated_settings,
+        "pagination": pagination
     }
 
 

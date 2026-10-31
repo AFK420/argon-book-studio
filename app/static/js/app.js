@@ -110,6 +110,7 @@ async function initStudio() {
 
     await loadBook(state.activeBookId);
     setupHeaderListeners();
+    checkLocalAIStatus();
   } catch (err) {
     console.error("Initialization error:", err);
   }
@@ -451,6 +452,7 @@ async function useSampleManuscriptForActiveBook() {
 // --- STEP 2: AUTO-STYLE & BLUEPRINT ---
 function renderStep2() {
   if (!state.manuscript) return;
+  checkLocalAIStatus();
 
   const chCount = state.manuscript.chapters?.length || 0;
   const wordCount = state.manuscript.total_words || 0;
@@ -3310,6 +3312,304 @@ function closeModal(event) {
   if (event && event.target !== event.currentTarget) return;
   const modal = document.getElementById("modal-container");
   if (modal) modal.innerHTML = "";
+}
+
+// ======================================================================
+// LOCAL AI BOOK ART DIRECTOR & AUTONOMOUS LAYOUT SUITE
+// ======================================================================
+
+async function checkLocalAIStatus(showToastNotify = false) {
+  const dot = document.getElementById("ai-status-dot");
+  const text = document.getElementById("ai-status-text");
+
+  try {
+    const res = await fetch("/api/ai/status");
+    const data = await res.json();
+    if (data.status === "success" && data.connection) {
+      const conn = data.connection;
+      state.aiConnection = conn;
+      state.aiConfig = data.config;
+
+      if (conn.status === "online") {
+        if (dot) dot.className = "status-dot online";
+        if (text) text.innerText = `🟢 Local AI Online (${conn.selected_model})`;
+        if (showToastNotify) showToast(`Connected to local LLM: ${conn.selected_model}`, "success");
+      } else {
+        if (dot) dot.className = "status-dot offline";
+        if (text) text.innerText = `🟡 Built-in Heuristics (Click to Config)`;
+        if (showToastNotify) showToast("Local LLM offline. High-Fidelity Heuristics active.", "info");
+      }
+    }
+  } catch (err) {
+    if (dot) dot.className = "status-dot offline";
+    if (text) text.innerText = `🟡 Built-in Heuristics Active`;
+  }
+}
+
+function openAIConfigModal() {
+  const modal = document.getElementById("modal-container");
+  if (!modal) return;
+
+  const conf = state.aiConfig || { endpoint_url: "http://localhost:11434", model: "llama3.1", timeout_sec: 30 };
+  const conn = state.aiConnection || {};
+  const models = conn.models || ["llama3.1", "qwen2.5", "mistral", "gemma2"];
+
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="closeModal(event)">
+      <div class="modal-card" style="max-width:540px;" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3>⚙️ Local AI Director Configuration</h3>
+          <button class="btn-close-modal" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:0.84rem; color:var(--text-muted); margin-bottom:14px;">
+            Connect Argon Studio to your local AI engine (Ollama, LM Studio, or llama.cpp) for autonomous book art direction.
+          </p>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:0.75rem; color:#AAA; font-weight:700; display:block; margin-bottom:4px;">
+              LOCAL SERVER ENDPOINT URL
+            </label>
+            <input type="text" id="ai-endpoint-input" value="${conf.endpoint_url || 'http://localhost:11434'}" 
+                   style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; padding:8px 10px; border-radius:4px; font-family:monospace; font-size:0.85rem;">
+            <span style="font-size:0.72rem; color:var(--text-muted);">Default: http://localhost:11434 (Ollama) or http://localhost:1234/v1 (LM Studio)</span>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:0.75rem; color:#AAA; font-weight:700; display:block; margin-bottom:4px;">
+              MODEL NAME
+            </label>
+            <input type="text" id="ai-model-input" value="${conf.model || 'llama3.1'}" list="ai-models-datalist"
+                   style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; padding:8px 10px; border-radius:4px; font-size:0.85rem;">
+            <datalist id="ai-models-datalist">
+              ${models.map(m => `<option value="${m}"></option>`).join('')}
+            </datalist>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="font-size:0.75rem; color:#AAA; font-weight:700; display:block; margin-bottom:4px;">
+              INSPECTION STATUS
+            </label>
+            <div style="background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); border-radius:4px; padding:10px; font-size:0.8rem; color:${conn.status === 'online' ? '#10B981' : '#F59E0B'};">
+              ${conn.message || 'Status check pending.'}
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; gap:10px;">
+            <button class="btn-secondary-action" onclick="testAIConnection()">
+              🔌 Test Connection
+            </button>
+            <button class="btn-wizard-primary" onclick="saveAIConfig()">
+              💾 Save & Connect
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function testAIConnection() {
+  const endpoint = document.getElementById("ai-endpoint-input").value.trim();
+  const model = document.getElementById("ai-model-input").value.trim();
+  showToast("Testing local AI connection...", "info");
+
+  try {
+    const res = await fetch("/api/ai/configure", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint_url: endpoint, model: model })
+    });
+    const data = await res.json();
+    if (data.status === "success") {
+      state.aiConnection = data.connection;
+      state.aiConfig = data.config;
+      checkLocalAIStatus(false);
+      openAIConfigModal();
+      if (data.connection.status === "online") {
+        showToast("Connected to local AI successfully!", "success");
+      } else {
+        showToast("Server offline. Built-in heuristics active.", "info");
+      }
+    }
+  } catch (err) {
+    showToast(`Connection failed: ${err.message}`, "error");
+  }
+}
+
+async function saveAIConfig() {
+  const endpoint = document.getElementById("ai-endpoint-input").value.trim();
+  const model = document.getElementById("ai-model-input").value.trim();
+
+  try {
+    const res = await fetch("/api/ai/configure", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint_url: endpoint, model: model })
+    });
+    const data = await res.json();
+    state.aiConnection = data.connection;
+    state.aiConfig = data.config;
+    checkLocalAIStatus(false);
+    closeModal();
+    showToast("AI Director settings saved!", "success");
+  } catch (err) {
+    showToast(`Error saving settings: ${err.message}`, "error");
+  }
+}
+
+async function runAIDirector() {
+  const btn = document.getElementById("btn-run-ai-director");
+  const origText = btn.innerHTML;
+  btn.innerHTML = "⏳ AI Director Reading Manuscript...";
+  btn.disabled = true;
+
+  showToast("Local AI Art Director analyzing manuscript & generating layout blueprint...", "info");
+
+  try {
+    const res = await fetch(`/api/ai/analyze/${state.activeBookId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ num_illustrations: 16 })
+    });
+    const data = await res.json();
+
+    if (data.status === "success" && data.blueprint) {
+      state.lastAIBlueprint = data.blueprint;
+      renderAIReview(data.blueprint);
+      showToast("✨ AI Art Director proposal ready for review!", "success");
+    } else {
+      showToast(`AI Director error: ${data.detail || "Analysis failed"}`, "error");
+    }
+  } catch (err) {
+    showToast(`AI Director failed: ${err.message}`, "error");
+  } finally {
+    btn.innerHTML = origText;
+    btn.disabled = false;
+  }
+}
+
+function renderAIReview(blueprint) {
+  const reviewCard = document.getElementById("ai-director-review");
+  if (!reviewCard) return;
+
+  reviewCard.style.display = "block";
+  document.getElementById("ai-review-genre").innerText = blueprint.genre_style || "Historical Speculative Fiction";
+  document.getElementById("ai-review-engine").innerText = blueprint.engine || "Generated by Argon Local AI Suite";
+  document.getElementById("ai-plates-count").innerText = (blueprint.assets || []).length;
+
+  const typo = blueprint.typography_overrides || {};
+  const matter = blueprint.front_back_matter || {};
+  const assets = blueprint.assets || [];
+
+  // 1. Typography Pane
+  const typoPane = document.getElementById("ai-tab-pane-typo");
+  typoPane.innerHTML = `
+    <div class="ai-spec-grid">
+      <div class="ai-spec-box">
+        <div class="ai-spec-label">Body Typography</div>
+        <div class="ai-spec-value">${typo.body_font_name || 'Cormorant Garamond'} (${typo.font_size_pt || 10.5}pt / ${typo.line_height || 1.38})</div>
+      </div>
+      <div class="ai-spec-box">
+        <div class="ai-spec-label">Chapter Heading Font</div>
+        <div class="ai-spec-value">${typo.heading_font_name || 'Cinzel'}</div>
+      </div>
+      <div class="ai-spec-box">
+        <div class="ai-spec-label">Print Texture Filter</div>
+        <div class="ai-spec-value">${(typo.filter_preset || 'cyanotype_silver_plate').replace(/_/g, ' ')}</div>
+      </div>
+      <div class="ai-spec-box">
+        <div class="ai-spec-label">Drop Cap Initial</div>
+        <div class="ai-spec-value">${typo.drop_cap_style || 'Engraved Gothic Initial'} (${typo.drop_cap_lines || 3} lines)</div>
+      </div>
+    </div>
+  `;
+
+  // 2. Mandatory Pages Pane
+  const matterPane = document.getElementById("ai-tab-pane-matter");
+  matterPane.innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div class="ai-spec-box">
+        <div class="ai-spec-label">Title Page Draft</div>
+        <div class="ai-spec-value" style="font-size:0.85rem;">
+          "${matter.title_page?.title || 'Book Title'}" — ${matter.title_page?.subtitle || ''} by ${matter.title_page?.author || 'Author'}
+        </div>
+      </div>
+      <div class="ai-spec-box">
+        <div class="ai-spec-label">Proposed Epigraph</div>
+        <div style="font-style:italic; color:#EEE;">"${matter.epigraph_text || ''}"</div>
+        <div style="font-size:0.75rem; color:#38BDF8; margin-top:2px;">${matter.epigraph_source || ''}</div>
+      </div>
+      <div class="ai-spec-box">
+        <div class="ai-spec-label">Dedication</div>
+        <div style="font-style:italic; color:#EEE;">"${matter.dedication_text || ''}"</div>
+      </div>
+      <div class="ai-spec-box">
+        <div class="ai-spec-label">Colophon & Production Note</div>
+        <div style="font-size:0.78rem; color:#BBB;">${matter.colophon_text || ''}</div>
+      </div>
+    </div>
+  `;
+
+  // 3. Visual Plates Pane
+  const platesPane = document.getElementById("ai-tab-pane-illustrations");
+  platesPane.innerHTML = `
+    <div class="ai-plate-grid">
+      ${assets.map((a, i) => `
+        <div class="ai-plate-card">
+          <div class="ai-plate-header">
+            <span>Slot #${i + 1} • Ch ${a.chapter}</span>
+            <span>${a.placement}</span>
+          </div>
+          <div style="font-weight:700; color:#FFF; margin-bottom:4px;">${a.title}</div>
+          <div class="ai-plate-prompt">"${a.prompt}"</div>
+          <div class="ai-plate-anchor">📍 Anchor: ${a.anchor} ("${(a.anchor_text || '').slice(0, 35)}...")</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function switchAITab(tabName) {
+  const tabs = ["typo", "matter", "illustrations"];
+  tabs.forEach(t => {
+    const btn = document.getElementById(`ai-tab-btn-${t}`);
+    const pane = document.getElementById(`ai-tab-pane-${t}`);
+    if (btn) btn.classList.toggle("active", t === tabName);
+    if (pane) pane.style.display = t === tabName ? "block" : "none";
+  });
+}
+
+async function applyAIDirectorBlueprint() {
+  if (!state.lastAIBlueprint) return;
+
+  showToast("Applying AI Blueprint & typesetting manuscript...", "info");
+
+  try {
+    const res = await fetch(`/api/ai/apply/${state.activeBookId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ blueprint: state.lastAIBlueprint })
+    });
+    const data = await res.json();
+
+    if (data.status === "success") {
+      state.manifest = data.manifest;
+      state.pagination = data.pagination;
+      state.settings = data.settings;
+
+      showToast("🚀 AI Blueprint applied! Typography, 16 illustration slots & front matter locked.", "success");
+      renderAll();
+
+      // Unlock Step 3
+      state.maxUnlockedStep = Math.max(state.maxUnlockedStep, 3);
+      updateStepperUI();
+    } else {
+      showToast(`Error applying blueprint: ${data.detail || 'Failed'}`, "error");
+    }
+  } catch (err) {
+    showToast(`Failed to apply blueprint: ${err.message}`, "error");
+  }
 }
 
 // Window Load Trigger

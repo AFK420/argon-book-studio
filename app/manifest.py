@@ -220,6 +220,10 @@ class ManifestManager:
         self.manifest_path = CUSTOM_MANIFEST_FILE if os.path.exists(CUSTOM_MANIFEST_FILE) else MANIFEST_FILE
         self.data: Dict[str, Any] = self._load()
 
+    def reload(self):
+        self.manifest_path = CUSTOM_MANIFEST_FILE if os.path.exists(CUSTOM_MANIFEST_FILE) else MANIFEST_FILE
+        self.data = self._load()
+
     def _load(self) -> Dict[str, Any]:
         data = None
         if os.path.exists(self.manifest_path):
