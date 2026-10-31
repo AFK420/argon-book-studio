@@ -272,6 +272,8 @@ class ManifestManager:
                     asset["callouts"] = updates["vector_callouts"]
                 if "callouts" in updates:
                     asset["vector_callouts"] = updates["callouts"]
+                if "anchor" in updates:
+                    asset["anchor_text"] = updates["anchor"]
                 self.save()
                 return asset
         return None

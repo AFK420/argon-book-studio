@@ -302,7 +302,7 @@ const BOOK_PROFILE_DETAILS = {
   book01: {
     title: "The Last Forty Minutes of Cormac Vane",
     subtitle: "A Speculative Forensic Mystery",
-    genre: "Gaslamp Forensic / Victorian Occult Mystery",
+    genre: "Gaslamp Speculative Forensic Mystery",
     fonts: "Cinzel & EB Garamond",
     colors: ["#1B365D", "#B8860B", "#FBF8F1"],
     containers: "Inquest Writs & Sensory Draws"
@@ -310,7 +310,7 @@ const BOOK_PROFILE_DETAILS = {
   book02: {
     title: "The Fourteen-Hour Barometer",
     subtitle: "A Chronometric Island Thriller and Speculative Romance",
-    genre: "Chronometric Island Thriller / Meteorological Mystery",
+    genre: "Chronometric Island Thriller & Speculative Romance",
     fonts: "Oswald & Lora",
     colors: ["#1E2229", "#00A896", "#F5F6F8"],
     containers: "Welsh Slate & Telemetry Equations"
@@ -318,7 +318,7 @@ const BOOK_PROFILE_DETAILS = {
   book03: {
     title: "The Dead-Room Transcripts",
     subtitle: "A Locked-Room Mystery and Acoustic Forensic Thriller",
-    genre: "Acoustic Locked-Room Mystery / Sonic Espionage",
+    genre: "Locked-Room Mystery & Acoustic Forensic Thriller",
     fonts: "JetBrains Mono & Source Serif 4",
     colors: ["#0F172A", "#38BDF8", "#F8FAFC"],
     containers: "DAW Audio Transcripts & FSK Payloads"
@@ -326,7 +326,7 @@ const BOOK_PROFILE_DETAILS = {
   book04: {
     title: "The Salt Orchard of Saint Jude",
     subtitle: "An Ecological & Institutional Gothic Mystery",
-    genre: "Ecological Southern Gothic / Lowcountry Bioluminescence",
+    genre: "Ecological & Institutional Southern Gothic Mystery",
     fonts: "Cormorant Garamond & Crimson Pro",
     colors: ["#2C402E", "#D97706", "#FCFAF2"],
     containers: "Pelham Ledgers & Archival Journals"
@@ -334,7 +334,7 @@ const BOOK_PROFILE_DETAILS = {
   book05: {
     title: "The Provenance of Ashes",
     subtitle: "An Epigraphic Crime & Field Excavation Thriller",
-    genre: "Cuneiform Antiquities Heist / Archaeometric Crime",
+    genre: "Archaeometric & Epigraphic Geopolitical Thriller",
     fonts: "Cinzel Decorative & Source Serif 4",
     colors: ["#5A2A18", "#C98A2C", "#FAF6EE"],
     containers: "Cuneiform Tablets & Cedar Note Blocks"
@@ -621,7 +621,10 @@ function renderStep3() {
     const cleanPrompt = (asset.prompt || "").replace(/"/g, '&quot;');
 
     return `
-      <div class="queue-card">
+      <div class="queue-card" 
+           ondragover="handleDragOver(event)" 
+           ondragleave="handleDragLeave(event)" 
+           ondrop="handleDropQueueImage(event, '${asset.id}')">
         <div class="queue-card-header">
           <div class="queue-card-loc">
             Slot #${idx + 1} • ${asset.anchor} • ${asset.placement}
@@ -660,6 +663,16 @@ function renderStep3() {
   }).join('');
 
   state.maxUnlockedStep = Math.max(state.maxUnlockedStep, 4);
+}
+
+async function handleDropQueueImage(event, assetId) {
+  event.preventDefault();
+  event.currentTarget.classList.remove("dragover");
+
+  if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+    const file = event.dataTransfer.files[0];
+    await uploadQueueImage(assetId, file);
+  }
 }
 
 async function uploadQueueImage(assetId, file) {
@@ -1695,6 +1708,38 @@ function openAssetInspector(assetId) {
   const captionPos = asset.caption_position || "below";
   const captionText = asset.caption || "";
 
+  // Resolve target chapter paragraphs for Anchor Paragraph selector
+  let targetChapter = null;
+  const chapters = state.manuscript?.chapters || [];
+  if (asset.chapter !== undefined && asset.chapter !== null && asset.chapter !== "") {
+    targetChapter = chapters.find(ch => String(ch.chapter_number) === String(asset.chapter));
+  }
+  if (!targetChapter && asset.anchor) {
+    targetChapter = chapters.find(ch => (ch.elements || []).some(el => el.id === asset.anchor));
+  }
+  if (!targetChapter && chapters.length > 0) {
+    targetChapter = chapters[0];
+  }
+
+  const pElements = (targetChapter?.elements || []).filter(el => el.type === "paragraph" || el.type === "container" || (el.id && el.id.startsWith("ch")));
+  let anchorOptionsHtml = "";
+  let currentAnchorIncluded = false;
+
+  pElements.forEach(el => {
+    const rawText = (el.text || el.content || "").replace(/<[^>]*>/g, "").trim();
+    const preview = rawText ? (rawText.length > 60 ? rawText.substring(0, 60) + "..." : rawText) : `[Empty Block]`;
+    const isSel = asset.anchor === el.id;
+    if (isSel) currentAnchorIncluded = true;
+    anchorOptionsHtml += `<option value="${el.id}" ${isSel ? 'selected' : ''}>${el.id}: "${preview}"</option>`;
+  });
+
+  if (!currentAnchorIncluded && asset.anchor) {
+    anchorOptionsHtml = `<option value="${asset.anchor}" selected>${asset.anchor} (Current Anchor)</option>` + anchorOptionsHtml;
+  }
+  if (!anchorOptionsHtml) {
+    anchorOptionsHtml = `<option value="ch01_p01" selected>ch01_p01</option>`;
+  }
+
   modal.innerHTML = `
     <div class="modal-overlay" onclick="closeModal(event)">
       <div class="modal-content" style="width:720px;" onclick="event.stopPropagation()">
@@ -1727,8 +1772,15 @@ function openAssetInspector(assetId) {
             </div>
           </div>
 
-          <!-- Placement & Page Locking -->
+          <!-- Anchor Paragraph & Placement -->
           <div style="background:var(--bg-card); padding:12px; border-radius:6px; border:1px solid var(--border-subtle); display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+              <label style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; display:block; margin-bottom:4px;">ANCHOR PARAGRAPH</label>
+              <select id="asset-anchor-select" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:6px; border-radius:4px;">
+                ${anchorOptionsHtml}
+              </select>
+            </div>
+
             <div>
               <label style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; display:block; margin-bottom:4px;">PAGE PLACEMENT & LOCKING</label>
               <select id="asset-placement" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:6px; border-radius:4px;">
@@ -1742,17 +1794,18 @@ function openAssetInspector(assetId) {
                 <option value="Chapter End Tailpiece" ${currentPlacement === 'Chapter End Tailpiece' ? 'selected' : ''}>Chapter End Tailpiece (Bottom of Scene)</option>
               </select>
             </div>
+          </div>
 
-            <div>
-              <label style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; display:block; margin-bottom:4px;">FRAME & BORDER STYLE</label>
-              <select id="asset-frame-style" onchange="document.getElementById('asset-inspect-img-preview').className = 'frame-' + this.value" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:6px; border-radius:4px;">
-                <option value="none" ${currentFrame === 'none' ? 'selected' : ''}>None (Frameless / Edge-to-Edge)</option>
-                <option value="thin_ink_border" ${currentFrame === 'thin_ink_border' ? 'selected' : ''}>Thin Ink Border (0.75pt Crisp Ink)</option>
-                <option value="double_brass_frame" ${currentFrame === 'double_brass_frame' ? 'selected' : ''}>Double Brass Ruled Frame (Book 01)</option>
-                <option value="blueprint_grid_frame" ${currentFrame === 'blueprint_grid_frame' ? 'selected' : ''}>Blueprint Grid Frame (Book 03)</option>
-                <option value="rounded_slate" ${currentFrame === 'rounded_slate' ? 'selected' : ''}>Basalt Rounded Slate (Book 02)</option>
-              </select>
-            </div>
+          <!-- Frame & Border Style -->
+          <div style="background:var(--bg-card); padding:12px; border-radius:6px; border:1px solid var(--border-subtle);">
+            <label style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; display:block; margin-bottom:4px;">FRAME & BORDER STYLE</label>
+            <select id="asset-frame-style" onchange="document.getElementById('asset-inspect-img-preview').className = 'frame-' + this.value" style="width:100%; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; font-size:0.75rem; padding:6px; border-radius:4px;">
+              <option value="none" ${currentFrame === 'none' ? 'selected' : ''}>None (Frameless / Edge-to-Edge)</option>
+              <option value="thin_ink_border" ${currentFrame === 'thin_ink_border' ? 'selected' : ''}>Thin Ink Border (0.75pt Crisp Ink)</option>
+              <option value="double_brass_frame" ${currentFrame === 'double_brass_frame' ? 'selected' : ''}>Double Brass Ruled Frame (Book 01)</option>
+              <option value="blueprint_grid_frame" ${currentFrame === 'blueprint_grid_frame' ? 'selected' : ''}>Blueprint Grid Frame (Book 03)</option>
+              <option value="rounded_slate" ${currentFrame === 'rounded_slate' ? 'selected' : ''}>Basalt Rounded Slate (Book 02)</option>
+            </select>
           </div>
 
           <!-- Sizing & Margins -->
@@ -1839,6 +1892,8 @@ async function deleteIllustrationSlot(assetId) {
 }
 
 async function saveAssetInspector(assetId) {
+  const anchorSelect = document.getElementById("asset-anchor-select");
+  const newAnchor = anchorSelect ? anchorSelect.value : null;
   const placement = document.getElementById("asset-placement").value;
   const frameStyle = document.getElementById("asset-frame-style").value;
   const widthPct = parseInt(document.getElementById("asset-width-pct").value, 10);
@@ -1848,22 +1903,28 @@ async function saveAssetInspector(assetId) {
   const captionText = document.getElementById("asset-caption-text").value;
   const captionPos = document.getElementById("asset-caption-position").value;
 
+  const updates = {
+    placement: placement,
+    frame_style: frameStyle,
+    width_pct: widthPct,
+    max_height_in: maxH,
+    margin_top_pt: marginT,
+    margin_bottom_pt: marginB,
+    caption: captionText,
+    caption_position: captionPos
+  };
+  if (newAnchor) {
+    updates.anchor = newAnchor;
+    updates.anchor_text = newAnchor;
+  }
+
   showToast(`Updating plate specs for ${assetId}...`, "info");
   const res = await fetchAPI(`/api/manifest/${state.activeBookId}/update-asset`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       asset_id: assetId,
-      updates: {
-        placement: placement,
-        frame_style: frameStyle,
-        width_pct: widthPct,
-        max_height_in: maxH,
-        margin_top_pt: marginT,
-        margin_bottom_pt: marginB,
-        caption: captionText,
-        caption_position: captionPos
-      }
+      updates: updates
     })
   });
 

@@ -8,6 +8,7 @@ Verifies:
 4. Frontend Stepper & 5-Step Workspace HTML structure
 """
 
+import os
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app, STATE, manifest_manager
@@ -120,3 +121,36 @@ def test_index_html_stepper_and_wizard_views():
 
     # Studio workspace (for manual 3-panel override)
     assert 'id="studio-workspace"' in html
+
+
+def test_v23_app_js_buttons_and_anchor_selector():
+    """Verify app.js contains step-3 wrapper aliases, queue-card drag-and-drop, and plate inspector anchor selector."""
+    js_path = os.path.join(os.path.dirname(__file__), "..", "app", "static", "js", "app.js")
+    with open(js_path, "r", encoding="utf-8") as f:
+        js_code = f.read()
+
+    # 1. Wrapper aliases
+    assert "function openPlateInspector(assetId)" in js_code
+    assert "function openFilterLab(assetId)" in js_code
+    assert "function openPinStudio(assetId)" in js_code
+
+    # 2. View mode dual-button toggle
+    assert "wview-mode-html-btn" in js_code
+    assert "wview-mode-pdf-btn" in js_code
+
+    # 3. Queue-card drag and drop in Step 3
+    assert "handleDropQueueImage" in js_code
+    assert "ondragover=\"handleDragOver(event)\"" in js_code
+    assert "ondrop=\"handleDropQueueImage(event" in js_code
+
+    # 4. Canonical book genres in BOOK_PROFILE_DETAILS
+    assert "Gaslamp Speculative Forensic Mystery" in js_code
+    assert "Chronometric Island Thriller & Speculative Romance" in js_code
+    assert "Locked-Room Mystery & Acoustic Forensic Thriller" in js_code
+    assert "Ecological & Institutional Southern Gothic Mystery" in js_code
+    assert "Archaeometric & Epigraphic Geopolitical Thriller" in js_code
+
+    # 5. Anchor dropdown selector in openAssetInspector
+    assert "asset-anchor-select" in js_code
+    assert "ANCHOR PARAGRAPH" in js_code
+

@@ -31,21 +31,26 @@ def client():
 
 
 def test_v21_official_titles_and_subtitles():
-    """Verify all 5 books have their full official titles, subtitles, and short titles."""
+    """Verify all 5 books have their full official titles, subtitles, short titles, and canonical genres."""
     assert BOOK_PROFILES["book01"]["title"] == "The Last Forty Minutes of Cormac Vane"
     assert BOOK_PROFILES["book01"]["short_title"] == "Cormac Vane"
+    assert BOOK_PROFILES["book01"]["genre"] == "Gaslamp Speculative Forensic Mystery"
     
     assert BOOK_PROFILES["book02"]["title"] == "The Fourteen-Hour Barometer"
     assert BOOK_PROFILES["book02"]["short_title"] == "Fourteen-Hour Barometer"
+    assert BOOK_PROFILES["book02"]["genre"] == "Chronometric Island Thriller & Speculative Romance"
     
     assert BOOK_PROFILES["book03"]["title"] == "The Dead-Room Transcripts"
     assert BOOK_PROFILES["book03"]["short_title"] == "Dead-Room Transcripts"
+    assert BOOK_PROFILES["book03"]["genre"] == "Locked-Room Mystery & Acoustic Forensic Thriller"
     
     assert BOOK_PROFILES["book04"]["title"] == "The Salt Orchard of Saint Jude"
     assert "Salt Orchard" in BOOK_PROFILES["book04"]["short_title"]
+    assert BOOK_PROFILES["book04"]["genre"] == "Ecological & Institutional Southern Gothic Mystery"
     
     assert BOOK_PROFILES["book05"]["title"] == "The Provenance of Ashes"
     assert BOOK_PROFILES["book05"]["short_title"] == "Provenance of Ashes"
+    assert BOOK_PROFILES["book05"]["genre"] == "Archaeometric & Epigraphic Geopolitical Thriller"
 
 
 def test_v21_consecutive_container_merging():
