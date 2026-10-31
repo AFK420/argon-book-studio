@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Argon Book Studio Pro — Typesetting & Publishing Engine</title>
+  <title>Argon Book Studio Pro — 5-Step Typesetting & Publishing Pipeline</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,7 +13,7 @@
 </head>
 <body>
 
-  <!-- Top Studio Navigation Bar -->
+  <!-- Top Studio Application Header -->
   <header class="studio-header">
     <div class="studio-brand">
       <div class="studio-logo">
@@ -24,7 +24,7 @@
           <path d="M6 14h6"/>
         </svg>
         ARGON BOOK STUDIO
-        <span class="tag">PRO ENGINE</span>
+        <span class="tag">PRO PIPELINE</span>
       </div>
 
       <div style="height:18px; width:1px; background:var(--border-subtle); margin:0 6px;"></div>
@@ -32,7 +32,7 @@
       <!-- Book Profile Selector -->
       <div style="display:flex; align-items:center; gap:8px;">
         <span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Theme:</span>
-        <select id="book-profile-select" style="background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-subtle); padding:5px 8px; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer;">
+        <select id="book-profile-select" style="background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-subtle); padding:5px 8px; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer;" onchange="handleHeaderProfileChange(this.value)">
         </select>
       </div>
 
@@ -40,17 +40,12 @@
       </div>
     </div>
 
-    <!-- Right Header Actions -->
+    <!-- Right Header Actions & Layout Switcher -->
     <div style="display:flex; align-items:center; gap:10px;">
-      <button onclick="document.getElementById('manuscript-file-input').click()" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:var(--text-main); font-size:0.76rem; font-weight:600; padding:5px 10px; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:6px;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-        Import Manuscript (.docx/.md)
+      <!-- Toggle between 5-Step Wizard and 3-Panel Studio -->
+      <button id="mode-toggle-btn" class="btn-mode-toggle" onclick="toggleLayoutMode()" title="Switch layout mode">
+        🔧 Switch to Advanced 3-Panel Studio
       </button>
-      <input type="file" id="manuscript-file-input" style="display:none;" accept=".md,.docx,.txt">
 
       <button onclick="exportDocument('all')" class="btn-export-all" style="padding:6px 14px; border-radius:6px; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5">
@@ -63,8 +58,430 @@
     </div>
   </header>
 
-  <!-- 3-Panel Main Workspace -->
-  <main class="studio-workspace">
+  <!-- Top Stepper Bar (Locked Sequential Order: Steps 1 -> 5) -->
+  <nav class="stepper-bar" id="stepper-bar">
+    <div class="stepper-container">
+      <!-- Step 1 -->
+      <div class="stepper-step active" id="step-btn-1" onclick="goToStep(1)">
+        <span class="step-num" id="step-num-1">1</span>
+        <div class="step-info">
+          <span class="step-title">Load Manuscript</span>
+          <span class="step-desc">Theme & Upload</span>
+        </div>
+      </div>
+      <div class="stepper-line" id="line-1"></div>
+
+      <!-- Step 2 -->
+      <div class="stepper-step pending" id="step-btn-2" onclick="goToStep(2)">
+        <span class="step-num" id="step-num-2">2</span>
+        <div class="step-info">
+          <span class="step-title">Auto-Style & Blueprint</span>
+          <span class="step-desc">Structure & Blocks</span>
+        </div>
+      </div>
+      <div class="stepper-line" id="line-2"></div>
+
+      <!-- Step 3 -->
+      <div class="stepper-step pending" id="step-btn-3" onclick="goToStep(3)">
+        <span class="step-num" id="step-num-3">3</span>
+        <div class="step-info">
+          <span class="step-title">Insert Artwork</span>
+          <span class="step-desc">Queue & Print Filters</span>
+        </div>
+      </div>
+      <div class="stepper-line" id="line-3"></div>
+
+      <!-- Step 4 -->
+      <div class="stepper-step pending" id="step-btn-4" onclick="goToStep(4)">
+        <span class="step-num" id="step-num-4">4</span>
+        <div class="step-info">
+          <span class="step-title">Review & Balance Pages</span>
+          <span class="step-desc">Spread Preview & Polish</span>
+        </div>
+      </div>
+      <div class="stepper-line" id="line-4"></div>
+
+      <!-- Step 5 -->
+      <div class="stepper-step pending" id="step-btn-5" onclick="goToStep(5)">
+        <span class="step-num" id="step-num-5">5</span>
+        <div class="step-info">
+          <span class="step-title">Export Book</span>
+          <span class="step-desc">Pre-Flight & Formats</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ======================================================================
+       WIZARD PIPELINE WORKSPACE (DEFAULT 5-STEP EXPERIENCE)
+       ====================================================================== -->
+  <main id="wizard-workspace" class="wizard-workspace">
+
+    <!-- STEP 1 SCREEN: SELECT BOOK THEME & UPLOAD MANUSCRIPT -->
+    <section id="wizard-step-1" class="wizard-step-view active">
+      <div class="wizard-card-narrow">
+        <div class="wizard-card-header">
+          <div class="step-pill">STAGE 01 / 05</div>
+          <h2>Select Book Theme & Upload Manuscript</h2>
+          <p class="wizard-card-subtitle">Choose an authentic historical typography theme profile and load your completed manuscript.</p>
+        </div>
+
+        <!-- 1. Select Book Profile (1–5) -->
+        <div class="wizard-section">
+          <label class="wizard-section-label">1. Select Book Profile (1–5)</label>
+          <div class="theme-card-grid" id="step1-theme-grid">
+            <!-- Dynamically populated by JS: Book 01 to 05 -->
+          </div>
+        </div>
+
+        <!-- 2. Upload Final Manuscript (.docx or .md) -->
+        <div class="wizard-section">
+          <label class="wizard-section-label">2. Upload Final Manuscript (.docx or .md)</label>
+          <div id="step1-upload-dropzone" class="wizard-dropzone" onclick="document.getElementById('wizard-manuscript-file-input').click()">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--accent-gold)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <div class="dropzone-text">
+              <strong>Drag and drop your manuscript (.docx or .md) here, or click to browse</strong>
+              <span>Automatically parses chapters, timestamps, scene break dividers, and in-world document blocks</span>
+            </div>
+          </div>
+          <input type="file" id="wizard-manuscript-file-input" style="display:none;" accept=".md,.docx,.txt" onchange="handleWizardManuscriptUpload(event)">
+          
+          <div style="display:flex; justify-content:center; margin-top:12px;">
+            <button type="button" class="btn-sample-shortcut" onclick="useSampleManuscriptForActiveBook()">
+              ⚡ Or Use Built-in Sample Manuscript for <strong id="step1-sample-name">Cormac Vane</strong>
+            </button>
+          </div>
+
+          <div id="step1-parse-status" class="parse-status-badge" style="display:none;">
+            ✓ Parsed 2 Chapters and 28 Paragraphs
+          </div>
+        </div>
+
+        <!-- Step 1 Nav -->
+        <div class="wizard-nav-bar">
+          <div></div>
+          <button id="step1-continue-btn" class="btn-wizard-primary" onclick="goToStep(2)">
+            Continue to Step 2: Auto-Style & Blueprint →
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2 SCREEN: 1-CLICK AUTO-STYLE & MANIFEST BLUEPRINT -->
+    <section id="wizard-step-2" class="wizard-step-view" style="display:none;">
+      <div class="wizard-card-narrow">
+        <div class="wizard-card-header">
+          <div class="step-pill">STAGE 02 / 05</div>
+          <h2>1-Click Auto-Style & Manifest Blueprint</h2>
+          <p class="wizard-card-subtitle">Review detected manuscript structure, bind illustration anchor slots, and run automated typesetting.</p>
+        </div>
+
+        <!-- Diagnostic Summary -->
+        <div class="wizard-section">
+          <label class="wizard-section-label">Manuscript Diagnostic Summary</label>
+          <div class="diagnostic-grid">
+            <div class="diag-card">
+              <div class="diag-val" id="step2-diag-chapters">0</div>
+              <div class="diag-label">Total Chapters</div>
+            </div>
+            <div class="diag-card">
+              <div class="diag-val" id="step2-diag-words">0</div>
+              <div class="diag-label">Total Words</div>
+            </div>
+            <div class="diag-card">
+              <div class="diag-val" id="step2-diag-slots">16</div>
+              <div class="diag-label">Illustration Slots</div>
+            </div>
+          </div>
+
+          <div class="container-chips-wrap">
+            <span class="chips-title">Auto-Detected In-World Document Blocks:</span>
+            <div id="step2-container-chips" class="container-chips-list">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Blueprint Actions (In Order) -->
+        <div class="wizard-section">
+          <label class="wizard-section-label">Blueprint Actions (Execute in Order)</label>
+
+          <!-- Action 1: Load or Re-Anchor Blueprint -->
+          <div class="blueprint-action-box">
+            <div class="action-num">1</div>
+            <div class="action-content">
+              <h4>Bind & Anchor Illustration Blueprint</h4>
+              <p>Match asset anchor texts against manuscript paragraphs, or import an external JSON manifest.</p>
+              <div class="action-buttons-row">
+                <button class="btn-secondary-action" onclick="document.getElementById('wizard-manifest-file-input').click()">
+                  📂 Load Custom Manifest JSON
+                </button>
+                <input type="file" id="wizard-manifest-file-input" style="display:none;" accept=".json" onchange="handleWizardManifestUpload(event)">
+
+                <button class="btn-secondary-action" onclick="useBuiltinBlueprint()">
+                  📋 Use Built-in 16-Asset Blueprint
+                </button>
+
+                <span id="step2-anchor-badge" class="badge-anchored">✓ 16 Illustration Slots Anchored</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action 2: 1-Click Auto-Styler -->
+          <div class="blueprint-action-box highlight">
+            <div class="action-num">2</div>
+            <div class="action-content">
+              <h4>Run 1-Click Auto-Styler & Lock Blueprint</h4>
+              <p>Merges consecutive multi-line containers into single unified blocks, styles Vesper sensory traces, enforces flush-left opening indents, and populates front/back matter defaults.</p>
+              <button id="step2-autostyle-btn" class="btn-hero-autostyle" onclick="runAutoStyle()">
+                ✨ Run 1-Click Auto-Styler & Lock Blueprint
+              </button>
+              <div id="step2-autostyle-result" style="display:none;" class="autostyle-result-banner"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 Nav -->
+        <div class="wizard-nav-bar">
+          <button class="btn-wizard-back" onclick="goToStep(1)">← Back to Step 1</button>
+          <button id="step2-continue-btn" class="btn-wizard-primary" onclick="goToStep(3)">
+            Continue to Step 3: Insert Artwork →
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 3 SCREEN: ILLUSTRATION & DIAGRAM PRODUCTION QUEUE -->
+    <section id="wizard-step-3" class="wizard-step-view" style="display:none;">
+      <div class="wizard-card-wide">
+        <div class="wizard-card-header queue-header-flex">
+          <div>
+            <div class="step-pill">STAGE 03 / 05</div>
+            <h2>Illustration & Diagram Production Queue</h2>
+            <p class="wizard-card-subtitle">Manage planned visual assets, copy AI generation prompts, and drop images for 300 DPI texture filtering.</p>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="queue-progress-box">
+            <div class="progress-label">
+              <strong id="step3-ready-label">0 of 16 Illustrations Ready</strong>
+              <span id="step3-pct-label">0%</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div id="step3-progress-bar" class="progress-bar-fill" style="width:0%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Toolbar & Filter Chips -->
+        <div class="queue-toolbar">
+          <div class="filter-chips-group">
+            <button id="filter-chip-all" class="filter-chip active" onclick="setQueueFilter('all')">All Slots (16)</button>
+            <button id="filter-chip-ready" class="filter-chip" onclick="setQueueFilter('ready')">✓ Ready & Filtered (0)</button>
+            <button id="filter-chip-pending" class="filter-chip" onclick="setQueueFilter('pending')">⏳ Needs Artwork (16)</button>
+          </div>
+        </div>
+
+        <!-- Cards Grid -->
+        <div class="queue-cards-grid" id="step3-cards-grid">
+          <!-- Dynamically populated by JS -->
+        </div>
+
+        <!-- Step 3 Nav -->
+        <div class="wizard-nav-bar">
+          <button class="btn-wizard-back" onclick="goToStep(2)">← Back to Step 2</button>
+          <button id="step3-continue-btn" class="btn-wizard-primary" onclick="goToStep(4)">
+            Continue to Step 4: Review Spread →
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 4 SCREEN: 2-PAGE SPREAD REVIEW & 1-CLICK WHITESPACE BALANCING -->
+    <section id="wizard-step-4" class="wizard-step-view" style="display:none;">
+      <div class="spread-step-container">
+        
+        <!-- Top Polish Bar -->
+        <div class="spread-polish-bar">
+          <div class="polish-left">
+            <button id="btn-auto-balance-all" class="btn-polish-hero" onclick="autoBalanceAllShortEndings()">
+              ✨ Auto-Balance All Short Chapter Endings (<span id="polish-short-count">0</span> Found)
+            </button>
+            <button id="btn-toggle-drawer" class="btn-polish-drawer" onclick="toggleTypographyDrawer()">
+              🎨 Toggle Typography & Margin Drawer
+            </button>
+          </div>
+
+          <!-- View Mode Toggle -->
+          <div style="display:flex; background:rgba(0,0,0,0.4); border-radius:4px; padding:2px; border:1px solid var(--border-subtle);">
+            <button id="wview-mode-html-btn" onclick="setViewMode('html')" class="view-mode-btn active" title="Interactive HTML Spread Preview">
+              📄 HTML Spread
+            </button>
+            <button id="wview-mode-pdf-btn" onclick="setViewMode('pdf')" class="view-mode-btn" title="True Print PDF Raster Spread">
+              🖨️ True Print PDF
+            </button>
+          </div>
+
+          <!-- Spread Controls -->
+          <div class="polish-right">
+            <button onclick="prevSpread()" class="btn-nav-arrow">◀ Prev</button>
+            <span id="wspread-indicator" class="spread-counter">Spread 1 of 1</span>
+            <button onclick="nextSpread()" class="btn-nav-arrow">Next ▶</button>
+            
+            <div style="height:14px; width:1px; background:var(--border-subtle); margin:0 4px;"></div>
+            
+            <button onclick="toggleMargins()" class="btn-guide-toggle">◫ Margins</button>
+            <button onclick="toggleBleed()" class="btn-guide-toggle">⧉ Bleed</button>
+            <button onclick="toggleFilmstrip()" class="btn-guide-toggle">🎞 Filmstrip</button>
+
+            <div style="display:flex; align-items:center; gap:3px; margin-left:4px;">
+              <button onclick="setZoom(0.85)" class="btn-guide-toggle">85%</button>
+              <button onclick="setZoom(1.0)" class="btn-guide-toggle">100%</button>
+              <button onclick="setZoom(1.15)" class="btn-guide-toggle">115%</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Center Spread Viewport -->
+        <div id="wspread-viewport" class="canvas-viewport" style="min-height:560px;">
+          <!-- Spread HTML / PDF renders here -->
+        </div>
+
+        <!-- Short Ending Banner Wrap -->
+        <div id="wshort-ending-banner-wrap"></div>
+
+        <!-- Bird's-Eye Filmstrip Dock -->
+        <div id="wfilmstrip-dock" class="filmstrip-dock"></div>
+
+        <!-- Slide-over Typography Drawer -->
+        <div id="typography-drawer" class="typography-drawer" style="display:none;">
+          <div class="drawer-header">
+            <h3>Book Design, Typography & Matter</h3>
+            <button class="drawer-close-btn" onclick="toggleTypographyDrawer()">✕</button>
+          </div>
+          <div class="drawer-tabs">
+            <button id="dtab-geom-btn" class="drawer-tab-btn active" onclick="switchDrawerTab('geometry')">Design & Typo</button>
+            <button id="dtab-matter-btn" class="drawer-tab-btn" onclick="switchDrawerTab('matter')">Front/Back Matter</button>
+          </div>
+          <div id="typography-drawer-content" class="drawer-scroll-content">
+            <!-- Populated dynamically by JS -->
+          </div>
+        </div>
+
+        <!-- Step 4 Nav -->
+        <div class="wizard-nav-bar" style="margin-top:16px;">
+          <button class="btn-wizard-back" onclick="goToStep(3)">← Back to Step 3</button>
+          <button id="step4-continue-btn" class="btn-wizard-primary" onclick="goToStep(5)">
+            Continue to Step 5: Export Book →
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 5 SCREEN: PRE-FLIGHT CHECK & FINAL RELEASE EXPORT -->
+    <section id="wizard-step-5" class="wizard-step-view" style="display:none;">
+      <div class="wizard-card-narrow">
+        <div class="wizard-card-header">
+          <div class="step-pill">STAGE 05 / 05</div>
+          <h2>Publishing Pre-Flight Check & Final Release Export</h2>
+          <p class="wizard-card-subtitle">Verify production geometry, typography, and illustration assets before generating distribution masters.</p>
+        </div>
+
+        <!-- Pre-Flight Summary Card -->
+        <div class="wizard-section">
+          <label class="wizard-section-label">Publishing Pre-Flight Summary</label>
+          <div class="preflight-box">
+            <div class="preflight-item">
+              <span class="check-icon">✓</span>
+              <div class="preflight-desc">
+                <strong>Trim & Geometry:</strong>
+                <span id="preflight-geometry-val">6.00" × 9.00" Mirrored Gutter Margins (0.875" Inside / 0.625" Outside)</span>
+              </div>
+            </div>
+            <div class="preflight-item">
+              <span class="check-icon">✓</span>
+              <div class="preflight-desc">
+                <strong>Typography & In-World Containers:</strong>
+                <span id="preflight-typo-val">EB Garamond (11.0pt / 15.0pt) & Inquest Containers Verified</span>
+              </div>
+            </div>
+            <div class="preflight-item">
+              <span class="check-icon">✓</span>
+              <div class="preflight-desc">
+                <strong>Illustrations:</strong>
+                <span id="preflight-artwork-val">16 of 16 Visual Plates Filtered at 300 DPI</span>
+              </div>
+            </div>
+            <div class="preflight-item">
+              <span class="check-icon">✓</span>
+              <div class="preflight-desc">
+                <strong>Pagination & Signatures:</strong>
+                <span id="preflight-pagination-val">32 Total Pages (Even Signature Count Verified)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 Large Export Cards -->
+        <div class="wizard-section">
+          <label class="wizard-section-label">Final Release Exporters</label>
+          <div class="export-buttons-grid">
+            <!-- Hero Button: ZIP -->
+            <button class="btn-export-card hero" onclick="exportDocument('all')">
+              <div class="export-icon">🚀</div>
+              <div class="export-text">
+                <strong>Download Complete Publishing Bundle (.ZIP)</strong>
+                <span>Primary gold release package: PDF master + styled DOCX + reflowable EPUB 3 + manifest</span>
+              </div>
+            </button>
+
+            <!-- PDF -->
+            <button class="btn-export-card" onclick="exportDocument('pdf')">
+              <div class="export-icon">📄</div>
+              <div class="export-text">
+                <strong>Download Print-Ready 6×9" PDF</strong>
+                <span>Mirrored gutter margins, 300 DPI plates, sharp vector labels, and suppressed headers</span>
+              </div>
+            </button>
+
+            <!-- DOCX -->
+            <button class="btn-export-card" onclick="exportDocument('docx')">
+              <div class="export-icon">📝</div>
+              <div class="export-text">
+                <strong>Download Styled Editable DOCX</strong>
+                <span>Synchronized line heights, paragraph styles, scaled images, and front/back matter</span>
+              </div>
+            </button>
+
+            <!-- EPUB 3 -->
+            <button class="btn-export-card" onclick="exportDocument('epub')">
+              <div class="export-icon">📱</div>
+              <div class="export-text">
+                <strong>Download Reflowable EPUB 3</strong>
+                <span>Embedded high-resolution artwork, chapter navigation, and responsive typography</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 5 Nav -->
+        <div class="wizard-nav-bar">
+          <button class="btn-wizard-back" onclick="goToStep(4)">← Back to Step 4: Spread Review</button>
+          <div></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ======================================================================
+       ADVANCED 3-PANEL STUDIO WORKSPACE (OPTIONAL OVERRIDE)
+       ====================================================================== -->
+  <main id="studio-workspace" class="studio-workspace" style="display:none;">
 
     <!-- PANEL 1: MANUSCRIPT & ANCHOR TREE (Left Panel) -->
     <aside class="side-panel">
@@ -89,13 +506,13 @@
             Tree
           </button>
           <div style="height:12px; width:1px; background:var(--border-subtle); margin:0 2px;"></div>
-          <button onclick="document.getElementById('manifest-file-input').click()" title="Import Manifest (.json)" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:var(--accent-gold); font-size:0.68rem; font-weight:600; padding:2px 6px; border-radius:3px; cursor:pointer; display:flex; align-items:center; gap:3px;">
+          <button onclick="document.getElementById('studio-manifest-file-input').click()" title="Import Manifest (.json)" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:var(--accent-gold); font-size:0.68rem; font-weight:600; padding:2px 6px; border-radius:3px; cursor:pointer; display:flex; align-items:center; gap:3px;">
             📥 Import
           </button>
           <button onclick="exportManifest()" title="Export Manifest (.json)" style="background:var(--bg-card); border:1px solid var(--border-subtle); color:var(--accent-cyan); font-size:0.68rem; font-weight:600; padding:2px 6px; border-radius:3px; cursor:pointer; display:flex; align-items:center; gap:3px;">
             📤 Export
           </button>
-          <input type="file" id="manifest-file-input" style="display:none;" accept=".json">
+          <input type="file" id="studio-manifest-file-input" style="display:none;" accept=".json" onchange="handleStudioManifestUpload(event)">
         </div>
       </div>
 

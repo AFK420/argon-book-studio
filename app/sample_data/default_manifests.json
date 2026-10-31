@@ -7,52 +7,327 @@
         "title": "Ratcliffe Highway Assay Laboratory & Water Gate",
         "anchor": "ch01_p01",
         "placement": "Chapter Opener Vignette",
-        "prompt": "Victorian gaslamp London wharf at low tide, Wapping Basin lime-washed arches, fog, sleet, moored collier barge, 19th-century silver-plate etching style, fine cross-hatching, rich intaglio ink lines, high detail, architectural engraving --ar 16:9 --no text, blurry",
-        "caption": "Figure 1.1: The Lime-Washed Arches of Wapping Basin at Low Water.",
+        "prompt": "Detailed archival illustration: Ratcliffe Highway Assay Laboratory & Water Gate. Victorian gaslamp London, Thames forensic alchemy, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 1.1: Lime-Washed Arches of Wapping Basin.",
+        "caption_position": "below",
         "image_url": "/static/assets/placeholders/book01_vignette.png",
         "filter_applied": true,
+        "frame_style": "double_brass_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
         "vector_callouts": [
-          { "x": 22, "y": 30, "label": "WAPPING BASIN DERRICK", "type": "badge" },
-          { "x": 74, "y": 68, "label": "LIME-WASHED SLIPWAY ARCH", "type": "arrow_left" }
+          {
+            "x": 40,
+            "y": 30,
+            "label": "RATCLIFFE HIGHWAY ASSAY ",
+            "type": "box"
+          }
         ]
       },
       {
         "id": "b01_asset_02",
         "title": "Post-Mortem Chemical Assay Apparatus & Alembic",
-        "anchor": "ch01_p06",
+        "anchor": "ch01_p03",
         "placement": "Half-Page Top",
-        "prompt": "Antique brass apothecary scales, glass alembics with copper condenser coils, bone spatulas, labelled reagent vials of antimony and vitriol, laboratory workbench, cyanotype print with silver halide grain, sharp technical diagram aesthetics --ar 3:2 --no modern items",
+        "prompt": "Detailed archival illustration: Post-Mortem Chemical Assay Apparatus & Alembic. Victorian gaslamp London, Thames forensic alchemy, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
         "caption": "Plate I: The Coroner's Reagent Kit and Sublimation Retort.",
+        "caption_position": "below",
         "image_url": "/static/assets/placeholders/book01_halfpage.png",
         "filter_applied": true,
-        "vector_callouts": [
-          { "x": 45, "y": 35, "label": "ANTIMONY CONDENSER", "type": "box" },
-          { "x": 80, "y": 72, "label": "BONE SPATULA & VIAL 1887", "type": "arrow_up" }
-        ]
+        "frame_style": "double_brass_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
       },
       {
         "id": "b01_asset_03",
-        "title": "The Salt-Cellar Refinery Beneath Orchard Lane",
-        "anchor": "ch02_p01",
-        "placement": "Full-Page Recto Plate",
-        "prompt": "Atmospheric subterranean Victorian brick cellar, rows of bubbling glass retorts in green wicker carboys, glowing charcoal furnace, brass calipers, copper balance scale, amber lantern beam through toxic vapor mist, fine etching, dramatic chiaroscuro --ar 2:3",
-        "caption": "Plate II: The Secret Subterranean Furnace at No. 7 Orchard Lane.",
-        "image_url": "/static/assets/placeholders/book01_fullplate.png",
+        "title": "Lime-Washed Wharf Slipway & Anchor Derrick",
+        "anchor": "ch01_p06",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: Lime-Washed Wharf Slipway & Anchor Derrick. Victorian gaslamp London, Thames forensic alchemy, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 1.2: Timber Derrick on Wapping Slipway.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book01_halfpage.png",
         "filter_applied": true,
+        "frame_style": "double_brass_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
         "vector_callouts": [
-          { "x": 50, "y": 20, "label": "CARBOY OF FUMING NITRIC ACID", "type": "box" },
-          { "x": 30, "y": 80, "label": "FURNACE HEARTH #04", "type": "badge" }
+          {
+            "x": 46,
+            "y": 38,
+            "label": "LIME-WASHED WHARF SLIPWA",
+            "type": "box"
+          }
         ]
       },
       {
         "id": "b01_asset_04",
-        "title": "Brass Caliper Assayer's Mark",
-        "anchor": "ch02_p06",
+        "title": "Coroner's Inquest Writ & Assayer's Mark",
+        "anchor": "ch01_p08",
+        "placement": "Half-Page Bottom",
+        "prompt": "Detailed archival illustration: Coroner's Inquest Writ & Assayer's Mark. Victorian gaslamp London, Thames forensic alchemy, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Document 1: Parish of St. John Inquest Warrant.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book01_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "double_brass_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b01_asset_05",
+        "title": "Vesper Sensory Perception Trace Map",
+        "anchor": "ch01_p10",
+        "placement": "Half-Page Top",
+        "prompt": "Detailed archival illustration: Vesper Sensory Perception Trace Map. Victorian gaslamp London, Thames forensic alchemy, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 1.3: Sensory Trace Gradient at 15:42 GMT.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book01_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "double_brass_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 52,
+            "y": 46,
+            "label": "VESPER SENSORY PERCEPTIO",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b01_asset_06",
+        "title": "Thames Low-Water Collier Barge & Shallows",
+        "anchor": "ch01_p12",
+        "placement": "Full-Page Verso Plate",
+        "prompt": "Detailed archival illustration: Thames Low-Water Collier Barge & Shallows. Victorian gaslamp London, Thames forensic alchemy, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate II: Low-Water Silt Beds below Shadwell Spire.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book01_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "double_brass_frame",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b01_asset_07",
+        "title": "Horn-Handled Magnifier & Antimony Tartrate",
+        "anchor": "ch01_p14",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: Horn-Handled Magnifier & Antimony Tartrate. Victorian gaslamp London, Thames forensic alchemy, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 1.4: Assay Glass and Reagent Crystals.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book01_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "double_brass_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 58,
+            "y": 54,
+            "label": "HORN-HANDLED MAGNIFIER",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b01_asset_08",
+        "title": "Subterranean Brick Cellar at No. 7 Orchard Lane",
+        "anchor": "ch02_p01",
+        "placement": "Full-Page Recto Plate",
+        "prompt": "Detailed archival illustration: Subterranean Brick Cellar at No. 7 Orchard Lane. Victorian gaslamp London, Thames forensic alchemy, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate III: Secret Furnace Cellar below Shadwell.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book01_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "double_brass_frame",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b01_asset_09",
+        "title": "Alembic Retorts in Green Wicker Carboys",
+        "anchor": "ch02_p03",
+        "placement": "Half-Page Top",
+        "prompt": "Detailed archival illustration: Alembic Retorts in Green Wicker Carboys. Victorian gaslamp London, Thames forensic alchemy, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 2.1: Fuming Nitric Carboys and Lead Condenser.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book01_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "double_brass_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 64,
+            "y": 62,
+            "label": "ALEMBIC RETORTS IN GREEN",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b01_asset_10",
+        "title": "Precision Copper Balance Scale & Meniscus",
+        "anchor": "ch02_p05",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: Precision Copper Balance Scale & Meniscus. Victorian gaslamp London, Thames forensic alchemy, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 2.2: Assay Scale Balanced at One-Tenth Grain.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book01_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "double_brass_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b01_asset_11",
+        "title": "Latin Marrow Ledger Bound in Oxidized Brass",
+        "anchor": "ch02_p07",
+        "placement": "Full-Page Verso Plate",
+        "prompt": "Detailed archival illustration: Latin Marrow Ledger Bound in Oxidized Brass. Victorian gaslamp London, Thames forensic alchemy, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate IV: The 1887 Apothecary's Marrow Register.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book01_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "double_brass_frame",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 70,
+            "y": 70,
+            "label": "LATIN MARROW LEDGER BOUN",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b01_asset_12",
+        "title": "Shadwell Industrial Smoke Plume at Dusk",
+        "anchor": "ch02_p09",
+        "placement": "Chapter Opener Vignette",
+        "prompt": "Detailed archival illustration: Shadwell Industrial Smoke Plume at Dusk. Victorian gaslamp London, Thames forensic alchemy, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 2.3: Atmospheric Smog across the Docks.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book01_vignette.png",
+        "filter_applied": true,
+        "frame_style": "double_brass_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b01_asset_13",
+        "title": "St. John Parish Mortuary Cold Slag Vault",
+        "anchor": "ch02_p11",
+        "placement": "Half-Page Bottom",
+        "prompt": "Detailed archival illustration: St. John Parish Mortuary Cold Slag Vault. Victorian gaslamp London, Thames forensic alchemy, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate V: Slate Embalming Beds and Vitriol Cistern.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book01_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "double_brass_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 76,
+            "y": 33,
+            "label": "ST. JOHN PARISH MORTUARY",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b01_asset_14",
+        "title": "Sublimated Arsenic Trioxide Needle Crystals",
+        "anchor": "ch02_p13",
+        "placement": "Full-Page Recto Plate",
+        "prompt": "Detailed archival illustration: Sublimated Arsenic Trioxide Needle Crystals. Victorian gaslamp London, Thames forensic alchemy, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 2.4: Micro-Assay of Efflorescent Crusts.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book01_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "double_brass_frame",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b01_asset_15",
+        "title": "Underground Laboratory Architectural Floorplan",
+        "anchor": "ch02_p15",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: Underground Laboratory Architectural Floorplan. Victorian gaslamp London, Thames forensic alchemy, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plan I: Section View of Orchard Lane Slipway Flue.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book01_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "double_brass_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 42,
+            "y": 41,
+            "label": "UNDERGROUND LABORATORY A",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b01_asset_16",
+        "title": "Brass Caliper & Assayer Diamond Ornament",
+        "anchor": "ch02_p17",
         "placement": "Chapter End Tailpiece",
-        "prompt": "Ornate brass caliper and assayer gear emblem with diamond geometry, Victorian booktail engraving, clean lines on parchment background --ar 2:1",
-        "caption": "Tailpiece: Official Seal of the Thames Coroner's Assayer.",
+        "prompt": "Detailed archival illustration: Brass Caliper & Assayer Diamond Ornament. Victorian gaslamp London, Thames forensic alchemy, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Tailpiece: The Guild of Assay Mark.",
+        "caption_position": "hidden",
         "image_url": "/static/assets/placeholders/book01_tailpiece.png",
         "filter_applied": true,
+        "frame_style": "double_brass_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
         "vector_callouts": []
       }
     ]
@@ -65,41 +340,328 @@
         "title": "Ghyll Skerries Lighthouse & Dolerite Reefs",
         "anchor": "ch01_p01",
         "placement": "Chapter Opener Vignette",
-        "prompt": "Moody Hebridean lighthouse perched on black basalt volcanic pillar, massive Atlantic storm swells crashing against granite foundation slip, charcoal wash and lithograph texture, sharp maritime drawing --ar 16:9",
-        "caption": "Figure 1: Ghyll Skerries Station 04 under Gale-Force Sea Surge.",
+        "prompt": "Detailed archival illustration: Ghyll Skerries Lighthouse & Dolerite Reefs. Hebridean island chronometry, gale barometer, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 1: Ghyll Skerries Station under Surge.",
+        "caption_position": "below",
         "image_url": "/static/assets/placeholders/book02_vignette.png",
         "filter_applied": true,
+        "frame_style": "blueprint_grid_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
         "vector_callouts": [
-          { "x": 30, "y": 25, "label": "LIGHTHOUSE LANTERN DOME", "type": "badge" },
-          { "x": 68, "y": 82, "label": "BASALT DOLERITE REEF", "type": "arrow_left" }
+          {
+            "x": 40,
+            "y": 30,
+            "label": "GHYLL SKERRIES LIGHTHOUS",
+            "type": "box"
+          }
         ]
       },
       {
         "id": "b02_asset_02",
-        "title": "Torricellian Mercury Column & Pressure Dial",
-        "anchor": "ch01_p04",
+        "title": "Torricellian Mercury Column & Meniscus Dial",
+        "anchor": "ch01_p03",
         "placement": "Inline Archival Insert",
-        "prompt": "Close-up technical drawing of a 19th-century marine mercury cistern barometer with vernier scale and brass shock absorbers, charcoal lithograph wash, engineering blueprint clarity --ar 4:3",
-        "caption": "Figure 2: Precision Torricellian Column with Inverted Meniscus.",
+        "prompt": "Detailed archival illustration: Torricellian Mercury Column & Meniscus Dial. Hebridean island chronometry, gale barometer, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 2: Precision Torricellian Column with Meniscus.",
+        "caption_position": "below",
         "image_url": "/static/assets/placeholders/book02_halfpage.png",
         "filter_applied": true,
-        "vector_callouts": [
-          { "x": 48, "y": 30, "label": "960 hPa CRITICAL THRESHOLD", "type": "box" }
-        ]
+        "frame_style": "blueprint_grid_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
       },
       {
         "id": "b02_asset_03",
-        "title": "Subterranean Surge Chamber Bulkhead",
-        "anchor": "ch02_p01",
+        "title": "Subterranean Surge Chamber Bulkhead & Latches",
+        "anchor": "ch01_p06",
         "placement": "Full-Page Recto Plate",
-        "prompt": "Massive cast-iron subterranean sea-surge chamber bulkhead with 24 heavy dog-latches, pressurized bronze gauges, carbide lantern casting dramatic shadows on wet cavern walls, charcoal and lithograph plate --ar 2:3",
-        "caption": "Plate I: The Twenty-Four Dog-Latches of the Atlantic Siphon Chamber.",
+        "prompt": "Detailed archival illustration: Subterranean Surge Chamber Bulkhead & Latches. Hebridean island chronometry, gale barometer, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate I: The Twenty-Four Dog-Latches.",
+        "caption_position": "below",
         "image_url": "/static/assets/placeholders/book02_fullplate.png",
         "filter_applied": true,
+        "frame_style": "blueprint_grid_frame",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
         "vector_callouts": [
-          { "x": 52, "y": 42, "label": "HIGH-PRESSURE BULKHEAD DOOR", "type": "box" },
-          { "x": 20, "y": 85, "label": "HYDROSTATIC EQUALIZER VALVE", "type": "arrow_up" }
+          {
+            "x": 46,
+            "y": 38,
+            "label": "SUBTERRANEAN SURGE CHAMB",
+            "type": "box"
+          }
         ]
+      },
+      {
+        "id": "b02_asset_04",
+        "title": "Chronometer Escapement Assembly with Ruby Pallets",
+        "anchor": "ch01_p08",
+        "placement": "Half-Page Top",
+        "prompt": "Detailed archival illustration: Chronometer Escapement Assembly with Ruby Pallets. Hebridean island chronometry, gale barometer, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 3: Marine Chronometer Escapement.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book02_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "blueprint_grid_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b02_asset_05",
+        "title": "Granite Island Relief Chart & Skerry Soundings",
+        "anchor": "ch01_p10",
+        "placement": "Full-Page Verso Plate",
+        "prompt": "Detailed archival illustration: Granite Island Relief Chart & Skerry Soundings. Hebridean island chronometry, gale barometer, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate II: Admiralty Soundings of North Minch Reefs.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book02_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "blueprint_grid_frame",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 52,
+            "y": 46,
+            "label": "GRANITE ISLAND RELIEF CH",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b02_asset_06",
+        "title": "Piezoelectric Wave Fault Sensor & Zinc Contacts",
+        "anchor": "ch01_p12",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: Piezoelectric Wave Fault Sensor & Zinc Contacts. Hebridean island chronometry, gale barometer, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 4: Piezoelectric Surge Sensor.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book02_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "blueprint_grid_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b02_asset_07",
+        "title": "Basalt Slate Message Tablet Inscribed with Chalk",
+        "anchor": "ch01_p14",
+        "placement": "Half-Page Bottom",
+        "prompt": "Detailed archival illustration: Basalt Slate Message Tablet Inscribed with Chalk. Hebridean island chronometry, gale barometer, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Document 1: Welsh Basalt Slate Log at 04:00.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book02_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "blueprint_grid_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 58,
+            "y": 54,
+            "label": "BASALT SLATE MESSAGE TAB",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b02_asset_08",
+        "title": "Storm Warning Flue & Barometric Alarm Bell",
+        "anchor": "ch02_p01",
+        "placement": "Chapter Opener Vignette",
+        "prompt": "Detailed archival illustration: Storm Warning Flue & Barometric Alarm Bell. Hebridean island chronometry, gale barometer, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 5: Pneumatic Alarm Flue Mechanism.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book02_vignette.png",
+        "filter_applied": true,
+        "frame_style": "blueprint_grid_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b02_asset_09",
+        "title": "Barograph Drum Chart with Steep Pressure Cliff",
+        "anchor": "ch02_p03",
+        "placement": "Half-Page Top",
+        "prompt": "Detailed archival illustration: Barograph Drum Chart with Steep Pressure Cliff. Hebridean island chronometry, gale barometer, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 6: Ink Barograph Trace during Gale-Force Drop.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book02_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "blueprint_grid_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 64,
+            "y": 62,
+            "label": "BAROGRAPH DRUM CHART WIT",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b02_asset_10",
+        "title": "Atlantic Siphon Chamber Overflow Spillway",
+        "anchor": "ch02_p05",
+        "placement": "Full-Page Recto Plate",
+        "prompt": "Detailed archival illustration: Atlantic Siphon Chamber Overflow Spillway. Hebridean island chronometry, gale barometer, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate III: Hydrostatic Relief Spillway.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book02_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "blueprint_grid_frame",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b02_asset_11",
+        "title": "Brass Vernier Depth Gauge with Tidal Calibrations",
+        "anchor": "ch02_p07",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: Brass Vernier Depth Gauge with Tidal Calibrations. Hebridean island chronometry, gale barometer, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 7: Spring-Tide Depth Calibration Rod.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book02_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "blueprint_grid_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 70,
+            "y": 70,
+            "label": "BRASS VERNIER DEPTH GAUG",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b02_asset_12",
+        "title": "Dolerite Cavern Sump & Inverted Air Pocket",
+        "anchor": "ch02_p09",
+        "placement": "Full-Page Verso Plate",
+        "prompt": "Detailed archival illustration: Dolerite Cavern Sump & Inverted Air Pocket. Hebridean island chronometry, gale barometer, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate IV: High-Pressure Submerged Vault.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book02_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "blueprint_grid_frame",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b02_asset_13",
+        "title": "Lighthouse Keeper's Logbook Page with Water Damage",
+        "anchor": "ch02_p11",
+        "placement": "Half-Page Bottom",
+        "prompt": "Detailed archival illustration: Lighthouse Keeper's Logbook Page with Water Damage. Hebridean island chronometry, gale barometer, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Document 2: Dr. Maren's Log of Barometric Anomaly.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book02_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "blueprint_grid_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 76,
+            "y": 33,
+            "label": "LIGHTHOUSE KEEPER'S LOGB",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b02_asset_14",
+        "title": "Mercury Vapor Vent Pipe & Lead Seal Assembly",
+        "anchor": "ch02_p13",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: Mercury Vapor Vent Pipe & Lead Seal Assembly. Hebridean island chronometry, gale barometer, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 8: Hermetic Mercury Trap Details.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book02_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "blueprint_grid_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b02_asset_15",
+        "title": "Hydrodynamic Water-Gate Lever & Counterweights",
+        "anchor": "ch02_p15",
+        "placement": "Full-Page Recto Plate",
+        "prompt": "Detailed archival illustration: Hydrodynamic Water-Gate Lever & Counterweights. Hebridean island chronometry, gale barometer, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate V: Counterweighted Tidal Sluice Gate.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book02_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "blueprint_grid_frame",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 42,
+            "y": 41,
+            "label": "HYDRODYNAMIC WATER-GATE ",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b02_asset_16",
+        "title": "Split Wave-Fault Ornament & Skerries Seal",
+        "anchor": "ch02_p17",
+        "placement": "Chapter End Tailpiece",
+        "prompt": "Detailed archival illustration: Split Wave-Fault Ornament & Skerries Seal. Hebridean island chronometry, gale barometer, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Tailpiece: Skerries Chronometric Station Seal.",
+        "caption_position": "hidden",
+        "image_url": "/static/assets/placeholders/book02_tailpiece.png",
+        "filter_applied": true,
+        "frame_style": "blueprint_grid_frame",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
       }
     ]
   },
@@ -108,44 +670,331 @@
     "assets": [
       {
         "id": "b03_asset_01",
-        "title": "Anechoic Wedge Array & Bruel & Kjaer Microphone",
+        "title": "Anechoic Wedge Array & Transducer Pod",
         "anchor": "ch01_p01",
         "placement": "Chapter Opener Vignette",
-        "prompt": "Deep sound-dampening acoustic fiberglass wedges covering bunker walls, precision laboratory microphone on isolated vibration-damped tripod, blueprint cyanotype duotone, high contrast technical schematic --ar 16:9",
-        "caption": "Fig. 1.0: Calibration Array in Bunker Zero Anechoic Chamber.",
+        "prompt": "Detailed archival illustration: Anechoic Wedge Array & Transducer Pod. Cold War signal telemetry, bunker anechoic chamber, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 1: Bunker Anechoic Array.",
+        "caption_position": "below",
         "image_url": "/static/assets/placeholders/book03_vignette.png",
         "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
         "vector_callouts": [
-          { "x": 35, "y": 30, "label": "FIBERGLASS BAFFLE MATRIX", "type": "badge" },
-          { "x": 70, "y": 65, "label": "B&K TYPE 4138 TRANSDUCER", "type": "arrow_left" }
+          {
+            "x": 40,
+            "y": 30,
+            "label": "ANECHOIC WEDGE ARRAY",
+            "type": "box"
+          }
         ]
       },
       {
         "id": "b03_asset_02",
         "title": "Otari Master Deck & 42.4 Hz Waveform Trace",
-        "anchor": "ch01_p05",
+        "anchor": "ch01_p03",
         "placement": "Half-Page Top",
-        "prompt": "Vintage 1/2-inch studio reel-to-reel magnetic tape deck with dual VU meters, oscilloscope monitor displaying clean sine wave with harmonic sidebands, cyan architectural blueprint halftone styling --ar 3:2",
-        "caption": "Fig. 1.2: Spectrographic Demodulation of Concrete Transmission Signal.",
+        "prompt": "Detailed archival illustration: Otari Master Deck & 42.4 Hz Waveform Trace. Cold War signal telemetry, bunker anechoic chamber, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 2: Waveform Demodulation.",
+        "caption_position": "below",
         "image_url": "/static/assets/placeholders/book03_halfpage.png",
         "filter_applied": true,
-        "vector_callouts": [
-          { "x": 50, "y": 40, "label": "42.40 Hz CARRIER LOCK", "type": "box" }
-        ]
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
       },
       {
         "id": "b03_asset_03",
-        "title": "Seismic Geophone Pedestal in Dead Vault",
-        "anchor": "ch02_p01",
+        "title": "Seismic Geophone Pedestal in Vault Zero",
+        "anchor": "ch01_p06",
         "placement": "Full-Page Recto Plate",
-        "prompt": "Dark subterranean research bunker vault, polished black granite seismic pedestal with sealed aluminum telemetry canister and 4 geophone sensors, blue cathode glow, technical architectural drawing --ar 2:3",
-        "caption": "Plate III: Triaxial Geophone Cluster on Isolated Seismic Base.",
+        "prompt": "Detailed archival illustration: Seismic Geophone Pedestal in Vault Zero. Cold War signal telemetry, bunker anechoic chamber, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate I: Geophone Cluster Base.",
+        "caption_position": "below",
         "image_url": "/static/assets/placeholders/book03_fullplate.png",
         "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
         "vector_callouts": [
-          { "x": 50, "y": 50, "label": "HERMETIC ALUMINUM CYLINDER", "type": "box" },
-          { "x": 25, "y": 75, "label": "GRANITE ISOLATION BED", "type": "badge" }
+          {
+            "x": 46,
+            "y": 38,
+            "label": "SEISMIC GEOPHONE PEDESTA",
+            "type": "box"
+          }
         ]
+      },
+      {
+        "id": "b03_asset_04",
+        "title": "FSK Telemetry Demodulator Unit",
+        "anchor": "ch01_p08",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: FSK Telemetry Demodulator Unit. Cold War signal telemetry, bunker anechoic chamber, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 3: Frequency Shift Keying Matrix.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book03_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b03_asset_05",
+        "title": "Acoustic Spectrogram of Sub-Surface Impulse",
+        "anchor": "ch01_p10",
+        "placement": "Full-Page Verso Plate",
+        "prompt": "Detailed archival illustration: Acoustic Spectrogram of Sub-Surface Impulse. Cold War signal telemetry, bunker anechoic chamber, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate II: Water-Fall FFT Spectrogram.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book03_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 52,
+            "y": 46,
+            "label": "ACOUSTIC SPECTROGRAM OF ",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b03_asset_06",
+        "title": "Cathode Ray Tube Oscilloscope Trace with Harmonics",
+        "anchor": "ch01_p12",
+        "placement": "Half-Page Bottom",
+        "prompt": "Detailed archival illustration: Cathode Ray Tube Oscilloscope Trace with Harmonics. Cold War signal telemetry, bunker anechoic chamber, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 4: Harmonic Resonance Peak.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book03_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b03_asset_07",
+        "title": "Tape Splicing Block & Demagnetized Razor",
+        "anchor": "ch01_p14",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: Tape Splicing Block & Demagnetized Razor. Cold War signal telemetry, bunker anechoic chamber, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 5: 1/2-Inch Studio Splice Guide.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book03_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 58,
+            "y": 54,
+            "label": "TAPE SPLICING BLOCK",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b03_asset_08",
+        "title": "Underground Conduit Route Map & Listening Posts",
+        "anchor": "ch02_p01",
+        "placement": "Full-Page Recto Plate",
+        "prompt": "Detailed archival illustration: Underground Conduit Route Map & Listening Posts. Cold War signal telemetry, bunker anechoic chamber, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate III: Perimeter Hydrophone Cable Route.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book03_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b03_asset_09",
+        "title": "Piezo Ceramic Sensor Embedded in Reinforced Concrete",
+        "anchor": "ch02_p03",
+        "placement": "Half-Page Top",
+        "prompt": "Detailed archival illustration: Piezo Ceramic Sensor Embedded in Reinforced Concrete. Cold War signal telemetry, bunker anechoic chamber, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 6: Core-Drilled Strain Gauge.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book03_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 64,
+            "y": 62,
+            "label": "PIEZO CERAMIC SENSOR EMB",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b03_asset_10",
+        "title": "Polygraph Galvanometer Pen Mechanism",
+        "anchor": "ch02_p05",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: Polygraph Galvanometer Pen Mechanism. Cold War signal telemetry, bunker anechoic chamber, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 7: High-Speed Ink Galvanometer.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book03_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b03_asset_11",
+        "title": "Signal Intercept Log Sheet with Military Timestamps",
+        "anchor": "ch02_p07",
+        "placement": "Half-Page Bottom",
+        "prompt": "Detailed archival illustration: Signal Intercept Log Sheet with Military Timestamps. Cold War signal telemetry, bunker anechoic chamber, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Document 1: DAW Intercept Channel 4 Log.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book03_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 70,
+            "y": 70,
+            "label": "SIGNAL INTERCEPT LOG SHE",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b03_asset_12",
+        "title": "Faraday Shielded Equipment Rack & Power Inverter",
+        "anchor": "ch02_p09",
+        "placement": "Full-Page Verso Plate",
+        "prompt": "Detailed archival illustration: Faraday Shielded Equipment Rack & Power Inverter. Cold War signal telemetry, bunker anechoic chamber, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate IV: Isolated Signal Processing Stack.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book03_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b03_asset_13",
+        "title": "Frequency Generator Dial Calibrated in Kilohertz",
+        "anchor": "ch02_p11",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: Frequency Generator Dial Calibrated in Kilohertz. Cold War signal telemetry, bunker anechoic chamber, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 8: Precision Sine Oscillator Dial.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book03_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 76,
+            "y": 33,
+            "label": "FREQUENCY GENERATOR DIAL",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b03_asset_14",
+        "title": "Cross-Section of Multi-Layer Bunker Wall Attenuation",
+        "anchor": "ch02_p13",
+        "placement": "Full-Page Recto Plate",
+        "prompt": "Detailed archival illustration: Cross-Section of Multi-Layer Bunker Wall Attenuation. Cold War signal telemetry, bunker anechoic chamber, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate V: Acoustic Transmission Loss Chart.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book03_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b03_asset_15",
+        "title": "Magnetic Tape Reel with Bronze Stroboscopic Hub",
+        "anchor": "ch02_p15",
+        "placement": "Chapter Opener Vignette",
+        "prompt": "Detailed archival illustration: Magnetic Tape Reel with Bronze Stroboscopic Hub. Cold War signal telemetry, bunker anechoic chamber, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 9: Master Reel Index Hub.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book03_vignette.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 42,
+            "y": 41,
+            "label": "MAGNETIC TAPE REEL WITH ",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b03_asset_16",
+        "title": "Cathode Signal Glitch Emblem & Decibel Tailpiece",
+        "anchor": "ch02_p17",
+        "placement": "Chapter End Tailpiece",
+        "prompt": "Detailed archival illustration: Cathode Signal Glitch Emblem & Decibel Tailpiece. Cold War signal telemetry, bunker anechoic chamber, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Tailpiece: Station Zero Broadcast Mark.",
+        "caption_position": "hidden",
+        "image_url": "/static/assets/placeholders/book03_tailpiece.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
       }
     ]
   },
@@ -157,41 +1006,328 @@
         "title": "Combahee Marsh & Drowned Cypress Silhouette",
         "anchor": "ch01_p01",
         "placement": "Chapter Opener Vignette",
-        "prompt": "Southern gothic lowcountry marsh at sunset, twisted bald cypress trees draped in Spanish moss, glowing amber bioluminescent taproots emerging from dark pluff mud, 1928 sepia botanical plate engraving --ar 16:9",
-        "caption": "Figure 1: Estuarine Stand of Salt-Adapted Cypress at Low Tide.",
+        "prompt": "Detailed archival illustration: Combahee Marsh & Drowned Cypress Silhouette. Lowcountry tide-marsh ecology, 1928 botanist, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 1: Estuarine Stand of Salt Cypress.",
+        "caption_position": "below",
         "image_url": "/static/assets/placeholders/book04_vignette.png",
         "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
         "vector_callouts": [
-          { "x": 40, "y": 30, "label": "DROWNED BUTTRESS", "type": "badge" },
-          { "x": 65, "y": 75, "label": "BIOLUMINESCENT TAPROOT SHEATH", "type": "arrow_up" }
+          {
+            "x": 40,
+            "y": 30,
+            "label": "COMBAHEE MARSH",
+            "type": "box"
+          }
         ]
       },
       {
         "id": "b04_asset_02",
         "title": "Microscopic Cross-Section of Aragonite Xylem",
-        "anchor": "ch01_p06",
+        "anchor": "ch01_p03",
         "placement": "Inline Archival Insert",
-        "prompt": "Botanical micro-photograph engraving of wood xylem vascular bundles filled with geometric hexagonal aragonite crystal needles, warm sepia and glowing amber stippling --ar 1:1",
-        "caption": "Plate 14-B: Radial Aragonite Biomineralization inside Vascular Pores.",
+        "prompt": "Detailed archival illustration: Microscopic Cross-Section of Aragonite Xylem. Lowcountry tide-marsh ecology, 1928 botanist, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 2: Radial Biomineralization inside Vascular Pores.",
+        "caption_position": "below",
         "image_url": "/static/assets/placeholders/book04_halfpage.png",
         "filter_applied": true,
-        "vector_callouts": [
-          { "x": 50, "y": 50, "label": "HEXAGONAL ARAGONITE PRISM", "type": "box" }
-        ]
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
       },
       {
         "id": "b04_asset_03",
         "title": "Field Electrometer & Root Galvanic Survey Map",
-        "anchor": "ch02_p01",
+        "anchor": "ch01_p06",
         "placement": "Full-Page Recto Plate",
-        "prompt": "1928 field surveyor map of Saint Jude tidal marsh overlaid with hand-inked equipotential voltage contours, galvanized zinc electrodes, antique galvanometer dial, sepia botanical archival plate --ar 2:3",
-        "caption": "Plate IV: Subterranean Galvanic Root Network Survey (October 1928).",
+        "prompt": "Detailed archival illustration: Field Electrometer & Root Galvanic Survey Map. Lowcountry tide-marsh ecology, 1928 botanist, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate I: Galvanic Root Network Survey (1928).",
+        "caption_position": "below",
         "image_url": "/static/assets/placeholders/book04_fullplate.png",
         "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
         "vector_callouts": [
-          { "x": 35, "y": 35, "label": "SURVEY DATUM -412 mV", "type": "badge" },
-          { "x": 70, "y": 60, "label": "COMBAHEE TIDAL CONFLUENCE", "type": "box" }
+          {
+            "x": 46,
+            "y": 38,
+            "label": "FIELD ELECTROMETER",
+            "type": "box"
+          }
         ]
+      },
+      {
+        "id": "b04_asset_04",
+        "title": "Botanist's Leather Specimen Box & Plant Press",
+        "anchor": "ch01_p08",
+        "placement": "Half-Page Top",
+        "prompt": "Detailed archival illustration: Botanist's Leather Specimen Box & Plant Press. Lowcountry tide-marsh ecology, 1928 botanist, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 3: Field Herbarium Press & Zinc Tags.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book04_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b04_asset_05",
+        "title": "Tidal Inundation Hydrograph of Saint Jude Estuary",
+        "anchor": "ch01_p10",
+        "placement": "Full-Page Verso Plate",
+        "prompt": "Detailed archival illustration: Tidal Inundation Hydrograph of Saint Jude Estuary. Lowcountry tide-marsh ecology, 1928 botanist, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate II: Semi-Diurnal Tide Curves in Marsh.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book04_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 52,
+            "y": 46,
+            "label": "TIDAL INUNDATION HYDROGR",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b04_asset_06",
+        "title": "Aragonite Crystal Cluster Growing from Tree Bark",
+        "anchor": "ch01_p12",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: Aragonite Crystal Cluster Growing from Tree Bark. Lowcountry tide-marsh ecology, 1928 botanist, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 4: Hexagonal Aragonite Needles on Trunk.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book04_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b04_asset_07",
+        "title": "Pelham's Field Journal with Hand-Drawn Root Map",
+        "anchor": "ch01_p14",
+        "placement": "Half-Page Bottom",
+        "prompt": "Detailed archival illustration: Pelham's Field Journal with Hand-Drawn Root Map. Lowcountry tide-marsh ecology, 1928 botanist, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Document 1: October 1928 Ledger Notes.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book04_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 58,
+            "y": 54,
+            "label": "PELHAM'S FIELD JOURNAL W",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b04_asset_08",
+        "title": "Abandoned Rice Plantation Sluice Gate Ruins",
+        "anchor": "ch02_p01",
+        "placement": "Chapter Opener Vignette",
+        "prompt": "Detailed archival illustration: Abandoned Rice Plantation Sluice Gate Ruins. Lowcountry tide-marsh ecology, 1928 botanist, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 5: Weathered Heart-Pine Trunk Water-Gate.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book04_vignette.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b04_asset_09",
+        "title": "Salinity Refractometer & Water Sampling Flasks",
+        "anchor": "ch02_p03",
+        "placement": "Half-Page Top",
+        "prompt": "Detailed archival illustration: Salinity Refractometer & Water Sampling Flasks. Lowcountry tide-marsh ecology, 1928 botanist, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 6: Optical Refractometer and Estuary Samples.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book04_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 64,
+            "y": 62,
+            "label": "SALINITY REFRACTOMETER",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b04_asset_10",
+        "title": "Sub-Canopy Mist Over Saint Jude Sound at Dawn",
+        "anchor": "ch02_p05",
+        "placement": "Full-Page Recto Plate",
+        "prompt": "Detailed archival illustration: Sub-Canopy Mist Over Saint Jude Sound at Dawn. Lowcountry tide-marsh ecology, 1928 botanist, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate III: Pluff Mud Flats at Neap Tide.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book04_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b04_asset_11",
+        "title": "Calvanic Copper-Zinc Probe Pair in Riverbed",
+        "anchor": "ch02_p07",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: Calvanic Copper-Zinc Probe Pair in Riverbed. Lowcountry tide-marsh ecology, 1928 botanist, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 7: Differential Soil Potential Probes.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book04_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 70,
+            "y": 70,
+            "label": "CALVANIC COPPER-ZINC PRO",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b04_asset_12",
+        "title": "Anatomical Drawing of Salt-Excreting Leaf Glands",
+        "anchor": "ch02_p09",
+        "placement": "Full-Page Verso Plate",
+        "prompt": "Detailed archival illustration: Anatomical Drawing of Salt-Excreting Leaf Glands. Lowcountry tide-marsh ecology, 1928 botanist, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate IV: Foliar Salt Glands under 100x Magnification.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book04_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b04_asset_13",
+        "title": "Old Surveyor's Plat of Saint Jude Parish (1842)",
+        "anchor": "ch02_p11",
+        "placement": "Half-Page Bottom",
+        "prompt": "Detailed archival illustration: Old Surveyor's Plat of Saint Jude Parish (1842). Lowcountry tide-marsh ecology, 1928 botanist, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Document 2: Boundary Plat Showing Rice Dykes.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book04_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 76,
+            "y": 33,
+            "label": "OLD SURVEYOR'S PLAT OF S",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b04_asset_14",
+        "title": "Sediment Core Profile Showing Aragonite Laminae",
+        "anchor": "ch02_p13",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: Sediment Core Profile Showing Aragonite Laminae. Lowcountry tide-marsh ecology, 1928 botanist, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 8: Micro-Stratigraphy of Estuary Mud.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book04_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b04_asset_15",
+        "title": "Bioluminescent Root System under Night Sky",
+        "anchor": "ch02_p15",
+        "placement": "Full-Page Recto Plate",
+        "prompt": "Detailed archival illustration: Bioluminescent Root System under Night Sky. Lowcountry tide-marsh ecology, 1928 botanist, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate V: Phosphorescent Root Network at Midnight.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book04_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 42,
+            "y": 41,
+            "label": "BIOLUMINESCENT ROOT SYST",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b04_asset_16",
+        "title": "Intertwined Reed & Cypress Branch Tailpiece",
+        "anchor": "ch02_p17",
+        "placement": "Chapter End Tailpiece",
+        "prompt": "Detailed archival illustration: Intertwined Reed & Cypress Branch Tailpiece. Lowcountry tide-marsh ecology, 1928 botanist, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Tailpiece: The Salt Orchard Woodcut Emblem.",
+        "caption_position": "hidden",
+        "image_url": "/static/assets/placeholders/book04_tailpiece.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
       }
     ]
   },
@@ -203,40 +1339,328 @@
         "title": "Sun-Dried Clay Tablet with Cuneiform Inscription",
         "anchor": "ch01_p01",
         "placement": "Chapter Opener Vignette",
-        "prompt": "Ancient Mesopotamian clay cuneiform tablet held by cotton-gloved hands under archaeometry laboratory examination lamp, micro-grain desert ochre texture, crisp wedge incisions, museum archival photo style --ar 16:9",
-        "caption": "Fig. 1: Clay Tablet C-88 with Erra Cycle Epigraphic Script.",
+        "prompt": "Detailed archival illustration: Sun-Dried Clay Tablet with Cuneiform Inscription. Mesopotamian antiquities heist, cuneiform archaeometry, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 1: Tablet C-88 with Erra Cycle.",
+        "caption_position": "below",
         "image_url": "/static/assets/placeholders/book05_vignette.png",
         "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
         "vector_callouts": [
-          { "x": 50, "y": 35, "label": "OBVERSE LINE 01: [an-za-qàr]", "type": "box" }
+          {
+            "x": 40,
+            "y": 30,
+            "label": "SUN-DRIED CLAY TABLET WI",
+            "type": "box"
+          }
         ]
       },
       {
         "id": "b05_asset_02",
-        "title": "Neutron Activation Gamma Spectrum & Europium Peak",
-        "anchor": "ch01_p05",
+        "title": "Neutron Activation Gamma Spectrum Readout",
+        "anchor": "ch01_p03",
         "placement": "Half-Page Top",
-        "prompt": "Archaeometric laboratory spectrometer readout screen showing gamma-ray energy isotope peaks of europium, barium, and lanthanum, desert terracotta and glowing UV gold tones, clean technical graphic --ar 3:2",
-        "caption": "Figure 2: Trace Rare-Earth Isotope Fingerprint (Eu-152 / Th-232).",
+        "prompt": "Detailed archival illustration: Neutron Activation Gamma Spectrum Readout. Mesopotamian antiquities heist, cuneiform archaeometry, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 2: Rare-Earth Isotope Fingerprint.",
+        "caption_position": "below",
         "image_url": "/static/assets/placeholders/book05_halfpage.png",
         "filter_applied": true,
-        "vector_callouts": [
-          { "x": 62, "y": 42, "label": "EUROPIUM-152 ANOMALY (3.1 ppm)", "type": "arrow_left" }
-        ]
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
       },
       {
         "id": "b05_asset_03",
         "title": "Nineveh Royal Kiln Core & Charred Cedar Sliver",
-        "anchor": "ch02_p01",
+        "anchor": "ch01_p06",
         "placement": "Full-Page Recto Plate",
-        "prompt": "Detailed archaeometric dissection of an ancient ceramic envelope revealing charred Lebanese cedar wood core with tree rings under UV fluorescent illumination, warm desert ochre and amber glow --ar 2:3",
-        "caption": "Plate V: Radiocarbon-Dated Cedar Splinter (730–640 BCE) Extracted from Core.",
+        "prompt": "Detailed archival illustration: Nineveh Royal Kiln Core & Charred Cedar Sliver. Mesopotamian antiquities heist, cuneiform archaeometry, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate I: Radiocarbon-Dated Cedar Splinter.",
+        "caption_position": "below",
         "image_url": "/static/assets/placeholders/book05_fullplate.png",
         "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
         "vector_callouts": [
-          { "x": 48, "y": 45, "label": "CHARRED CEDRUS LIBANI CORE", "type": "box" },
-          { "x": 25, "y": 78, "label": "CLAY ENVELOPE STRATA", "type": "badge" }
+          {
+            "x": 46,
+            "y": 38,
+            "label": "NINEVEH ROYAL KILN CORE",
+            "type": "box"
+          }
         ]
+      },
+      {
+        "id": "b05_asset_04",
+        "title": "Cylinder Seal Impression Showing Winged Bull",
+        "anchor": "ch01_p08",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: Cylinder Seal Impression Showing Winged Bull. Mesopotamian antiquities heist, cuneiform archaeometry, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 3: Hematite Seal Rollout on Clay.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book05_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b05_asset_05",
+        "title": "Antiquities Vault Security Schematics & Laser Grid",
+        "anchor": "ch01_p10",
+        "placement": "Full-Page Verso Plate",
+        "prompt": "Detailed archival illustration: Antiquities Vault Security Schematics & Laser Grid. Mesopotamian antiquities heist, cuneiform archaeometry, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate II: Floorplan of the Pergamos Wing Vault.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book05_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 52,
+            "y": 46,
+            "label": "ANTIQUITIES VAULT SECURI",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b05_asset_06",
+        "title": "Stereomicroscope View of Wedge Stylus Impressions",
+        "anchor": "ch01_p12",
+        "placement": "Half-Page Bottom",
+        "prompt": "Detailed archival illustration: Stereomicroscope View of Wedge Stylus Impressions. Mesopotamian antiquities heist, cuneiform archaeometry, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 4: Reed Stylus Angle of Inscription.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book05_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b05_asset_07",
+        "title": "X-Ray Fluorescence Spectrum of Blue Frit Glaze",
+        "anchor": "ch01_p14",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: X-Ray Fluorescence Spectrum of Blue Frit Glaze. Mesopotamian antiquities heist, cuneiform archaeometry, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 5: Elemental Copper Analysis of Glaze.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book05_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 58,
+            "y": 54,
+            "label": "X-RAY FLUORESCENCE SPECT",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b05_asset_08",
+        "title": "Babylonian Ishtar Gate Glazed Brick Segment",
+        "anchor": "ch02_p01",
+        "placement": "Chapter Opener Vignette",
+        "prompt": "Detailed archival illustration: Babylonian Ishtar Gate Glazed Brick Segment. Mesopotamian antiquities heist, cuneiform archaeometry, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 6: Cobalt-Glazed Relief Brick with Dragon.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book05_vignette.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b05_asset_09",
+        "title": "Diamond Core Drill Bit with Clay Residue",
+        "anchor": "ch02_p03",
+        "placement": "Half-Page Top",
+        "prompt": "Detailed archival illustration: Diamond Core Drill Bit with Clay Residue. Mesopotamian antiquities heist, cuneiform archaeometry, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 7: Forensic Sampling Drill Assembly.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book05_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 64,
+            "y": 62,
+            "label": "DIAMOND CORE DRILL BIT W",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b05_asset_10",
+        "title": "Thermoluminescence Heating Curve for Ceramic Clay",
+        "anchor": "ch02_p05",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: Thermoluminescence Heating Curve for Ceramic Clay. Mesopotamian antiquities heist, cuneiform archaeometry, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 8: Glow-Curve Dating Profile (700 BCE).",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book05_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b05_asset_11",
+        "title": "Cuneiform Legal Contract Tablet with Clay Envelope",
+        "anchor": "ch02_p07",
+        "placement": "Half-Page Bottom",
+        "prompt": "Detailed archival illustration: Cuneiform Legal Contract Tablet with Clay Envelope. Mesopotamian antiquities heist, cuneiform archaeometry, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Document 1: Sealed Neo-Babylonian Promissory Note.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book05_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 70,
+            "y": 70,
+            "label": "CUNEIFORM LEGAL CONTRACT",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b05_asset_12",
+        "title": "Museum Basement Conservation Laboratory at Midnight",
+        "anchor": "ch02_p09",
+        "placement": "Full-Page Recto Plate",
+        "prompt": "Detailed archival illustration: Museum Basement Conservation Laboratory at Midnight. Mesopotamian antiquities heist, cuneiform archaeometry, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate III: Conservation Bench with Solvent Vials.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book05_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b05_asset_13",
+        "title": "Assyrian Cuneiform Royal Library Fragment",
+        "anchor": "ch02_p11",
+        "placement": "Full-Page Verso Plate",
+        "prompt": "Detailed archival illustration: Assyrian Cuneiform Royal Library Fragment. Mesopotamian antiquities heist, cuneiform archaeometry, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate IV: Ashurbanipal Library Tablet Colophon.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book05_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 76,
+            "y": 33,
+            "label": "ASSYRIAN CUNEIFORM ROYAL",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b05_asset_14",
+        "title": "Micro-CT Scan Cross Section of Clay Core Internal Voids",
+        "anchor": "ch02_p13",
+        "placement": "Inline Archival Insert",
+        "prompt": "Detailed archival illustration: Micro-CT Scan Cross Section of Clay Core Internal Voids. Mesopotamian antiquities heist, cuneiform archaeometry, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Figure 9: Tomographic Slice Showing Hollow Core.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book05_halfpage.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
+      },
+      {
+        "id": "b05_asset_15",
+        "title": "Antique Brass Caliper Measuring Tablet Thickness",
+        "anchor": "ch02_p15",
+        "placement": "Full-Page Recto Plate",
+        "prompt": "Detailed archival illustration: Antique Brass Caliper Measuring Tablet Thickness. Mesopotamian antiquities heist, cuneiform archaeometry, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Plate V: Precision Micrometer Inspection of Tablet.",
+        "caption_position": "below",
+        "image_url": "/static/assets/placeholders/book05_fullplate.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 100,
+        "max_height_in": 7.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": [
+          {
+            "x": 42,
+            "y": 41,
+            "label": "ANTIQUE BRASS CALIPER ME",
+            "type": "box"
+          }
+        ]
+      },
+      {
+        "id": "b05_asset_16",
+        "title": "Cuneiform Wedge Rosette & Sun Disk Emblem",
+        "anchor": "ch02_p17",
+        "placement": "Chapter End Tailpiece",
+        "prompt": "Detailed archival illustration: Cuneiform Wedge Rosette & Sun Disk Emblem. Mesopotamian antiquities heist, cuneiform archaeometry, fine intaglio book engraving style, crisp line work, museum quality publication plate --ar 16:9",
+        "caption": "Tailpiece: Royal Ashur Seal Tailpiece.",
+        "caption_position": "hidden",
+        "image_url": "/static/assets/placeholders/book05_tailpiece.png",
+        "filter_applied": true,
+        "frame_style": "none",
+        "width_pct": 88,
+        "max_height_in": 4.0,
+        "margin_top_pt": 6,
+        "margin_bottom_pt": 12,
+        "vector_callouts": []
       }
     ]
   }

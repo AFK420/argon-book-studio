@@ -30,6 +30,13 @@ const state = {
   activeRightTab: "geometry", // 'geometry', 'matter', 'export'
   viewMode: "html", // 'html' or 'pdf'
   activeEditingId: null,
+  // 5-Step Sequential Wizard Pipeline State
+  currentStep: 1,
+  maxUnlockedStep: 1,
+  layoutMode: "wizard", // 'wizard' (default) or 'studio'
+  queueFilter: "all",   // 'all', 'ready', 'pending'
+  drawerTab: "geometry", // 'geometry' or 'matter'
+  isDrawerOpen: false,
   imageLabState: {
     assetId: null,
     filter_preset: "cyanotype_silver_plate",
@@ -121,26 +128,37 @@ async function loadBook(bookId) {
     state.currentSpreadIndex = 1;
   }
 
+  // If manuscript exists, unlock step 2
+  if (state.manuscript && state.manuscript.chapters && state.manuscript.chapters.length > 0) {
+    state.maxUnlockedStep = Math.max(state.maxUnlockedStep, 2);
+  }
+
   renderAll();
+  applyLayoutMode();
 }
 
 function renderAll() {
   renderHeader();
-  renderLeftPanel();
-  renderSpreadCanvas();
-  renderFilmstrip();
-  renderRightPanel();
+  if (state.layoutMode === "wizard") {
+    updateStepperUI();
+    renderWizardStep();
+  } else {
+    renderLeftPanel();
+    renderSpreadCanvas();
+    renderFilmstrip();
+    renderRightPanel();
+  }
 }
 
 // ======================================================================
-// 1. TOP HEADER & VIEW MODE CONTROLLER
+// 1. TOP HEADER & LAYOUT MODE CONTROLLER
 // ======================================================================
 function renderHeader() {
   const selector = document.getElementById("book-profile-select");
   if (selector) {
     selector.innerHTML = state.books.map(b => `
       <option value="${b.id}" ${b.id === state.activeBookId ? "selected" : ""}>
-        ${b.short_title} (${b.genre.split("/")[0].trim()})
+        ${b.short_title} (${(b.genre || '').split("/")[0].trim()})
       </option>
     `).join("");
   }
@@ -148,10 +166,11 @@ function renderHeader() {
   const indicator = document.getElementById("active-profile-indicator");
   if (indicator && state.activeBook && state.settings) {
     const s = state.settings;
-    const bodyFont = s.typography.body_font_name || s.body_font || state.activeBook.body_font_name;
-    const bodySize = s.typography.body_font_size_pt || s.font_size_pt || 11;
-    const leading = s.typography.body_leading_pt || (bodySize * (s.line_height || 1.36));
-    const accent = s.typography.accent_color || state.activeBook.accent_color || "#D97706";
+    const typo = s.typography || {};
+    const bodyFont = typo.body_font_name || s.body_font || state.activeBook.body_font_name;
+    const bodySize = typo.body_font_size_pt || s.font_size_pt || 11;
+    const leading = typo.body_leading_pt || (bodySize * (s.line_height || 1.36));
+    const accent = typo.accent_color || state.activeBook.accent_color || "#D97706";
 
     indicator.innerHTML = `
       <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${accent};"></span>
@@ -161,41 +180,584 @@ function renderHeader() {
   }
 }
 
+function toggleLayoutMode() {
+  state.layoutMode = state.layoutMode === "wizard" ? "studio" : "wizard";
+  applyLayoutMode();
+}
+
+function applyLayoutMode() {
+  const wizardWs = document.getElementById("wizard-workspace");
+  const studioWs = document.getElementById("studio-workspace");
+  const modeBtn = document.getElementById("mode-toggle-btn");
+  const stepperBar = document.getElementById("stepper-bar");
+
+  if (state.layoutMode === "wizard") {
+    if (wizardWs) wizardWs.style.display = "block";
+    if (studioWs) studioWs.style.display = "none";
+    if (stepperBar) stepperBar.style.display = "flex";
+    if (modeBtn) modeBtn.innerHTML = "🔧 Switch to Advanced 3-Panel Studio";
+    updateStepperUI();
+    renderWizardStep();
+  } else {
+    if (wizardWs) wizardWs.style.display = "none";
+    if (studioWs) studioWs.style.display = "grid";
+    if (stepperBar) stepperBar.style.display = "flex";
+    if (modeBtn) modeBtn.innerHTML = "🧙 Switch to 5-Step Pipeline";
+    renderLeftPanel();
+    renderSpreadCanvas();
+    renderFilmstrip();
+    renderRightPanel();
+  }
+}
+
 function setupHeaderListeners() {
   const profileSelect = document.getElementById("book-profile-select");
   if (profileSelect) {
-    profileSelect.addEventListener("change", (e) => loadBook(e.target.value));
+    profileSelect.addEventListener("change", (e) => selectTheme(e.target.value));
   }
 
-  const uploadInput = document.getElementById("manuscript-file-input");
-  if (uploadInput) {
-    uploadInput.addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const formData = new FormData();
-      formData.append("book_id", state.activeBookId);
-      formData.append("file", file);
-
-      showToast(`Importing full manuscript: ${file.name}...`, "info");
-      const res = await fetch("/api/manuscript/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      if (data.status === "success") {
-        showToast("Manuscript successfully parsed with semantic block auto-detection!", "success");
-        await loadBook(state.activeBookId);
+  const dropzone = document.getElementById("step1-upload-dropzone");
+  if (dropzone) {
+    dropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzone.classList.add("dragover");
+    });
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.classList.remove("dragover");
+    });
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("dragover");
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleWizardManuscriptUpload({ target: { files: e.dataTransfer.files } });
       }
     });
   }
+}
 
-  const manifestInput = document.getElementById("manifest-file-input");
-  if (manifestInput) {
-    manifestInput.addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      await importManifestFile(file);
-      manifestInput.value = "";
-    });
+// ======================================================================
+// 2. SEQUENTIAL 5-STEP PIPELINE CONTROLLER
+// ======================================================================
+function goToStep(stepNum) {
+  if (stepNum > state.maxUnlockedStep && stepNum > state.currentStep) {
+    showToast(`Complete Stage 0${state.currentStep} to unlock Stage 0${stepNum}.`, "warning");
+    return;
   }
+  state.currentStep = stepNum;
+  updateStepperUI();
+  renderWizardStep();
+}
+
+function updateStepperUI() {
+  for (let i = 1; i <= 5; i++) {
+    const btn = document.getElementById(`step-btn-${i}`);
+    const num = document.getElementById(`step-num-${i}`);
+    const line = document.getElementById(`line-${i}`);
+
+    if (!btn || !num) continue;
+
+    btn.classList.remove("active", "completed", "pending");
+
+    if (i === state.currentStep) {
+      btn.classList.add("active");
+      num.innerText = `${i}`;
+    } else if (i < state.currentStep) {
+      btn.classList.add("completed");
+      num.innerText = "✓";
+    } else if (i <= state.maxUnlockedStep) {
+      btn.classList.add("completed");
+      num.innerText = `${i}`;
+    } else {
+      btn.classList.add("pending");
+      num.innerText = `${i}`;
+    }
+
+    if (line) {
+      if (i < state.currentStep) {
+        line.classList.add("completed");
+      } else {
+        line.classList.remove("completed");
+      }
+    }
+  }
+}
+
+function renderWizardStep() {
+  for (let i = 1; i <= 5; i++) {
+    const view = document.getElementById(`wizard-step-${i}`);
+    if (view) {
+      view.style.display = (i === state.currentStep) ? "flex" : "none";
+    }
+  }
+
+  if (state.currentStep === 1) renderStep1();
+  else if (state.currentStep === 2) renderStep2();
+  else if (state.currentStep === 3) renderStep3();
+  else if (state.currentStep === 4) renderStep4();
+  else if (state.currentStep === 5) renderStep5();
+}
+
+// --- STEP 1: THEME & MANUSCRIPT UPLOAD ---
+const BOOK_PROFILE_DETAILS = {
+  book01: {
+    title: "Cormac Vane: The Alchemical Inquest",
+    genre: "Gaslamp Forensic Alchemy",
+    fonts: "Cinzel & EB Garamond",
+    colors: ["#1B365D", "#D97706", "#FAF7F0"],
+    containers: "Inquest Writs & Sensory Draws"
+  },
+  book02: {
+    title: "The Fourteen-Hour Barometer",
+    genre: "Chronometric Island Thriller",
+    fonts: "Oswald & Lora",
+    colors: ["#1E2229", "#00A896", "#F5F6F8"],
+    containers: "Welsh Slate & Telemetry Equations"
+  },
+  book03: {
+    title: "The Dead-Room Transcripts",
+    genre: "Cold War Signal Polyphony",
+    fonts: "JetBrains Mono & Baskerville",
+    colors: ["#12151A", "#38BDF8", "#D97706"],
+    containers: "DAW Audio Transcripts & FSK Telemetry"
+  },
+  book04: {
+    title: "The Salt Orchard of Saint Jude",
+    genre: "Tide-Marsh Folk Ecocriticism",
+    fonts: "Cormorant Garamond & Crimson Pro",
+    colors: ["#222E26", "#D4A373", "#E8DCC4"],
+    containers: "Pelham Ledgers & Archival Journals"
+  },
+  book05: {
+    title: "Provenance of Ashes",
+    genre: "Cuneiform Antiquities Heist",
+    fonts: "Cinzel Decorative & Source Serif 4",
+    colors: ["#2A1B18", "#C2593F", "#D97706"],
+    containers: "Cuneiform Tablets & Assur Writs"
+  }
+};
+
+function renderStep1() {
+  const grid = document.getElementById("step1-theme-grid");
+  if (!grid) return;
+
+  const books = state.books.length > 0 ? state.books : [
+    { id: "book01", short_title: "Cormac Vane" },
+    { id: "book02", short_title: "Fourteen-Hour Barometer" },
+    { id: "book03", short_title: "Dead-Room Transcripts" },
+    { id: "book04", short_title: "Salt Orchard" },
+    { id: "book05", short_title: "Provenance of Ashes" }
+  ];
+
+  grid.innerHTML = books.map(b => {
+    const meta = BOOK_PROFILE_DETAILS[b.id] || {
+      title: b.title || b.short_title,
+      genre: b.genre || "Illustrated Edition",
+      fonts: "Serif & Sans",
+      colors: ["#1B365D", "#D97706", "#FAF7F0"],
+      containers: "In-World Documents"
+    };
+    const isSelected = b.id === state.activeBookId;
+    return `
+      <div class="theme-card ${isSelected ? 'selected' : ''}" onclick="selectTheme('${b.id}')">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span class="theme-card-badge" style="background:${meta.colors[0]}; color:#FFF;">${b.id.toUpperCase()}</span>
+            ${isSelected ? '<span style="color:#10B981; font-weight:800; font-size:0.75rem;">✓ ACTIVE</span>' : ''}
+          </div>
+          <div class="theme-card-title">${meta.title}</div>
+          <div class="theme-card-genre">${meta.genre}</div>
+        </div>
+        <div class="theme-card-meta">
+          <div><strong style="color:#D1D5DB;">Fonts:</strong> ${meta.fonts}</div>
+          <div><strong style="color:#D1D5DB;">Containers:</strong> ${meta.containers}</div>
+          <div class="theme-card-swatches">
+            ${meta.colors.map(c => `<span class="theme-swatch" style="background:${c};"></span>`).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const sampleName = document.getElementById("step1-sample-name");
+  if (sampleName && state.activeBook) {
+    sampleName.innerText = state.activeBook.short_title || "Active Book";
+  }
+
+  const parseStatus = document.getElementById("step1-parse-status");
+  const continueBtn = document.getElementById("step1-continue-btn");
+  if (state.manuscript && state.manuscript.chapters && state.manuscript.chapters.length > 0) {
+    const chCount = state.manuscript.chapters.length;
+    let pCount = 0;
+    state.manuscript.chapters.forEach(ch => {
+      pCount += (ch.elements || []).filter(el => el.type === "paragraph" || el.type === "container").length;
+    });
+    if (parseStatus) {
+      parseStatus.style.display = "flex";
+      parseStatus.innerText = `✓ Parsed ${chCount} Chapter${chCount === 1 ? '' : 's'} and ${pCount} Paragraphs`;
+    }
+    if (continueBtn) continueBtn.disabled = false;
+  }
+}
+
+async function selectTheme(bookId) {
+  if (state.activeBookId === bookId && state.activeBook) return;
+  showToast(`Switching to ${bookId.toUpperCase()} theme profile...`, "info");
+  await loadBook(bookId);
+  renderStep1();
+}
+
+function handleHeaderProfileChange(bookId) {
+  selectTheme(bookId);
+}
+
+async function handleWizardManuscriptUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  showToast(`Parsing manuscript: ${file.name}...`, "info");
+
+  const formData = new FormData();
+  formData.append("book_id", state.activeBookId);
+  formData.append("file", file);
+
+  try {
+    const res = await fetch("/api/manuscript/upload", { method: "POST", body: formData });
+    if (!res.ok) throw new Error("Upload failed");
+    const data = await res.json();
+    state.manuscript = data.parsed;
+    state.pagination = data.pagination;
+    state.maxUnlockedStep = Math.max(state.maxUnlockedStep, 2);
+    showToast(`✓ Parsed ${data.parsed.chapters?.length || 0} chapters and ${data.parsed.total_words || 0} words!`, "success");
+    await loadBook(state.activeBookId);
+    goToStep(2);
+  } catch (err) {
+    console.error(err);
+    showToast(`Error parsing manuscript: ${err.message}`, "error");
+  }
+}
+
+async function useSampleManuscriptForActiveBook() {
+  showToast(`Loading built-in sample manuscript for ${state.activeBookId.toUpperCase()}...`, "info");
+  await loadBook(state.activeBookId);
+  state.maxUnlockedStep = Math.max(state.maxUnlockedStep, 2);
+  showToast("✓ Built-in sample manuscript loaded!", "success");
+  goToStep(2);
+}
+
+// --- STEP 2: AUTO-STYLE & BLUEPRINT ---
+function renderStep2() {
+  if (!state.manuscript) return;
+
+  const chCount = state.manuscript.chapters?.length || 0;
+  const wordCount = state.manuscript.total_words || 0;
+  const slotCount = state.manifest.assets?.length || 16;
+
+  document.getElementById("step2-diag-chapters").innerText = chCount;
+  document.getElementById("step2-diag-words").innerText = wordCount.toLocaleString();
+  document.getElementById("step2-diag-slots").innerText = slotCount;
+
+  const containerCounts = {
+    inworld_writ: 0,
+    welsh_slate: 0,
+    audio_transcript: 0,
+    archival_journal: 0,
+    scientific_formula: 0,
+    cuneiform_clause: 0,
+    sensory_draw: 0
+  };
+
+  (state.manuscript.chapters || []).forEach(ch => {
+    (ch.elements || []).forEach(el => {
+      const btype = el.block_type || (el.type === "container" ? el.tag : null);
+      if (el.tag === "sensory-draw" || btype === "sensory_draw") {
+        containerCounts.sensory_draw++;
+      } else if (btype && containerCounts[btype] !== undefined) {
+        containerCounts[btype]++;
+      }
+    });
+  });
+
+  const chipsContainer = document.getElementById("step2-container-chips");
+  if (chipsContainer) {
+    const labels = {
+      inworld_writ: "Inquest Writs / Warrants",
+      sensory_draw: "Vesper Sensory Draws",
+      welsh_slate: "Welsh Slate Blocks",
+      audio_transcript: "DAW Audio Transcripts",
+      archival_journal: "Pelham Archival Ledgers",
+      scientific_formula: "Telemetry Equations",
+      cuneiform_clause: "Cuneiform Clauses"
+    };
+
+    let chipsHtml = "";
+    Object.keys(containerCounts).forEach(key => {
+      const count = containerCounts[key];
+      chipsHtml += `
+        <span class="diag-chip ${count > 0 ? 'active' : ''}">
+          <strong>${count}</strong> ${labels[key] || key}
+        </span>
+      `;
+    });
+    chipsContainer.innerHTML = chipsHtml;
+  }
+}
+
+async function useBuiltinBlueprint() {
+  showToast("Anchoring built-in 16-asset blueprint to manuscript...", "info");
+  try {
+    const res = await fetch(`/api/manifest/${state.activeBookId}/import`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ use_builtin: true })
+    });
+    if (!res.ok) throw new Error("Failed to anchor blueprint");
+    const data = await res.json();
+    state.manifest = data.manifest;
+    state.pagination = data.pagination;
+    showToast("✓ 16 illustration slots anchored to manuscript paragraphs!", "success");
+    renderStep2();
+  } catch (err) {
+    showToast(`Error anchoring blueprint: ${err.message}`, "error");
+  }
+}
+
+async function handleWizardManifestUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  await importManifestFile(file);
+  event.target.value = "";
+  renderStep2();
+}
+
+async function handleStudioManifestUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  await importManifestFile(file);
+  event.target.value = "";
+}
+
+async function runAutoStyle() {
+  const btn = document.getElementById("step2-autostyle-btn");
+  if (btn) btn.disabled = true;
+  showToast("Running 1-Click Auto-Styler & locking blueprint...", "info");
+
+  try {
+    const res = await fetch(`/api/manuscript/${state.activeBookId}/auto-style`, {
+      method: "POST"
+    });
+    if (!res.ok) throw new Error("Auto-styler request failed");
+    const data = await res.json();
+
+    state.manuscript = data.manuscript;
+    state.pagination = data.pagination;
+    state.frontMatter = data.front_matter;
+    state.maxUnlockedStep = Math.max(state.maxUnlockedStep, 3);
+
+    const banner = document.getElementById("step2-autostyle-result");
+    if (banner) {
+      banner.style.display = "block";
+      banner.innerHTML = `
+        <strong>✓ Auto-Style Successfully Applied:</strong><br>
+        • Merged consecutive multi-line containers into unified blocks.<br>
+        • Styled Vesper sensory draws and formatted in-world containers.<br>
+        • Enforced flush-left indents on chapter opening paragraphs & scene breaks.<br>
+        • Initialized front and back matter defaults.
+      `;
+    }
+
+    showToast("✓ Auto-Style Locked! Advancing to Step 3...", "success");
+    setTimeout(() => {
+      goToStep(3);
+    }, 900);
+  } catch (err) {
+    console.error(err);
+    showToast(`Auto-style error: ${err.message}`, "error");
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// --- STEP 3: ILLUSTRATION PRODUCTION QUEUE ---
+function setQueueFilter(filter) {
+  state.queueFilter = filter;
+  ["all", "ready", "pending"].forEach(f => {
+    document.getElementById(`filter-chip-${f}`)?.classList.toggle("active", f === filter);
+  });
+  renderStep3();
+}
+
+function renderStep3() {
+  const assets = state.manifest.assets || [];
+  const isReady = (a) => a.filter_applied || a.raw_image_path || (a.image_url && !a.image_url.includes("placeholder"));
+
+  const readyCount = assets.filter(isReady).length;
+  const totalCount = assets.length;
+  const pct = totalCount > 0 ? Math.round((readyCount / totalCount) * 100) : 0;
+
+  document.getElementById("step3-ready-label").innerText = `${readyCount} of ${totalCount} Illustrations Ready`;
+  document.getElementById("step3-pct-label").innerText = `${pct}%`;
+  document.getElementById("step3-progress-bar").style.width = `${pct}%`;
+
+  document.getElementById("filter-chip-all").innerText = `All Slots (${totalCount})`;
+  document.getElementById("filter-chip-ready").innerText = `✓ Ready & Filtered (${readyCount})`;
+  document.getElementById("filter-chip-pending").innerText = `⏳ Needs Artwork (${totalCount - readyCount})`;
+
+  const filtered = assets.filter(a => {
+    if (state.queueFilter === "ready") return isReady(a);
+    if (state.queueFilter === "pending") return !isReady(a);
+    return true;
+  });
+
+  const grid = document.getElementById("step3-cards-grid");
+  if (!grid) return;
+
+  grid.innerHTML = filtered.map((asset, idx) => {
+    const ready = isReady(asset);
+    const pinCount = (asset.vector_callouts || []).length;
+    const cleanPrompt = (asset.prompt || "").replace(/"/g, '&quot;');
+
+    return `
+      <div class="queue-card">
+        <div class="queue-card-header">
+          <div class="queue-card-loc">
+            Slot #${idx + 1} • ${asset.anchor} • ${asset.placement}
+          </div>
+          <div class="queue-card-status ${ready ? 'ready' : 'pending'}">
+            ${ready ? '✓ 300 DPI Filtered' : '⏳ Needs Artwork'}
+          </div>
+        </div>
+
+        <div style="font-size:0.82rem; font-weight:700; color:#FFF;">${asset.title || 'Illustration Plate'}</div>
+
+        <div class="queue-prompt-box">
+          <div class="queue-prompt-text">${asset.prompt || 'No prompt specified.'}</div>
+          <button class="btn-copy-prompt" onclick="copyPromptText('${cleanPrompt}', this)">
+            📋 Copy Prompt
+          </button>
+        </div>
+
+        <div class="queue-thumb-row">
+          <img src="${asset.image_url}" class="queue-thumb-img" alt="Artwork Preview" onclick="openPlateInspector('${asset.id}')">
+          <div class="queue-actions-col">
+            <input type="file" id="queue-file-${asset.id}" style="display:none;" accept="image/*" onchange="uploadQueueImage('${asset.id}', this.files[0])">
+            <button class="btn-queue-action" onclick="document.getElementById('queue-file-${asset.id}').click()">
+              📤 Drop / Upload Image
+            </button>
+            <button class="btn-queue-action" onclick="openFilterLab('${asset.id}')">
+              🔍 Preview / Adjust Filter
+            </button>
+            <button class="btn-queue-action" onclick="openPinStudio('${asset.id}')">
+              📍 Adjust Map Pins (${pinCount})
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  state.maxUnlockedStep = Math.max(state.maxUnlockedStep, 4);
+}
+
+async function uploadQueueImage(assetId, file) {
+  if (!file) return;
+  await uploadImageFile(assetId, file);
+  renderStep3();
+}
+
+function copyPromptText(text, btn) {
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.innerHTML;
+    btn.innerHTML = "✓ Copied!";
+    btn.style.color = "#10B981";
+    setTimeout(() => {
+      btn.innerHTML = orig;
+      btn.style.color = "var(--accent-cyan)";
+    }, 1500);
+  });
+}
+
+// --- STEP 4: SPREAD REVIEW & POLISH ---
+function renderStep4() {
+  renderSpreadCanvas();
+  renderFilmstrip();
+
+  const shortCount = (state.pagination.short_endings || []).length;
+  const countSpan = document.getElementById("polish-short-count");
+  if (countSpan) countSpan.innerText = shortCount;
+
+  state.maxUnlockedStep = Math.max(state.maxUnlockedStep, 5);
+}
+
+async function autoBalanceAllShortEndings() {
+  showToast("Auto-balancing all short chapter endings...", "info");
+  try {
+    const res = await fetch("/api/tailpiece/auto-balance-all", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ book_id: state.activeBookId })
+    });
+    if (!res.ok) throw new Error("Auto-balance request failed");
+    const data = await res.json();
+    state.pagination = data.pagination;
+    showToast(`✓ Balanced ${data.balanced_count} short endings with thematic tailpieces!`, "success");
+    renderSpreadCanvas();
+    renderFilmstrip();
+    const countSpan = document.getElementById("polish-short-count");
+    if (countSpan) countSpan.innerText = (data.pagination.short_endings || []).length;
+  } catch (err) {
+    console.error(err);
+    showToast(`Error balancing endings: ${err.message}`, "error");
+  }
+}
+
+function toggleTypographyDrawer() {
+  state.isDrawerOpen = !state.isDrawerOpen;
+  const drawer = document.getElementById("typography-drawer");
+  if (!drawer) return;
+  drawer.style.display = state.isDrawerOpen ? "flex" : "none";
+  if (state.isDrawerOpen) {
+    renderTypographyDrawer();
+  }
+}
+
+function switchDrawerTab(tab) {
+  state.drawerTab = tab;
+  document.getElementById("dtab-geom-btn")?.classList.toggle("active", tab === "geometry");
+  document.getElementById("dtab-matter-btn")?.classList.toggle("active", tab === "matter");
+  renderTypographyDrawer();
+}
+
+function renderTypographyDrawer() {
+  const content = document.getElementById("typography-drawer-content");
+  if (!content) return;
+  if (state.drawerTab === "geometry") {
+    renderGeometryTab(content);
+  } else {
+    renderFrontMatterTab(content);
+  }
+}
+
+// --- STEP 5: PRE-FLIGHT & EXPORTS ---
+function renderStep5() {
+  if (!state.settings || !state.activeBook) return;
+  const s = state.settings;
+  const typo = s.typography || {};
+  const assets = state.manifest.assets || [];
+  const readyCount = assets.filter(a => a.filter_applied || a.raw_image_path || (a.image_url && !a.image_url.includes("placeholder"))).length;
+  const totalPages = state.pagination.total_pages || (state.pagination.pages?.length || 0);
+  const signaturePages = Math.ceil(Math.max(1, totalPages) / 4) * 4;
+
+  document.getElementById("preflight-geometry-val").innerText = 
+    `${parseFloat(s.trim_width_in).toFixed(2)}" × ${parseFloat(s.trim_height_in).toFixed(2)}" Mirrored Gutters (${parseFloat(s.margin_inside_in).toFixed(3)}" Inside / ${parseFloat(s.margin_outside_in).toFixed(3)}" Outside)`;
+
+  document.getElementById("preflight-typo-val").innerText = 
+    `${typo.body_font_name || 'EB Garamond'} (${parseFloat(typo.body_font_size_pt || 11).toFixed(1)}pt / ${parseFloat(typo.body_leading_pt || 15).toFixed(1)}pt) & In-World Boxes Verified`;
+
+  document.getElementById("preflight-artwork-val").innerText = 
+    `${readyCount} of ${assets.length} Visual Plates Filtered at 300 DPI`;
+
+  document.getElementById("preflight-pagination-val").innerText = 
+    `${totalPages} Total Pages (${signaturePages} Pages in 4-Page Standard Signature Count)`;
 }
 
 async function importManifestFile(file) {
@@ -404,16 +966,17 @@ function switchRightTab(tabName) {
 // 3. CENTER SPREAD CANVAS (HTML SPREAD & TRUE PRINT PDF SPREAD)
 // ======================================================================
 function renderSpreadCanvas() {
-  const viewport = document.getElementById("spread-viewport");
-  const spreadIndicator = document.getElementById("spread-indicator");
-  const prevBtn = document.getElementById("spread-prev-btn");
-  const nextBtn = document.getElementById("spread-next-btn");
-  const bannerContainer = document.getElementById("short-ending-banner-wrap");
-  if (!viewport) return;
+  const viewports = [
+    document.getElementById("spread-viewport"),
+    document.getElementById("wspread-viewport")
+  ].filter(Boolean);
+  if (viewports.length === 0) return;
 
   const spreads = state.pagination.spreads || [];
   if (spreads.length === 0) {
-    viewport.innerHTML = `<div style="color:var(--text-dim); text-align:center; padding:50px;">No pages to display in this edition.</div>`;
+    viewports.forEach(vp => {
+      vp.innerHTML = `<div style="color:var(--text-dim); text-align:center; padding:50px;">No pages to display in this edition.</div>`;
+    });
     return;
   }
 
@@ -422,30 +985,52 @@ function renderSpreadCanvas() {
 
   const currentSpread = spreads[state.currentSpreadIndex];
 
-  if (spreadIndicator) {
-    const versoPage = currentSpread.verso?.page_number;
-    const rectoPage = currentSpread.recto?.page_number;
-    const pageLabel = versoPage && rectoPage ? `Pages ${versoPage}–${rectoPage}` : rectoPage ? `Page ${rectoPage}` : `Page ${versoPage}`;
-    spreadIndicator.innerText = `Spread ${state.currentSpreadIndex + 1} of ${spreads.length} (${pageLabel})`;
-  }
-  if (prevBtn) prevBtn.disabled = state.currentSpreadIndex === 0;
-  if (nextBtn) nextBtn.disabled = state.currentSpreadIndex === spreads.length - 1;
+  const spreadIndicators = [
+    document.getElementById("spread-indicator"),
+    document.getElementById("wspread-indicator")
+  ].filter(Boolean);
+
+  const prevBtns = [
+    document.getElementById("spread-prev-btn")
+  ].filter(Boolean);
+
+  const nextBtns = [
+    document.getElementById("spread-next-btn")
+  ].filter(Boolean);
+
+  const versoPage = currentSpread.verso?.page_number;
+  const rectoPage = currentSpread.recto?.page_number;
+  const pageLabel = versoPage && rectoPage ? `Pages ${versoPage}–${rectoPage}` : rectoPage ? `Page ${rectoPage}` : `Page ${versoPage}`;
+
+  spreadIndicators.forEach(ind => {
+    ind.innerText = `Spread ${state.currentSpreadIndex + 1} of ${spreads.length} (${pageLabel})`;
+  });
+
+  prevBtns.forEach(btn => btn.disabled = state.currentSpreadIndex === 0);
+  nextBtns.forEach(btn => btn.disabled = state.currentSpreadIndex === spreads.length - 1);
 
   // Branch: TRUE PRINT PDF VIEW vs INTERACTIVE HTML VIEW
-  if (state.viewMode === "pdf") {
-    renderPdfSpread(viewport, currentSpread);
-  } else {
-    renderHtmlSpread(viewport, currentSpread);
-  }
+  viewports.forEach(vp => {
+    if (state.viewMode === "pdf") {
+      renderPdfSpread(vp, currentSpread);
+    } else {
+      renderHtmlSpread(vp, currentSpread);
+    }
+  });
 
   // Short Chapter Ending Detection Banner
-  if (bannerContainer) {
-    const hasShortVerso = currentSpread.verso?.short_ending && !currentSpread.verso?.has_tailpiece;
-    const hasShortRecto = currentSpread.recto?.short_ending && !currentSpread.recto?.has_tailpiece;
-    const shortPageNum = hasShortVerso ? currentSpread.verso.page_number : (hasShortRecto ? currentSpread.recto.page_number : null);
+  const bannerContainers = [
+    document.getElementById("short-ending-banner-wrap"),
+    document.getElementById("wshort-ending-banner-wrap")
+  ].filter(Boolean);
 
+  const hasShortVerso = currentSpread.verso?.short_ending && !currentSpread.verso?.has_tailpiece;
+  const hasShortRecto = currentSpread.recto?.short_ending && !currentSpread.recto?.has_tailpiece;
+  const shortPageNum = hasShortVerso ? currentSpread.verso.page_number : (hasShortRecto ? currentSpread.recto.page_number : null);
+
+  bannerContainers.forEach(bc => {
     if (shortPageNum) {
-      bannerContainer.innerHTML = `
+      bc.innerHTML = `
         <div class="short-ending-banner">
           <div style="font-size:1.1rem;">⚠️</div>
           <div>
@@ -458,9 +1043,9 @@ function renderSpreadCanvas() {
         </div>
       `;
     } else {
-      bannerContainer.innerHTML = "";
+      bc.innerHTML = "";
     }
-  }
+  });
 }
 
 function renderPdfSpread(viewport, currentSpread) {
@@ -1518,53 +2103,58 @@ async function saveVisualPins() {
 // 7. BIRD'S-EYE FILMSTRIP DOCK (BOTTOM)
 // ======================================================================
 function renderFilmstrip() {
-  const dock = document.getElementById("filmstrip-dock");
-  if (!dock) return;
+  const docks = [
+    document.getElementById("filmstrip-dock"),
+    document.getElementById("wfilmstrip-dock")
+  ].filter(Boolean);
+  if (docks.length === 0) return;
 
-  if (!state.showFilmstrip) {
-    dock.classList.add("collapsed");
-    dock.innerHTML = `
-      <button onclick="toggleFilmstrip()" style="background:none; border:none; color:var(--text-muted); font-size:0.75rem; cursor:pointer; width:100%;">
-        ▲ Expand Filmstrip (${state.pagination.total_spreads || 0} Spreads)
-      </button>
-    `;
-    return;
-  }
+  docks.forEach(dock => {
+    if (!state.showFilmstrip) {
+      dock.classList.add("collapsed");
+      dock.innerHTML = `
+        <button onclick="toggleFilmstrip()" style="background:none; border:none; color:var(--text-muted); font-size:0.75rem; cursor:pointer; width:100%;">
+          ▲ Expand Filmstrip (${state.pagination.total_spreads || 0} Spreads)
+        </button>
+      `;
+      return;
+    }
 
-  dock.classList.remove("collapsed");
-  const items = state.pagination.filmstrip || [];
+    dock.classList.remove("collapsed");
+    const items = state.pagination.filmstrip || [];
 
-  let html = `
-    <div style="font-size:0.68rem; color:var(--accent-gold); font-weight:700; writing-mode:vertical-lr; transform:rotate(180deg); flex-shrink:0;">
-      FILMSTRIP
-    </div>
-  `;
-
-  items.forEach(item => {
-    const isActive = item.spread_index === state.currentSpreadIndex;
-    const vLabel = item.verso_num || "-";
-    const rLabel = item.recto_num || "-";
-
-    html += `
-      <div class="filmstrip-card ${isActive ? 'active' : ''}" onclick="jumpToSpread(${item.spread_index})">
-        <div class="filmstrip-badge-row">
-          ${item.has_opener ? '<span class="f-badge f-opener" title="Chapter Opener">Ch</span>' : ''}
-          ${item.has_plate ? '<span class="f-badge f-plate" title="Illustration Plate">Pl</span>' : ''}
-          ${item.has_short ? '<span class="f-badge f-short" title="Short Ending">⚠️</span>' : ''}
-          ${item.is_front ? '<span class="f-badge f-front" title="Front Matter">Fm</span>' : ''}
-        </div>
-        <div class="filmstrip-pages-preview">
-          <div class="mini-page-box">${vLabel}</div>
-          <div class="mini-page-box">${rLabel}</div>
-        </div>
-        <div style="font-size:0.62rem; color:var(--text-dim); font-family:monospace;">
-          Spread ${item.display_num}
-        </div>
+    let html = `
+      <div style="font-size:0.68rem; color:var(--accent-gold); font-weight:700; writing-mode:vertical-lr; transform:rotate(180deg); flex-shrink:0;">
+        FILMSTRIP
       </div>
     `;
-  });
 
-  dock.innerHTML = html;
+    items.forEach(item => {
+      const isActive = item.spread_index === state.currentSpreadIndex;
+      const vLabel = item.verso_num || "-";
+      const rLabel = item.recto_num || "-";
+
+      html += `
+        <div class="filmstrip-card ${isActive ? 'active' : ''}" onclick="jumpToSpread(${item.spread_index})">
+          <div class="filmstrip-badge-row">
+            ${item.has_opener ? '<span class="f-badge f-opener" title="Chapter Opener">Ch</span>' : ''}
+            ${item.has_plate ? '<span class="f-badge f-plate" title="Illustration Plate">Pl</span>' : ''}
+            ${item.has_short ? '<span class="f-badge f-short" title="Short Ending">⚠️</span>' : ''}
+            ${item.is_front ? '<span class="f-badge f-front" title="Front Matter">Fm</span>' : ''}
+          </div>
+          <div class="filmstrip-pages-preview">
+            <div class="mini-page-box">${vLabel}</div>
+            <div class="mini-page-box">${rLabel}</div>
+          </div>
+          <div style="font-size:0.62rem; color:var(--text-dim); font-family:monospace;">
+            Spread ${item.display_num}
+          </div>
+        </div>
+      `;
+    });
+
+    dock.innerHTML = html;
+  });
 }
 
 function jumpToSpread(index) {

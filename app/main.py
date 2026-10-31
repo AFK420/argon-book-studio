@@ -563,6 +563,128 @@ async def delete_manuscript_element(book_id: str, element_id: str):
     }
 
 
+@app.post("/api/manuscript/{book_id}/auto-style")
+async def auto_style_manuscript(book_id: str):
+    """
+    1-Click Auto-Styler & Blueprint Locker:
+    - Merges consecutive multi-line container paragraphs.
+    - Styles Vesper sensory trace in Chapters 2, 10, 20 for book01.
+    - Sets flush-left indent (is_first_after_break = True) on first paragraphs & post-break blocks.
+    - Populates Front & Back Matter defaults.
+    - Invalidates PDF cache & repaginates.
+    """
+    import copy
+    from app.parser import merge_consecutive_containers
+    
+    manuscript = load_book_manuscript(book_id)
+    manuscript = copy.deepcopy(manuscript)
+    
+    detected_containers = {
+        "inworld_writ": 0,
+        "welsh_slate": 0,
+        "audio_transcript": 0,
+        "archival_journal": 0,
+        "scientific_formula": 0,
+        "cuneiform_clause": 0,
+        "sensory_draw": 0
+    }
+    
+    vesper_keywords = [
+        "vesper draw", "sensory draw", "sensory trace",
+        "alembic in the shadows", "alembic", "vitriol",
+        "copper fluorosilicate", "arsenic trioxide", "raw marrow", "soft palate"
+    ]
+    
+    for ch in manuscript.get("chapters", []):
+        ch_num = ch.get("chapter_number", 1)
+        elements = ch.get("elements", [])
+        
+        # 1. Merge consecutive containers
+        merged_elements = merge_consecutive_containers(elements)
+        
+        # 2. For book01: auto-style Vesper sensory trace in chapters 2, 10, 20 or matching keywords
+        if book_id == "book01":
+            for el in merged_elements:
+                txt = (el.get("text") or el.get("content") or "").lower()
+                if el.get("tag") == "inquest-writ" or "coroner's inquest writ" in txt:
+                    el["type"] = "container"
+                    el["block_type"] = "inworld_writ"
+                    el["tag"] = "inquest-writ"
+                elif el.get("tag") == "sensory-draw" or any(k in txt for k in ["vesper draw", "sensory draw", "sensory trace"]):
+                    el["type"] = "container"
+                    el["block_type"] = "inworld_writ"
+                    el["tag"] = "sensory-draw"
+                elif ch_num in [2, 10, 20] and any(k in txt for k in ["vesper", "sensory", "alembic in the shadows", "raw marrow"]):
+                    el["type"] = "container"
+                    el["block_type"] = "inworld_writ"
+                    el["tag"] = "sensory-draw"
+        
+        # 3. Indentation logic: first paragraph after chapter opening, scene break, or container is flush-left
+        prev_was_break_or_container = True  # Start of chapter: first paragraph is always first after break
+        for el in merged_elements:
+            btype = el.get("block_type", "body")
+            etype = el.get("type", "paragraph")
+            
+            # Count detected containers
+            if etype == "container" or btype in detected_containers or el.get("tag") in ["sensory-draw", "inquest-writ"]:
+                if el.get("tag") == "sensory-draw":
+                    detected_containers["sensory_draw"] += 1
+                elif el.get("tag") == "inquest-writ" or btype == "inworld_writ":
+                    detected_containers["inworld_writ"] += 1
+                elif btype in detected_containers:
+                    detected_containers[btype] += 1
+                    
+            if etype == "paragraph":
+                if prev_was_break_or_container:
+                    el["is_first_after_break"] = True
+                    if btype == "body":
+                        el["block_type"] = "body_first"
+                else:
+                    el["is_first_after_break"] = False
+                    if btype == "body_first":
+                        el["block_type"] = "body"
+                        
+            # Determine if this element acts as a break/container for the next element
+            if etype in ["scene_break", "container", "illustration"] or el.get("scene_break_after", "none") != "none" or el.get("page_break_before", False):
+                prev_was_break_or_container = True
+            elif btype in ["inworld_writ", "welsh_slate", "audio_transcript", "archival_journal", "scientific_formula", "cuneiform_clause"]:
+                prev_was_break_or_container = True
+            else:
+                prev_was_break_or_container = False
+                
+        ch["elements"] = merged_elements
+        
+    STATE["custom_manuscripts"][book_id] = manuscript
+    invalidate_pdf_cache(book_id)
+    
+    # 4. Populate Front Matter & Back Matter defaults for this book
+    default_matter = generate_front_matter_data(book_id, manuscript_meta=manuscript)
+    settings_manager.update_settings(book_id, {"front_back_matter": default_matter})
+    
+    manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
+    tailpieces = STATE["auto_tailpieces"].get(book_id, {})
+    pagination = paginate_manuscript(
+        manuscript,
+        manifest,
+        book_id,
+        auto_tailpieces=tailpieces,
+        custom_specs=settings,
+        custom_matter=default_matter
+    )
+    
+    return {
+        "status": "success",
+        "book_id": book_id,
+        "manuscript": manuscript,
+        "pagination": pagination,
+        "front_matter": default_matter,
+        "detected_containers": detected_containers,
+        "total_chapters": manuscript.get("total_chapters", len(manuscript.get("chapters", []))),
+        "total_words": manuscript.get("total_words", 0)
+    }
+
+
 # ======================================================================
 # 3. IMAGE PRINT LAB (SPLIT BEFORE/AFTER & SLIDERS)
 # ======================================================================
@@ -935,11 +1057,12 @@ async def import_manifest_endpoint(
         try:
             body_json = await request.json()
             raw_data = body_json.get("data", body_json)
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Invalid JSON body: {e}")
+        except Exception:
+            raw_data = None
         
-    if not raw_data:
-        raise HTTPException(status_code=400, detail="No JSON manifest data provided")
+    if not raw_data or (isinstance(raw_data, dict) and raw_data.get("use_builtin")) or raw_data == "builtin":
+        # Automatically load the built-in 16-asset blueprint for the selected book
+        raw_data = manifest_manager.get_book_manifest(book_id)
         
     updated_manifest = manifest_manager.import_manifest(book_id, raw_data, manuscript)
     invalidate_pdf_cache(book_id)
@@ -1165,6 +1288,59 @@ async def auto_insert_tailpiece(payload: Dict[str, Any] = Body(...)):
         "book_id": book_id,
         "page_number": page_number,
         "pagination": pagination
+    }
+
+
+@app.post("/api/tailpiece/auto-balance-all")
+async def auto_balance_all_short_endings(payload: Optional[Dict[str, Any]] = Body(None)):
+    """
+    1-Click Whitespace Balancer:
+    Finds every chapter-ending page with < 18 lines of text and activates
+    the book profile's thematic tailpiece ornament.
+    """
+    book_id = payload.get("book_id", STATE["active_book_id"]) if payload else STATE["active_book_id"]
+    if book_id not in STATE["auto_tailpieces"]:
+        STATE["auto_tailpieces"][book_id] = {}
+        
+    parsed = load_book_manuscript(book_id)
+    manifest = manifest_manager.get_book_manifest(book_id)
+    settings = settings_manager.get_settings(book_id)
+    
+    # Pass 1: detect short chapter endings
+    p1 = paginate_manuscript(
+        parsed,
+        manifest,
+        book_id,
+        auto_tailpieces=STATE["auto_tailpieces"][book_id],
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
+    
+    balanced_pages = []
+    for page in p1.get("pages", []):
+        if page.get("short_ending"):
+            pnum = page["page_number"]
+            STATE["auto_tailpieces"][book_id][pnum] = True
+            balanced_pages.append(pnum)
+            
+    invalidate_pdf_cache(book_id)
+    
+    # Pass 2: repaginate with all tailpieces applied
+    final_pagination = paginate_manuscript(
+        parsed,
+        manifest,
+        book_id,
+        auto_tailpieces=STATE["auto_tailpieces"][book_id],
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
+    
+    return {
+        "status": "success",
+        "book_id": book_id,
+        "balanced_pages": balanced_pages,
+        "balanced_count": len(balanced_pages),
+        "pagination": final_pagination
     }
 
 
