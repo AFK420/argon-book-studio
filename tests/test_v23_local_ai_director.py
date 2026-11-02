@@ -60,6 +60,9 @@ def test_ai_analyze_manuscript_endpoint():
     assert "genre_style" in bp
     assert "typography_overrides" in bp
     assert "front_back_matter" in bp
+    assert "character_dossiers" in bp
+    assert len(bp["character_dossiers"]) >= 1
+    assert "locked_prompt_anchor" in bp["character_dossiers"][0]
     assert "assets" in bp
     assert len(bp["assets"]) == 16
 
@@ -177,6 +180,7 @@ def test_index_html_ai_director_ui_elements():
     assert "ai-director-review" in html
     assert "ai-tab-btn-typo" in html
     assert "ai-tab-btn-matter" in html
+    assert "ai-tab-btn-characters" in html
     assert "ai-tab-btn-illustrations" in html
 
 

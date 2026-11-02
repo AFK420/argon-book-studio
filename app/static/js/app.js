@@ -638,6 +638,11 @@ function renderStep3() {
 
         <div style="font-size:0.82rem; font-weight:700; color:#FFF;">${asset.title || 'Illustration Plate'}</div>
 
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin:4px 0;">
+          ${asset.featured_character ? `<span class="badge-char">👤 ${asset.featured_character}</span>` : ''}
+          <span class="badge-res">📐 ${asset.aspect_ratio || '2:3'} • ${asset.target_resolution_px || '1875×2775 px (300 DPI)'}</span>
+        </div>
+
         <div class="queue-prompt-box">
           <div class="queue-prompt-text">${asset.prompt || 'No prompt specified.'}</div>
           <button class="btn-copy-prompt" onclick="copyPromptText('${cleanPrompt}', this)">
@@ -724,13 +729,18 @@ async function handleStep3BatchUpload(event) {
 function copyPromptText(text, btn) {
   if (!text) return;
   navigator.clipboard.writeText(text).then(() => {
-    const orig = btn.innerHTML;
-    btn.innerHTML = "✓ Copied!";
-    btn.style.color = "#10B981";
-    setTimeout(() => {
-      btn.innerHTML = orig;
-      btn.style.color = "var(--accent-cyan)";
-    }, 1500);
+    showToast("✓ Copied prompt to clipboard!", "success");
+    if (btn) {
+      const orig = btn.innerHTML;
+      btn.innerHTML = "✓ Copied!";
+      btn.style.color = "#10B981";
+      setTimeout(() => {
+        btn.innerHTML = orig;
+        btn.style.color = "";
+      }, 1500);
+    }
+  }).catch(() => {
+    showToast("Failed to copy to clipboard", "error");
   });
 }
 
@@ -3551,27 +3561,96 @@ function renderAIReview(blueprint) {
     </div>
   `;
 
-  // 3. Visual Plates Pane
+  // 3. Character Consistency Bible Pane
+  const characters = bp.character_dossiers || [];
+  const charCountEl = document.getElementById("ai-characters-count");
+  if (charCountEl) charCountEl.textContent = characters.length;
+
+  const charPane = document.getElementById("ai-tab-pane-characters");
+  if (charPane) {
+    charPane.innerHTML = `
+      <div style="margin-bottom:12px; color:#94A3B8; font-size:0.8rem; line-height:1.4;">
+        <strong style="color:#38BDF8;">Locked Character Identity System:</strong> To keep character faces, hair, and clothing 100% identical across all illustrations, copy the <em>Locked Prompt Anchor</em> into your image prompts, or generate the <em>Master Turnaround Sheet</em> first to use as a Midjourney <code style="color:#FBBF24;">--cref</code> character reference.
+      </div>
+      <div class="ai-characters-grid">
+        ${characters.map((c) => {
+          const cleanAnchor = (c.locked_prompt_anchor || "").replace(/'/g, "\\'").replace(/"/g, '&quot;');
+          const cleanTurnaround = (c.turnaround_sheet_prompt || "").replace(/'/g, "\\'").replace(/"/g, '&quot;');
+          return `
+            <div class="char-dossier-card">
+              <div class="char-dossier-header">
+                <div>
+                  <span class="char-avatar-badge">${c.gender === 'Female' ? '👩' : '👨'}</span>
+                  <strong style="font-size:0.95rem; color:#FFF; margin-left:6px;">${c.name}</strong>
+                </div>
+                <span class="char-role-pill">${c.age} yo • ${c.gender}</span>
+              </div>
+              <div class="char-role-sub">${c.role}</div>
+
+              <div class="char-traits-grid">
+                <div class="char-trait-item"><strong>Complexion:</strong> ${c.complexion}</div>
+                <div class="char-trait-item"><strong>Face Architecture:</strong> ${c.face_architecture}</div>
+                <div class="char-trait-item"><strong>Eyes & Gaze:</strong> ${c.eyes}</div>
+                <div class="char-trait-item"><strong>Hair & Parting:</strong> ${c.hair}</div>
+                <div class="char-trait-item"><strong>Distinctive Marks:</strong> ${c.distinguishing_marks}</div>
+                <div class="char-trait-item"><strong>Signature Attire:</strong> ${c.signature_wardrobe}</div>
+                <div class="char-trait-item"><strong>Posture / Demeanor:</strong> ${c.resting_expression}</div>
+              </div>
+
+              <div class="char-anchor-box">
+                <div class="char-anchor-title">🔒 Locked Prompt Anchor (Paste into every scene prompt):</div>
+                <div class="char-anchor-code">${c.locked_prompt_anchor}</div>
+                <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                  <button class="btn-copy-anchor" onclick="copyPromptText('${cleanAnchor}', this)">
+                    📋 Copy Locked Anchor
+                  </button>
+                  <button class="btn-copy-turnaround" onclick="copyPromptText('${cleanTurnaround}', this)">
+                    🖼️ Copy Turnaround Sheet Prompt
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // 4. Visual Plates Pane
   const platesPane = document.getElementById("ai-tab-pane-illustrations");
-  platesPane.innerHTML = `
-    <div class="ai-plate-grid">
-      ${assets.map((a, i) => `
-        <div class="ai-plate-card">
-          <div class="ai-plate-header">
-            <span>Slot #${i + 1} • Ch ${a.chapter}</span>
-            <span>${a.placement}</span>
-          </div>
-          <div style="font-weight:700; color:#FFF; margin-bottom:4px;">${a.title}</div>
-          <div class="ai-plate-prompt">"${a.prompt}"</div>
-          <div class="ai-plate-anchor">📍 Anchor: ${a.anchor} ("${(a.anchor_text || '').slice(0, 35)}...")</div>
-        </div>
-      `).join('')}
-    </div>
-  `;
+  if (platesPane) {
+    platesPane.innerHTML = `
+      <div class="ai-plate-grid">
+        ${assets.map((a, i) => {
+          const cleanPrompt = (a.prompt || "").replace(/'/g, "\\'").replace(/"/g, '&quot;');
+          return `
+            <div class="ai-plate-card">
+              <div class="ai-plate-header">
+                <span>Slot #${i + 1} • Ch ${a.chapter}</span>
+                <span>${a.placement}</span>
+              </div>
+              <div style="font-weight:700; color:#FFF; margin-bottom:4px;">${a.title}</div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;">
+                ${a.featured_character ? `<span class="badge-char">👤 ${a.featured_character}</span>` : ''}
+                <span class="badge-res">📐 ${a.aspect_ratio || '2:3'} • ${a.target_resolution_px || '1875×2775'}</span>
+              </div>
+              <div class="ai-plate-prompt">"${a.prompt}"</div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; flex-wrap:wrap; gap:6px;">
+                <span class="ai-plate-anchor">📍 Anchor: ${a.anchor}</span>
+                <button class="btn-copy-prompt" style="padding:3px 8px; font-size:0.75rem;" onclick="copyPromptText('${cleanPrompt}', this)">
+                  📋 Copy Prompt
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
 }
 
 function switchAITab(tabName) {
-  const tabs = ["typo", "matter", "illustrations"];
+  const tabs = ["typo", "matter", "characters", "illustrations"];
   tabs.forEach(t => {
     const btn = document.getElementById(`ai-tab-btn-${t}`);
     const pane = document.getElementById(`ai-tab-pane-${t}`);

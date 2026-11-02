@@ -128,6 +128,190 @@ THEME_PRESETS = {
     }
 }
 
+BOOK_CHARACTER_PRESETS = {
+    "gaslamp_gothic": [
+        {
+            "name": "Coroner Cormac Vane",
+            "role": "Forensic Alchemist & Official Coroner of St. John Parish",
+            "age": "38",
+            "gender": "Male",
+            "stature": "Tall (6 ft 1 in), lean athletic build, erect posture with slight forward-leaning intensity",
+            "complexion": "Pallid alabaster skin with subtle cool undertones, faint chemical acid stain near left cuff",
+            "face_architecture": "Chiseled angular jawline, high aristocratic cheekbones, straight aquiline nose, thin disciplined lips",
+            "eyes": "Piercing steel-gray hooded eyes, intense forensic scrutiny, subtle crow's feet from hours at the microscope",
+            "hair": "Thick wavy charcoal-black hair with distinguished silver dusting at the temples, combed back in a neat Victorian side-part",
+            "distinguishing_marks": "Thin 1-inch horizontal silver scar across left cheekbone, wears brass-rimmed folding spectacles tucked in pocket, carries a horn-handled magnifying loupe",
+            "signature_wardrobe": "Tailored midnight-charcoal Victorian frock coat with notched lapels, black silk double-breasted waistcoat with dull pewter buttons, stiff high wing collar, dark gray ascot tie, charcoal trousers, dark kidskin dissecting gloves",
+            "resting_expression": "Intense analytical detachment, skeptical calm, faint enigmatic curl at corner of mouth",
+            "locked_prompt_anchor": (
+                "Cormac Vane, 38yo tall lean Victorian forensic coroner, pallid aristocratic complexion, "
+                "chiseled jaw, sharp aquiline nose, piercing steel-gray hooded eyes, thick wavy charcoal-black hair "
+                "with silver-dusted temples in side-part, thin horizontal scar on left cheek, tailored midnight-charcoal "
+                "frock coat, high wing collar, dark ascot, dark kidskin gloves, calm analytical gaze"
+            ),
+            "turnaround_sheet_prompt": (
+                "Character design reference turnaround sheet, three views (front view, three-quarter view, profile), "
+                "featuring Cormac Vane, 38-year-old tall lean Victorian forensic coroner, pallid complexion, sharp aquiline nose, "
+                "piercing steel-gray eyes, wavy charcoal-black hair with silver temples, thin scar on left cheekbone, "
+                "wearing tailored midnight-charcoal Victorian frock coat and high collar, neutral studio lighting, "
+                "white clean background, 19th-century fine steel-plate engraving style, hyper-detailed, 8k --ar 16:9 --v 6.1"
+            )
+        },
+        {
+            "name": "Inspector Silas Hallowell",
+            "role": "Scotland Yard River Police Inspector",
+            "age": "48",
+            "gender": "Male",
+            "stature": "Broad-shouldered, sturdy barrel-chested build, weathered gait",
+            "complexion": "Ruddy, wind-chafed Thames weather-beaten skin with broken capillaries on cheeks",
+            "face_architecture": "Square heavy jaw, blunt broken nose, bushy graying walrus mustache",
+            "eyes": "Deep-set watery hazel eyes beneath heavy furrowed brow, tired wary gaze",
+            "hair": "Thinning iron-gray hair cropped short beneath a black oilskin bowler hat",
+            "distinguishing_marks": "Chilblained red left ear, thick woolen fingerless gloves, heavy brass whistle on lanyard",
+            "signature_wardrobe": "Heavy rough-spun navy blue pea jacket with horn buttons, thick knitted gray woolen scarf, coarse corduroy trousers, mud-caked waterman's boots",
+            "resting_expression": "Weary skepticism, furrowed brow, lips clamped around unlit briar pipe",
+            "locked_prompt_anchor": (
+                "Inspector Silas Hallowell, 48yo sturdy broad-shouldered Victorian river police detective, "
+                "ruddy weathered face, square heavy jaw, bushy iron-gray walrus mustache, deep-set wary hazel eyes, "
+                "wearing heavy navy pea jacket, black oilskin bowler, knitted wool scarf, rugged Thames detective"
+            ),
+            "turnaround_sheet_prompt": (
+                "Character turnaround sheet, 3 views (front, 3/4, profile), Inspector Silas Hallowell, 48yo sturdy Victorian detective, "
+                "ruddy weathered skin, bushy iron-gray mustache, black oilskin bowler hat, heavy navy pea jacket, neutral studio background, "
+                "fine-press copperplate engraving, 8k --ar 16:9 --v 6.1"
+            )
+        }
+    ],
+    "chronometric_thriller": [
+        {
+            "name": "Kenneth Coram",
+            "role": "Master Horologist & Hydrographic Surveyor",
+            "age": "42",
+            "gender": "Male",
+            "stature": "Medium height (5 ft 10 in), sinewy frame, clockmaker's dexterous hands",
+            "complexion": "Weather-bronzed from Atlantic salt spray, faint freckling across bridge of nose",
+            "face_architecture": "Angular hawk-like profile, firm determined chin with slight cleft, high forehead",
+            "eyes": "Keen sea-glass green eyes, habituated to squinting through marine chronometer loupes",
+            "hair": "Auburn-brown windswept hair tied back with a leather thong at the nape",
+            "distinguishing_marks": "Jeweler's loupe permanently mounted on hinged brass head-wire over right eye, brass callipers in breast pocket",
+            "signature_wardrobe": "Dark teal waxed canvas mariner's coat with brass maritime buttons, heavy oiled cable-knit cream fisherman sweater, oiled leather apron with tool pouches, brass pocket chronometer chain",
+            "resting_expression": "Hyper-focused mathematical precision, calm vigilance in stormy gale",
+            "locked_prompt_anchor": (
+                "Kenneth Coram, 42yo sinewy Victorian chronometer surveyor, weather-bronzed Atlantic complexion, "
+                "hawk-like profile, cleft chin, keen sea-glass green eyes, auburn-brown hair tied back, jeweler's brass loupe "
+                "over right eye, dark teal waxed coat, cream cable-knit sweater, leather tool apron, maritime precision"
+            ),
+            "turnaround_sheet_prompt": (
+                "Character turnaround model sheet, three views (front, three-quarter, profile), Kenneth Coram 42yo nautical clockmaker, "
+                "sea-glass green eyes, brass eye-loupe, teal waxed mariner coat, cable-knit sweater, neutral clean background, "
+                "copperplate etching style, high detail --ar 16:9 --v 6.1"
+            )
+        }
+    ],
+    "acoustic_coldwar": [
+        {
+            "name": "Klaus Mercer",
+            "role": "Forensic Cryptanalyst & Acoustic Signal Specialist",
+            "age": "36",
+            "gender": "Male",
+            "stature": "Tall and gaunt, narrow shoulders, deliberate careful movements",
+            "complexion": "Pale subterranean fluorescent-tube skin tone, dark purplish circles under eyes",
+            "face_architecture": "Hollow cheeks, sharp pointed nose, thin pale lips, taut jaw",
+            "eyes": "Intense dark brown observant eyes, highly sensitized to oscilloscope waveforms",
+            "hair": "Neat jet-black Brylcreem-slicked 1950s side-part, severe short back and sides",
+            "distinguishing_marks": "Heavy vintage Bakelite headphones resting around his neck, mechanical stopwatch around thumb",
+            "signature_wardrobe": "Rumpled narrow-lapel charcoal wool suit, narrow black knit tie, crisp white collar, stainless steel analog wristwatch, pencil tucked behind right ear",
+            "resting_expression": "Intense concentrated auditory listening, head cocked slightly to one side",
+            "locked_prompt_anchor": (
+                "Klaus Mercer, 36yo gaunt Cold War audio cryptanalyst, pale indoor complexion, hollow cheeks, dark circles under dark brown eyes, "
+                "slicked jet-black 1950s hair, heavy Bakelite headphones around neck, charcoal narrow-lapel wool suit, skinny black tie, "
+                "concentrated listening expression"
+            ),
+            "turnaround_sheet_prompt": (
+                "Character turnaround model sheet, 3 views (front, 3/4, side), Klaus Mercer, 36yo Cold War cryptanalyst, gaunt pale face, "
+                "Bakelite headphones around neck, 1950s charcoal suit, white background, sepia microfilm archival print, 8k --ar 16:9 --v 6.1"
+            )
+        }
+    ],
+    "southern_gothic": [
+        {
+            "name": "Dr. Sarah Vance",
+            "role": "Botanical Pathologist & Institutional Genealogist",
+            "age": "34",
+            "gender": "Female",
+            "stature": "Slender, graceful poise, quiet unwavering physical presence",
+            "complexion": "Fair magnolia porcelain skin, light dusting of freckles over cheekbones",
+            "face_architecture": "Soft oval face, delicate refined nose, expressive arched dark eyebrows, full expressive lips",
+            "eyes": "Warm hazel-amber eyes with intense inquiring gaze",
+            "hair": "Rich dark chestnut wavy hair pinned up loosely in an Edwardian chignon with stray tendrils framing the face",
+            "distinguishing_marks": "Silver botanical locket containing pressed cypress fern, antique brass herbarium tweezers pinned to lapel",
+            "signature_wardrobe": "Forest-green linen walking suit with high lace collar, fitted buttoned vest, dark olive pleated skirt, black leather lace-up ankle boots, leather field satchel",
+            "resting_expression": "Contemplative melancholy, keen observant empathy, guarded intelligence",
+            "locked_prompt_anchor": (
+                "Dr. Sarah Vance, 34yo slender Edwardian botanical genealogist, fair magnolia porcelain skin, light freckles, "
+                "warm amber-hazel eyes, dark chestnut wavy hair pinned in loose chignon, forest-green linen walking suit, "
+                "high lace collar, silver botanical locket, contemplative melancholy expression"
+            ),
+            "turnaround_sheet_prompt": (
+                "Character reference turnaround sheet, 3 views (front, three-quarter, profile), Dr. Sarah Vance, 34yo Edwardian botanist, "
+                "magnolia skin, amber eyes, loose chestnut chignon, forest green linen suit, neutral white background, "
+                "fine linocut and woodcut engraving style, 8k --ar 16:9 --v 6.1"
+            )
+        }
+    ],
+    "archaeometric_heist": [
+        {
+            "name": "Dr. Tariq Al-Mansur",
+            "role": "Senior Epigrapher & Archaeometric Surveyor",
+            "age": "45",
+            "gender": "Male",
+            "stature": "Athletic medium-tall build, weathered stamina from desert excavations",
+            "complexion": "Warm olive-tan Mesopotamian complexion, sun-creased temple lines",
+            "face_architecture": "Strong square jaw, prominent straight Mediterranean nose, well-groomed salt-and-pepper beard",
+            "eyes": "Deep espresso-brown almond eyes, insightful and piercing",
+            "hair": "Thick wavy dark brown hair shot with silver streaks, trimmed short and neat",
+            "distinguishing_marks": "Carved lapis lazuli signet ring on right index finger with ancient Sumerian cuneiform glyph, fine calliper scar on thumb",
+            "signature_wardrobe": "Terracotta and sand-khaki linen field jacket with reinforced elbow patches, white rolled-sleeve cotton shirt, dark canvas expedition trousers, leather band field watch",
+            "resting_expression": "Astute scholarly acumen, quiet composure in high-stakes situations",
+            "locked_prompt_anchor": (
+                "Dr. Tariq Al-Mansur, 45yo athletic Middle Eastern archaeometrist epigrapher, warm olive-tan complexion, "
+                "salt-and-pepper neat beard, deep espresso-brown almond eyes, lapis lazuli cuneiform signet ring, "
+                "sand-khaki linen field jacket, rolled white cotton shirt, scholarly astute composure"
+            ),
+            "turnaround_sheet_prompt": (
+                "Character turnaround model sheet, 3 views (front, 3/4, side), Dr. Tariq Al-Mansur, 45yo Mesopotamian epigrapher, "
+                "olive-tan skin, salt-and-pepper beard, khaki expedition jacket, neutral clean background, bas-relief and intaglio etching, 8k --ar 16:9 --v 6.1"
+            )
+        }
+    ]
+}
+
+
+def get_placement_geometry(placement: str) -> Dict[str, str]:
+    """Returns aspect ratio, target pixel dimensions at 300 DPI, and CLI generator tags."""
+    p_lower = (placement or "").lower()
+    if any(k in p_lower for k in ["full bleed", "full-page", "full plate", "verso plate", "recto plate"]):
+        ar = "2:3"
+        res = "1875 x 2775 px (300 DPI, 6x9 Full Bleed)"
+        mj = "--ar 2:3 --v 6.1 --stylize 250"
+        flux = "Aspect: 2:3 | Output: 1024x1536 (upscale to 1875x2775) | Guidance: 3.5 | Steps: 28"
+    elif "half" in p_lower:
+        ar = "4:3"
+        res = "1500 x 1140 px (300 DPI, Half-Page)"
+        mj = "--ar 4:3 --v 6.1 --stylize 200"
+        flux = "Aspect: 4:3 | Output: 1344x896 | Guidance: 3.5 | Steps: 28"
+    else:  # vignette, emblem, quarter-page, tailpiece, inline
+        ar = "1:1"
+        res = "1200 x 1200 px (300 DPI, Spot Emblem)"
+        mj = "--ar 1:1 --v 6.1 --stylize 180"
+        flux = "Aspect: 1:1 | Output: 1024x1024 | Guidance: 3.0 | Steps: 25"
+    return {
+        "aspect_ratio": ar,
+        "target_resolution_px": res,
+        "midjourney_params": mj,
+        "flux_params": flux
+    }
+
 
 class AIDirectorManager:
     def __init__(self):
@@ -360,6 +544,11 @@ class AIDirectorManager:
             except Exception:
                 b_prefix = book_id
 
+        # Load Character Consistency Dossiers for this Theme
+        characters = BOOK_CHARACTER_PRESETS.get(theme_key, BOOK_CHARACTER_PRESETS["gaslamp_gothic"])
+        primary_char = characters[0] if characters else None
+        secondary_char = characters[1] if len(characters) > 1 else None
+
         for idx in range(num_illustrations):
             slot_num = idx + 1
             asset_id = f"{b_prefix}_asset_{slot_num:02d}"
@@ -383,11 +572,53 @@ class AIDirectorManager:
             
             prompt_data = raw_prompts[idx] if idx < len(raw_prompts) else {}
             title_text = prompt_data.get("title") or f"Plate {slot_num:02d}: Chapter {target_ch_num} Scene"
-            prompt_text = prompt_data.get("prompt") or (
-                f"19th-century atmospheric illustration, {preset['filter_preset'].replace('_', ' ')}, "
-                f"intricate woodcut and silver-plate detailing, dramatic chiaroscuro lighting, masterwork composition."
-            )
+            raw_user_prompt = prompt_data.get("prompt") or ""
             placement = prompt_data.get("placement") or placements[idx % len(placements)]
+            geom = get_placement_geometry(placement)
+
+            # Character consistency assignment & prompt enrichment
+            if idx % 4 in [0, 1] and primary_char:
+                is_char = True
+                feat_char = primary_char["name"]
+                cat = "character_scene"
+                char_anchor = primary_char["locked_prompt_anchor"]
+                base_desc = raw_user_prompt or f"Investigating evidence in chapter {target_ch_int}"
+                prompt_text = (
+                    f"Historical fine-press engraving, {preset['filter_preset'].replace('_', ' ')} style. "
+                    f"Subject: {char_anchor}. Action/Scene: {base_desc}. "
+                    f"Period accuracy, volumetric chiaroscuro lighting, intricate crosshatching, 8k resolution {geom['midjourney_params']}"
+                )
+            elif idx % 4 == 2 and secondary_char:
+                is_char = True
+                feat_char = secondary_char["name"]
+                cat = "character_scene"
+                char_anchor = secondary_char["locked_prompt_anchor"]
+                base_desc = raw_user_prompt or f"Consulting records in chapter {target_ch_int}"
+                prompt_text = (
+                    f"Historical fine-press engraving, {preset['filter_preset'].replace('_', ' ')} style. "
+                    f"Subject: {char_anchor}. Action/Scene: {base_desc}. "
+                    f"Authentic atmospheric perspective, subtle stippling, deep shadows {geom['midjourney_params']}"
+                )
+            elif idx % 4 == 3:
+                is_char = False
+                feat_char = "Forensic Blueprint / Instrument"
+                cat = "forensic_diagram"
+                char_anchor = ""
+                base_desc = raw_user_prompt or f"Technical apparatus and forensic assay from chapter {target_ch_int}"
+                prompt_text = (
+                    f"Technical forensic schematic and scientific apparatus blueprint, {preset['filter_preset'].replace('_', ' ')} style. "
+                    f"Subject: {base_desc}. Orthographic elevation, labeled components, brass callipers, archival folio plate {geom['midjourney_params']}"
+                )
+            else:
+                is_char = False
+                feat_char = "Architectural Environment"
+                cat = "environment_landscape"
+                char_anchor = ""
+                base_desc = raw_user_prompt or f"Atmospheric nocturnal cityscape from chapter {target_ch_int}"
+                prompt_text = (
+                    f"Atmospheric historical landscape, {preset['filter_preset'].replace('_', ' ')} style. "
+                    f"Scene: {base_desc}. Dense fog, dramatic cast shadows, intaglio printmaking texture {geom['midjourney_params']}"
+                )
 
             assets.append({
                 "id": asset_id,
@@ -401,7 +632,15 @@ class AIDirectorManager:
                 "filter_preset": preset["filter_preset"],
                 "frame_style": preset["frame_style"],
                 "filter_applied": False,
-                "vector_callouts": []
+                "vector_callouts": [],
+                "is_character": is_char,
+                "featured_character": feat_char,
+                "asset_category": cat,
+                "locked_character_anchor": char_anchor,
+                "aspect_ratio": geom["aspect_ratio"],
+                "target_resolution_px": geom["target_resolution_px"],
+                "midjourney_params": geom["midjourney_params"],
+                "flux_params": geom["flux_params"]
             })
 
         return {
@@ -412,6 +651,7 @@ class AIDirectorManager:
             "mood_summary": llm_data.get("mood_summary", "Atmospheric speculative fiction with intricate forensic elements."),
             "typography_overrides": typography,
             "front_back_matter": front_back_matter,
+            "character_dossiers": characters,
             "assets": assets,
             "total_illustrations": len(assets)
         }
@@ -525,6 +765,11 @@ class AIDirectorManager:
             except Exception:
                 b_prefix = book_id
 
+        # Load Character Consistency Dossiers for this Theme
+        characters = BOOK_CHARACTER_PRESETS.get(theme_key, BOOK_CHARACTER_PRESETS["gaslamp_gothic"])
+        primary_char = characters[0] if characters else None
+        secondary_char = characters[1] if len(characters) > 1 else None
+
         for idx in range(num_illustrations):
             slot_num = idx + 1
             asset_id = f"{b_prefix}_asset_{slot_num:02d}"
@@ -547,15 +792,51 @@ class AIDirectorManager:
             anchor_raw = p_pick.get("text", "")
             anchor_text = anchor_raw[:55].strip() if anchor_raw else "CHAPTER_OPENING"
             
-            # Generate bespoke prompt based on theme & paragraph snippet
-            prompt_snippet = anchor_raw[:120].replace('"', "'") if anchor_raw else c_title
-            prompt = (
-                f"Historical 19th-century engraving, {preset['filter_preset'].replace('_', ' ')} style. "
-                f"Scene: {prompt_snippet}. Detailed volumetric shadows, brass laboratory fittings, "
-                f"period forensic instruments, fine stippling, antique archival plate, 300 DPI fine print."
-            )
-
             placement = placements[idx % len(placements)]
+            geom = get_placement_geometry(placement)
+            prompt_snippet = anchor_raw[:120].replace('"', "'") if anchor_raw else c_title
+
+            # Character consistency assignment & prompt enrichment
+            if idx % 4 in [0, 1] and primary_char:
+                is_char = True
+                feat_char = primary_char["name"]
+                cat = "character_scene"
+                char_anchor = primary_char["locked_prompt_anchor"]
+                prompt = (
+                    f"Historical fine-press engraving, {preset['filter_preset'].replace('_', ' ')} style. "
+                    f"Subject: {char_anchor}. Scene: {c_title} — {prompt_snippet}. "
+                    f"Volumetric chiaroscuro lighting, intricate period forensic detailing, 8k resolution {geom['midjourney_params']}"
+                )
+            elif idx % 4 == 2 and secondary_char:
+                is_char = True
+                feat_char = secondary_char["name"]
+                cat = "character_scene"
+                char_anchor = secondary_char["locked_prompt_anchor"]
+                prompt = (
+                    f"Historical fine-press engraving, {preset['filter_preset'].replace('_', ' ')} style. "
+                    f"Subject: {char_anchor}. Scene: {c_title} — {prompt_snippet}. "
+                    f"Atmospheric fog, authentic period textures, deep intaglio shadows {geom['midjourney_params']}"
+                )
+            elif idx % 4 == 3:
+                is_char = False
+                feat_char = "Forensic Blueprint / Instrument"
+                cat = "forensic_diagram"
+                char_anchor = ""
+                prompt = (
+                    f"Technical forensic schematic and scientific apparatus blueprint, {preset['filter_preset'].replace('_', ' ')} style. "
+                    f"Subject: {c_title} forensic assay — {prompt_snippet}. "
+                    f"Orthographic elevation, labeled components, brass callipers, archival folio plate {geom['midjourney_params']}"
+                )
+            else:
+                is_char = False
+                feat_char = "Architectural Environment"
+                cat = "environment_landscape"
+                char_anchor = ""
+                prompt = (
+                    f"Atmospheric historical landscape, {preset['filter_preset'].replace('_', ' ')} style. "
+                    f"Scene: {c_title} — {prompt_snippet}. Dense fog, dramatic cast shadows, intaglio printmaking texture {geom['midjourney_params']}"
+                )
+
             assets.append({
                 "id": asset_id,
                 "title": f"Plate {slot_num:02d}: {c_title}",
@@ -568,7 +849,15 @@ class AIDirectorManager:
                 "filter_preset": preset["filter_preset"],
                 "frame_style": preset["frame_style"],
                 "filter_applied": False,
-                "vector_callouts": []
+                "vector_callouts": [],
+                "is_character": is_char,
+                "featured_character": feat_char,
+                "asset_category": cat,
+                "locked_character_anchor": char_anchor,
+                "aspect_ratio": geom["aspect_ratio"],
+                "target_resolution_px": geom["target_resolution_px"],
+                "midjourney_params": geom["midjourney_params"],
+                "flux_params": geom["flux_params"]
             })
 
         return {
@@ -579,6 +868,7 @@ class AIDirectorManager:
             "mood_summary": f"Detected thematic profile: {preset['genre_label']}. Optimized for 300 DPI fine book publication.",
             "typography_overrides": typography,
             "front_back_matter": front_back_matter,
+            "character_dossiers": characters,
             "assets": assets,
             "total_illustrations": len(assets)
         }
