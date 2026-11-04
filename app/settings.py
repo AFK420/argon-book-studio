@@ -7,7 +7,7 @@ front/back matter flags, and image lab parameters per book.
 import json
 import os
 from typing import Dict, Any, Optional
-from app.profiles import BOOK_PROFILES, UNIVERSAL_PUBLISHING_SPECS
+from app.profiles import BOOK_PROFILES, UNIVERSAL_PUBLISHING_SPECS, get_profile
 
 SETTINGS_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads", "settings")
 os.makedirs(SETTINGS_DIR, exist_ok=True)
@@ -22,7 +22,7 @@ DEFAULT_TRIM_PRESETS = {
 
 
 def get_default_settings_for_book(book_id: str) -> Dict[str, Any]:
-    profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"])
+    profile = get_profile(book_id)
     specs = UNIVERSAL_PUBLISHING_SPECS
     
     body_size = float(profile["body_font_size"].replace("pt", ""))

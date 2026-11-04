@@ -4,7 +4,10 @@ Each profile encodes the typography, ornamentation, custom document containers,
 scene break SVG, image filter presets, and print styling rules for a specific book.
 """
 
-from typing import Dict, Any, List
+import os
+import json
+import re
+from typing import Dict, Any, List, Optional
 
 BOOK_PROFILES: Dict[str, Dict[str, Any]] = {
     "book01": {
@@ -323,6 +326,90 @@ BOOK_PROFILES: Dict[str, Dict[str, Any]] = {
         ]
     }
 }
+
+PROJECTS_REGISTRY_PATH = os.path.join(os.path.dirname(__file__), "..", "uploads", "projects_registry.json")
+
+
+def load_projects_registry() -> Dict[str, Dict[str, Any]]:
+    if os.path.exists(PROJECTS_REGISTRY_PATH):
+        try:
+            with open(PROJECTS_REGISTRY_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def save_projects_registry(registry: Dict[str, Dict[str, Any]]):
+    os.makedirs(os.path.dirname(PROJECTS_REGISTRY_PATH), exist_ok=True)
+    with open(PROJECTS_REGISTRY_PATH, "w", encoding="utf-8") as f:
+        json.dump(registry, f, indent=2)
+
+
+def create_dynamic_project(
+    title: str,
+    author: str = "Author Name",
+    genre: str = "Literary Fiction",
+    theme_base: str = "book01",
+    custom_book_id: str = None
+) -> Dict[str, Any]:
+    registry = load_projects_registry()
+    
+    if custom_book_id:
+        clean_id = re.sub(r'[^a-zA-Z0-9_]', '_', custom_book_id).lower()
+    else:
+        existing_indices = []
+        for pid in list(BOOK_PROFILES.keys()) + list(registry.keys()):
+            if pid.startswith("book") and len(pid) >= 6 and pid[4:6].isdigit():
+                try:
+                    existing_indices.append(int(pid[4:6]))
+                except ValueError:
+                    pass
+        next_idx = max(existing_indices, default=5) + 1
+        slug = re.sub(r'[^a-zA-Z0-9]+', '_', title.lower()).strip('_')[:20] or "custom"
+        clean_id = f"book{next_idx:02d}_{slug}"
+    
+    base_prof = BOOK_PROFILES.get(theme_base, BOOK_PROFILES["book01"])
+    new_profile = dict(base_prof)
+    new_profile.update({
+        "id": clean_id,
+        "title": title,
+        "short_title": title[:30],
+        "author": author,
+        "genre": genre,
+        "subtitle": f"A {genre}",
+        "is_custom_project": True
+    })
+    
+    registry[clean_id] = new_profile
+    save_projects_registry(registry)
+    return new_profile
+
+
+def get_all_profiles() -> Dict[str, Dict[str, Any]]:
+    all_prof = dict(BOOK_PROFILES)
+    custom_profs = load_projects_registry()
+    all_prof.update(custom_profs)
+    return all_prof
+
+
+def get_profile(book_id: str) -> Dict[str, Any]:
+    registry = load_projects_registry()
+    if book_id in registry:
+        return registry[book_id]
+    if book_id in BOOK_PROFILES:
+        return BOOK_PROFILES[book_id]
+    
+    # Dynamically generate fallback profile for this specific book_id
+    base_prof = BOOK_PROFILES["book01"]
+    return {
+        **base_prof,
+        "id": book_id,
+        "title": book_id.replace("_", " ").title(),
+        "short_title": book_id[:24].title(),
+        "is_custom_project": True
+    }
+
 
 UNIVERSAL_PUBLISHING_SPECS = {
     "trim_width_in": 6.0,

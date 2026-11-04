@@ -14,7 +14,7 @@ Implements the 6.0 x 9.0 inch book layout rules (and dynamic custom trim sizes):
 
 import math
 from typing import Dict, Any, List, Optional
-from app.profiles import UNIVERSAL_PUBLISHING_SPECS, BOOK_PROFILES
+from app.profiles import UNIVERSAL_PUBLISHING_SPECS, BOOK_PROFILES, get_profile
 
 
 class BookPage:
@@ -115,7 +115,7 @@ def paginate_manuscript(
     Simulates physical pagination conforming to all publishing engine rules,
     dynamically calculated from live geometry and matter configuration.
     """
-    profile = BOOK_PROFILES.get(profile_id, BOOK_PROFILES["book01"])
+    profile = get_profile(profile_id)
     specs = UNIVERSAL_PUBLISHING_SPECS
     cs = custom_specs or {}
     cm = custom_matter or {}

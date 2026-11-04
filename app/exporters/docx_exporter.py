@@ -18,7 +18,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml import OxmlElement, parse_xml
 from docx.oxml.ns import qn, nsdecls
-from app.profiles import BOOK_PROFILES, UNIVERSAL_PUBLISHING_SPECS
+from app.profiles import BOOK_PROFILES, UNIVERSAL_PUBLISHING_SPECS, get_profile
 
 
 def set_cell_background(cell, color_hex: str):
@@ -49,7 +49,7 @@ def export_docx(
     custom_specs: Dict[str, Any] = None,
     custom_matter: Dict[str, Any] = None
 ) -> str:
-    profile = BOOK_PROFILES.get(profile_id, BOOK_PROFILES["book01"])
+    profile = get_profile(profile_id)
     specs = UNIVERSAL_PUBLISHING_SPECS
     cs = custom_specs or {}
     cm = custom_matter or {}

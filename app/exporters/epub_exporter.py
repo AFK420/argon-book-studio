@@ -10,7 +10,7 @@ import os
 from typing import Dict, Any, List, Optional
 import ebooklib
 from ebooklib import epub
-from app.profiles import BOOK_PROFILES
+from app.profiles import BOOK_PROFILES, get_profile
 
 
 def resolve_local_image_path(img_url: str) -> Optional[str]:
@@ -35,7 +35,7 @@ def export_epub(
     custom_specs: Dict[str, Any] = None,
     custom_matter: Dict[str, Any] = None
 ) -> str:
-    profile = BOOK_PROFILES.get(profile_id, BOOK_PROFILES["book01"])
+    profile = get_profile(profile_id)
     cs = custom_specs or {}
     cm = custom_matter or {}
     

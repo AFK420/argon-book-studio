@@ -20,7 +20,14 @@ from pydantic import BaseModel
 import pymupdf
 from PIL import Image
 
-from app.profiles import BOOK_PROFILES, UNIVERSAL_PUBLISHING_SPECS
+from app.profiles import (
+    BOOK_PROFILES,
+    UNIVERSAL_PUBLISHING_SPECS,
+    get_profile,
+    get_all_profiles,
+    create_dynamic_project,
+    load_projects_registry
+)
 from app.settings import settings_manager, DEFAULT_TRIM_PRESETS
 from app.parser import parse_markdown_manuscript, parse_docx_manuscript
 from app.manifest import manifest_manager
@@ -143,17 +150,31 @@ def load_book_manuscript(book_id: str) -> Dict[str, Any]:
         "book04": "book04_salt_orchard.md",
         "book05": "book05_provenance_of_ashes.md"
     }
-    fname = sample_files.get(book_id, "book01_cormac_vane.md")
-    path = os.path.join(BASE_DIR, "sample_data", fname)
-    if os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as f:
+    if book_id in sample_files:
+        path = os.path.join(BASE_DIR, "sample_data", sample_files[book_id])
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+            parsed = parse_markdown_manuscript(content)
+            STATE["custom_manuscripts"][book_id] = parsed
+            return parsed
+
+    # Check custom uploads directory for {book_id}_manuscript.md
+    custom_ms = os.path.join(UPLOADS_DIR, f"{book_id}_manuscript.md")
+    if os.path.exists(custom_ms):
+        with open(custom_ms, "r", encoding="utf-8") as f:
             content = f.read()
         parsed = parse_markdown_manuscript(content)
-        # Store a working copy so inline edits can be performed
         STATE["custom_manuscripts"][book_id] = parsed
         return parsed
-        
-    return parse_markdown_manuscript("# Empty Manuscript\n\n## Chapter 1\n\nNo text available.")
+
+    prof = get_profile(book_id)
+    b_title = prof.get("title") or book_id.replace("_", " ").title()
+    b_author = prof.get("author") or "Author"
+    default_text = f"# {b_title}\n\n*By {b_author}*\n\n## Chapter 1\n\nBegin typing or upload your manuscript in Step 1."
+    parsed = parse_markdown_manuscript(default_text)
+    STATE["custom_manuscripts"][book_id] = parsed
+    return parsed
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -168,7 +189,7 @@ async def serve_index():
 @app.get("/api/profiles")
 async def get_profiles():
     return {
-        "profiles": BOOK_PROFILES,
+        "profiles": get_all_profiles(),
         "specs": UNIVERSAL_PUBLISHING_SPECS,
         "trim_presets": DEFAULT_TRIM_PRESETS
     }
@@ -177,25 +198,91 @@ async def get_profiles():
 @app.get("/api/books")
 async def get_books():
     books_list = []
-    for bid, p in BOOK_PROFILES.items():
+    for bid, p in get_all_profiles().items():
         books_list.append({
             "id": bid,
-            "title": p["title"],
-            "short_title": p["short_title"],
-            "genre": p["genre"],
-            "author": p["author"],
-            "filter_name": p["filter_name"],
-            "scene_break_name": p["scene_break_name"],
-            "accent_color": p["accent_color"]
+            "title": p.get("title", bid),
+            "short_title": p.get("short_title", bid),
+            "genre": p.get("genre", "Fiction"),
+            "author": p.get("author", "Author"),
+            "filter_name": p.get("filter_name", "Archival Etching"),
+            "scene_break_name": p.get("scene_break_name", "Diamond Divider"),
+            "accent_color": p.get("accent_color", "#1B365D"),
+            "is_custom_project": p.get("is_custom_project", False)
         })
     return {"books": books_list, "active_book_id": STATE["active_book_id"]}
 
 
+@app.post("/api/projects/create")
+async def create_new_project_endpoint(payload: Dict[str, Any] = Body(...)):
+    """
+    Dynamic Project Creator:
+    Creates a new book project with isolated settings, manifest, and starter manuscript.
+    """
+    title = payload.get("title", "Untitled Project").strip() or "Untitled Project"
+    author = payload.get("author", "Author Name").strip() or "Author Name"
+    genre = payload.get("genre", "Speculative Fiction").strip() or "Speculative Fiction"
+    theme_base = payload.get("theme_base", "book01")
+    custom_slug = payload.get("book_id")
+    
+    new_proj = create_dynamic_project(
+        title=title,
+        author=author,
+        genre=genre,
+        theme_base=theme_base,
+        custom_book_id=custom_slug
+    )
+    new_book_id = new_proj["id"]
+    STATE["active_book_id"] = new_book_id
+    
+    # Initialize starter manuscript
+    init_text = f"# {title}\n\n*By {author}*\n\n## Chapter 1\n\nBegin typing or upload your manuscript in Step 1."
+    parsed = parse_markdown_manuscript(init_text)
+    STATE["custom_manuscripts"][new_book_id] = parsed
+    
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
+    ms_file = os.path.join(UPLOADS_DIR, f"{new_book_id}_manuscript.md")
+    with open(ms_file, "w", encoding="utf-8") as f:
+        f.write(init_text)
+        
+    reg_ms_path = os.path.join(UPLOADS_DIR, "uploaded_manuscripts.json")
+    reg_ms = {}
+    if os.path.exists(reg_ms_path):
+        try:
+            with open(reg_ms_path, "r", encoding="utf-8") as f:
+                reg_ms = json.load(f)
+        except Exception:
+            pass
+    reg_ms[new_book_id] = ms_file
+    with open(reg_ms_path, "w", encoding="utf-8") as f:
+        json.dump(reg_ms, f, indent=2)
+        
+    settings = settings_manager.get_settings(new_book_id)
+    manifest = manifest_manager.get_book_manifest(new_book_id)
+    
+    pagination = paginate_manuscript(
+        parsed,
+        manifest,
+        new_book_id,
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
+    
+    return {
+        "status": "success",
+        "book_id": new_book_id,
+        "project": new_proj,
+        "settings": settings,
+        "manifest": manifest,
+        "pagination": pagination,
+        "message": f"Created book project '{title}' ({new_book_id})."
+    }
+
+
 @app.get("/api/book/{book_id}")
 async def get_book_details(book_id: str):
-    if book_id not in BOOK_PROFILES and book_id not in STATE["custom_manuscripts"]:
-        book_id = "book01"
     STATE["active_book_id"] = book_id
+    profile = get_profile(book_id)
     
     parsed = load_book_manuscript(book_id)
     manifest = manifest_manager.get_book_manifest(book_id)
@@ -216,7 +303,7 @@ async def get_book_details(book_id: str):
     
     return {
         "book_id": book_id,
-        "profile": BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"]),
+        "profile": profile,
         "manuscript": parsed,
         "manifest": manifest,
         "settings": settings,
@@ -925,7 +1012,7 @@ async def extract_book_visual_bible(book_id: str):
     and stores it in project settings.
     """
     manuscript = load_book_manuscript(book_id)
-    profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"])
+    profile = get_profile(book_id)
     bible = extract_visual_bible(manuscript, profile)
     
     settings_manager.update_settings(book_id, {"visual_bible": bible})
@@ -939,11 +1026,12 @@ async def extract_book_visual_bible(book_id: str):
 @app.post("/api/ai/{book_id}/enhance-prompt")
 async def enhance_flux_prompt(book_id: str, payload: Dict[str, Any] = Body(...)):
     """
-    Stage 2: Rewrites a single slot or all 16 slots into 5-layer Flux T5 prose
-    using the Visual Bible and manuscript paragraph context.
+    Stage 2: Context-Aware Flux Prompt Compiler.
+    Reads the actual paragraph text at asset anchor plus 2 preceding and 2 following paragraphs,
+    injects Visual Bible character descriptors, and compiles into 5-layer Flux T5 prose.
     """
     manuscript = load_book_manuscript(book_id)
-    profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"])
+    profile = get_profile(book_id)
     settings = settings_manager.get_settings(book_id)
     visual_bible = settings.get("visual_bible") or extract_visual_bible(manuscript, profile)
     manifest = manifest_manager.get_book_manifest(book_id)
@@ -954,18 +1042,22 @@ async def enhance_flux_prompt(book_id: str, payload: Dict[str, Any] = Body(...))
     chapters = manuscript.get("chapters", [])
     enhanced_count = 0
 
-    # Build paragraph lookup dict
+    # Build paragraph lookup dict with 2 preceding and 2 following paragraphs
     p_lookup = {}
     for ch in chapters:
-        c_text = " ".join([p.get("text", "") for p in ch.get("elements", []) if p.get("type") == "paragraph"][:8])
-        for el in ch.get("elements", []):
-            if el.get("type") == "paragraph":
-                p_lookup[el.get("id")] = (el.get("text", ""), c_text)
+        p_elems = [el for el in ch.get("elements", []) if el.get("type") == "paragraph"]
+        for idx, el in enumerate(p_elems):
+            pid = el.get("id")
+            prec = [p_elems[j].get("text", "") for j in range(max(0, idx - 2), idx)]
+            target = el.get("text", "")
+            foll = [p_elems[j].get("text", "") for j in range(idx + 1, min(len(p_elems), idx + 3))]
+            full_context = "\n\n".join(prec + [f"[TARGET SCENE PARAGRAPH]: {target}"] + foll)
+            p_lookup[pid] = (target, full_context)
 
     for asset in assets:
         if all_slots or asset.get("id") == asset_id:
             anchor_id = asset.get("anchor")
-            p_text, c_text = p_lookup.get(anchor_id, (asset.get("prompt", ""), "Chapter scene"))
+            p_text, c_text = p_lookup.get(anchor_id, (asset.get("prompt", ""), "Chapter scene context"))
             
             res = generate_flux_prompt_for_slot(
                 chapter_text=c_text,
@@ -997,21 +1089,29 @@ async def enhance_flux_prompt(book_id: str, payload: Dict[str, Any] = Body(...))
 
 
 @app.post("/api/ai/{book_id}/auto-plan-manifest")
-async def auto_plan_manifest_endpoint(book_id: str):
+async def auto_plan_manifest_endpoint(book_id: str, payload: Optional[Dict[str, Any]] = Body(None)):
     """
-    Stage 3: 1-Click 16-Asset Autonomous Book Manifest Planner.
-    Generates the optimal 16-asset pacing rhythm with 5-layer Flux prompts
+    Stage 3: Autonomous Book Manifest Planner.
+    Generates the optimal pacing rhythm (4 to 40 slots, default 16) with 5-layer Flux prompts
     and binds vector callouts across the manuscript.
     """
+    p = payload or {}
+    target_count = 16
+    if "target_count" in p:
+        try:
+            target_count = max(4, min(40, int(p["target_count"])))
+        except (ValueError, TypeError):
+            target_count = 16
+
     manuscript = load_book_manuscript(book_id)
-    profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"])
+    profile = get_profile(book_id)
     
     # 1. Extract visual bible
     bible = extract_visual_bible(manuscript, profile)
     settings_manager.update_settings(book_id, {"visual_bible": bible})
     
-    # 2. Plan 16-slot manifest
-    new_assets = auto_plan_full_book_manifest(manuscript, profile)
+    # 2. Plan dynamic manifest
+    new_assets = auto_plan_full_book_manifest(manuscript, profile, target_count=target_count)
     manifest_manager.import_manifest(book_id, {"assets": new_assets}, manuscript)
     manifest_manager.bind_anchors_to_manuscript(book_id, manuscript)
     
@@ -1031,6 +1131,7 @@ async def auto_plan_manifest_endpoint(book_id: str):
     return {
         "status": "success",
         "book_id": book_id,
+        "target_count": target_count,
         "manifest": updated_manifest,
         "pagination": pagination,
         "visual_bible": bible
@@ -1456,7 +1557,7 @@ async def add_illustration_slot(book_id: str, payload: Dict[str, Any] = Body(...
     prompt = payload.get("prompt", "Atmospheric etching matching book theme")
     caption = payload.get("caption", f"Plate: {title}")
     
-    profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"])
+    profile = get_profile(book_id)
     asset_id = f"{book_id}_asset_{len(manifest_manager.get_book_manifest(book_id).get('assets', [])) + 1:02d}"
     
     img_name = f"{asset_id}.png"
@@ -1528,20 +1629,20 @@ async def update_callouts(book_id: str, payload: Dict[str, Any] = Body(...)):
     elif os.path.isabs(img_url):
         disk_path = img_url
 
+    profile = get_profile(book_id)
     if raw_path and os.path.exists(raw_path):
         if not disk_path:
             disk_path = os.path.join(STATIC_DIR, "assets", "placeholders", f"{asset_id}_custom_filtered.png")
         process_image(
             input_image_path=raw_path,
             output_image_path=disk_path,
-            filter_preset=asset.get("filter_preset") or BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"]).get("filter_preset", "cyanotype_silver_plate"),
+            filter_preset=asset.get("filter_preset") or profile.get("filter_preset", "cyanotype_silver_plate"),
             placement_type=asset.get("placement", "Half-Page Top"),
             callouts=callouts,
             profile_id=book_id,
             frame_style=frame_style
         )
     elif disk_path and os.path.exists(disk_path):
-        profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"])
         generate_procedural_placeholder(
             output_path=disk_path,
             title=asset.get("title", ""),
@@ -1616,8 +1717,8 @@ async def import_manifest_endpoint(
             raw_data = None
         
     if not raw_data or (isinstance(raw_data, dict) and raw_data.get("use_builtin")) or raw_data == "builtin":
-        # Automatically load the built-in 16-asset blueprint for the selected book
-        raw_data = manifest_manager.get_book_manifest(book_id)
+        # Automatically load the pristine built-in 16-asset blueprint for the selected book
+        raw_data = manifest_manager.get_builtin_default_manifest(book_id)
     elif isinstance(raw_data, dict):
         settings_updates = {}
         if "typography_overrides" in raw_data and isinstance(raw_data["typography_overrides"], dict):
@@ -1751,7 +1852,7 @@ async def upload_asset_image(
     asset_id: str,
     file: UploadFile = File(...)
 ):
-    profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"])
+    profile = get_profile(book_id)
     manifest = manifest_manager.get_book_manifest(book_id)
     asset = next((a for a in manifest.get("assets", []) if a.get("id") == asset_id), None)
     if not asset:
@@ -1817,7 +1918,7 @@ async def batch_upload_assets(
     updates manifest, invalidates PDF cache, and returns summary + updated pagination.
     """
     import re
-    profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"])
+    profile = get_profile(book_id)
     manifest = manifest_manager.get_book_manifest(book_id)
     assets = manifest.get("assets", [])
     
@@ -2004,7 +2105,7 @@ async def upload_matter_image(
     
     # Process 300 DPI version for high-res print export
     dpi300_path = os.path.join(STATIC_DIR, "assets", "placeholders", f"{book_id}_{image_type}_300dpi.png")
-    profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES.get("book01", {}))
+    profile = get_profile(book_id)
     try:
         process_image(
             input_image_path=disk_path,

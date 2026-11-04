@@ -1575,18 +1575,16 @@ class AIDirectorManager:
     def auto_plan_full_book_manifest(
         self,
         manuscript: Dict[str, Any],
-        profile: Dict[str, Any] = None
+        profile: Dict[str, Any] = None,
+        target_count: int = 16
     ) -> List[Dict[str, Any]]:
         """
-        Stage 3: 16-Asset Autonomous Book Pacing Rhythm Architect.
-        Automatically selects:
-        - 1 Frontispiece Plate
-        - 1 Map / Architectural Cross-Section Diagram
-        - 6 Full-Page Climax Plates spaced every ~4 chapters
-        - 5 Half-Page Forensic/Technical Diagrams anchored to exact clue paragraphs
-        - 3 Chapter Tailpiece Vignettes on chapter endings
-        Generates 5-layer Flux prompts and vector callout labels for all 16 slots.
+        Stage 3: Autonomous Book Pacing Rhythm Architect.
+        Supports dynamic slot counts (4 to 40, default 16).
+        Automatically plans Frontispiece, Maps, Full-Page Climax Plates,
+        Forensic Diagrams, and Chapter Tailpiece Vignettes.
         """
+        target_count = max(4, min(40, int(target_count)))
         profile = profile or {}
         theme_key = profile.get("id") or "gaslamp_gothic"
         preset = THEME_PRESETS.get(theme_key, THEME_PRESETS["gaslamp_gothic"])
@@ -1597,41 +1595,71 @@ class AIDirectorManager:
         book_id = profile.get("id", "book01")
         b_prefix = f"b{int(book_id.replace('book', '')):02d}" if book_id.startswith("book") and book_id[4:].isdigit() else book_id
 
-        # 16-slot pacing blueprint rhythm
-        slot_blueprints = [
-            # 1. Frontispiece
-            {"slot": 1, "type": "frontispiece", "placement": "Full-Page Verso Plate", "aspect_ratio": "2:3", "ch_target": 1, "is_diagram": False, "is_tailpiece": False},
-            # 2. Map / Architectural Cross-Section
-            {"slot": 2, "type": "map_cross_section", "placement": "Inline Diagram", "aspect_ratio": "16:9", "ch_target": 1, "is_diagram": True, "is_tailpiece": False},
-            # 3. Full-Page Climax Plate 1
-            {"slot": 3, "type": "climax_plate", "placement": "Full-Page Recto Plate", "aspect_ratio": "2:3", "ch_target": min(2, total_ch), "is_diagram": False, "is_tailpiece": False},
-            # 4. Forensic Diagram 1
-            {"slot": 4, "type": "forensic_diagram", "placement": "Half-Page Top", "aspect_ratio": "16:9", "ch_target": min(3, total_ch), "is_diagram": True, "is_tailpiece": False},
-            # 5. Full-Page Climax Plate 2
-            {"slot": 5, "type": "climax_plate", "placement": "Full-Page Verso Plate", "aspect_ratio": "2:3", "ch_target": min(5, total_ch), "is_diagram": False, "is_tailpiece": False},
-            # 6. Forensic Diagram 2
-            {"slot": 6, "type": "forensic_diagram", "placement": "Half-Page Bottom", "aspect_ratio": "16:9", "ch_target": min(7, total_ch), "is_diagram": True, "is_tailpiece": False},
-            # 7. Full-Page Climax Plate 3
-            {"slot": 7, "type": "climax_plate", "placement": "Full-Page Recto Plate", "aspect_ratio": "2:3", "ch_target": min(9, total_ch), "is_diagram": False, "is_tailpiece": False},
-            # 8. Forensic Diagram 3
-            {"slot": 8, "type": "forensic_diagram", "placement": "Half-Page Top", "aspect_ratio": "16:9", "ch_target": min(11, total_ch), "is_diagram": True, "is_tailpiece": False},
-            # 9. Full-Page Climax Plate 4
-            {"slot": 9, "type": "climax_plate", "placement": "Full-Page Verso Plate", "aspect_ratio": "2:3", "ch_target": min(13, total_ch), "is_diagram": False, "is_tailpiece": False},
-            # 10. Forensic Diagram 4
-            {"slot": 10, "type": "forensic_diagram", "placement": "Half-Page Bottom", "aspect_ratio": "16:9", "ch_target": min(15, total_ch), "is_diagram": True, "is_tailpiece": False},
-            # 11. Full-Page Climax Plate 5
-            {"slot": 11, "type": "climax_plate", "placement": "Full-Page Recto Plate", "aspect_ratio": "2:3", "ch_target": min(17, total_ch), "is_diagram": False, "is_tailpiece": False},
-            # 12. Forensic Diagram 5
-            {"slot": 12, "type": "forensic_diagram", "placement": "Inline Diagram", "aspect_ratio": "16:9", "ch_target": min(19, total_ch), "is_diagram": True, "is_tailpiece": False},
-            # 13. Full-Page Climax Plate 6
-            {"slot": 13, "type": "climax_plate", "placement": "Full Bleed Plate", "aspect_ratio": "2:3", "ch_target": min(21, total_ch), "is_diagram": False, "is_tailpiece": False},
-            # 14. Chapter Tailpiece 1
-            {"slot": 14, "type": "tailpiece_vignette", "placement": "Chapter End Tailpiece", "aspect_ratio": "1:1", "ch_target": min(8, total_ch), "is_diagram": False, "is_tailpiece": True},
-            # 15. Chapter Tailpiece 2
-            {"slot": 15, "type": "tailpiece_vignette", "placement": "Chapter End Tailpiece", "aspect_ratio": "1:1", "ch_target": min(16, total_ch), "is_diagram": False, "is_tailpiece": True},
-            # 16. Chapter Tailpiece 3
-            {"slot": 16, "type": "tailpiece_vignette", "placement": "Chapter End Tailpiece", "aspect_ratio": "1:1", "ch_target": total_ch, "is_diagram": False, "is_tailpiece": True}
-        ]
+        if target_count == 16:
+            slot_blueprints = [
+                {"slot": 1, "type": "frontispiece", "placement": "Full-Page Verso Plate", "aspect_ratio": "2:3", "ch_target": 1, "is_diagram": False, "is_tailpiece": False},
+                {"slot": 2, "type": "map_cross_section", "placement": "Inline Diagram", "aspect_ratio": "16:9", "ch_target": 1, "is_diagram": True, "is_tailpiece": False},
+                {"slot": 3, "type": "climax_plate", "placement": "Full-Page Recto Plate", "aspect_ratio": "2:3", "ch_target": min(2, total_ch), "is_diagram": False, "is_tailpiece": False},
+                {"slot": 4, "type": "forensic_diagram", "placement": "Half-Page Top", "aspect_ratio": "16:9", "ch_target": min(3, total_ch), "is_diagram": True, "is_tailpiece": False},
+                {"slot": 5, "type": "climax_plate", "placement": "Full-Page Verso Plate", "aspect_ratio": "2:3", "ch_target": min(5, total_ch), "is_diagram": False, "is_tailpiece": False},
+                {"slot": 6, "type": "forensic_diagram", "placement": "Half-Page Bottom", "aspect_ratio": "16:9", "ch_target": min(7, total_ch), "is_diagram": True, "is_tailpiece": False},
+                {"slot": 7, "type": "climax_plate", "placement": "Full-Page Recto Plate", "aspect_ratio": "2:3", "ch_target": min(9, total_ch), "is_diagram": False, "is_tailpiece": False},
+                {"slot": 8, "type": "forensic_diagram", "placement": "Half-Page Top", "aspect_ratio": "16:9", "ch_target": min(11, total_ch), "is_diagram": True, "is_tailpiece": False},
+                {"slot": 9, "type": "climax_plate", "placement": "Full-Page Verso Plate", "aspect_ratio": "2:3", "ch_target": min(13, total_ch), "is_diagram": False, "is_tailpiece": False},
+                {"slot": 10, "type": "forensic_diagram", "placement": "Half-Page Bottom", "aspect_ratio": "16:9", "ch_target": min(15, total_ch), "is_diagram": True, "is_tailpiece": False},
+                {"slot": 11, "type": "climax_plate", "placement": "Full-Page Recto Plate", "aspect_ratio": "2:3", "ch_target": min(17, total_ch), "is_diagram": False, "is_tailpiece": False},
+                {"slot": 12, "type": "forensic_diagram", "placement": "Inline Diagram", "aspect_ratio": "16:9", "ch_target": min(19, total_ch), "is_diagram": True, "is_tailpiece": False},
+                {"slot": 13, "type": "climax_plate", "placement": "Full Bleed Plate", "aspect_ratio": "2:3", "ch_target": min(21, total_ch), "is_diagram": False, "is_tailpiece": False},
+                {"slot": 14, "type": "tailpiece_vignette", "placement": "Chapter End Tailpiece", "aspect_ratio": "1:1", "ch_target": min(8, total_ch), "is_diagram": False, "is_tailpiece": True},
+                {"slot": 15, "type": "tailpiece_vignette", "placement": "Chapter End Tailpiece", "aspect_ratio": "1:1", "ch_target": min(16, total_ch), "is_diagram": False, "is_tailpiece": True},
+                {"slot": 16, "type": "tailpiece_vignette", "placement": "Chapter End Tailpiece", "aspect_ratio": "1:1", "ch_target": total_ch, "is_diagram": False, "is_tailpiece": True}
+            ]
+        else:
+            # Dynamic blueprint generation for any target_count (4 to 40)
+            slot_blueprints = []
+            slot_blueprints.append({
+                "slot": 1, "type": "frontispiece", "placement": "Full-Page Verso Plate", "aspect_ratio": "2:3", "ch_target": 1, "is_diagram": False, "is_tailpiece": False
+            })
+            if target_count >= 6:
+                slot_blueprints.append({
+                    "slot": 2, "type": "map_cross_section", "placement": "Inline Diagram", "aspect_ratio": "16:9", "ch_target": 1, "is_diagram": True, "is_tailpiece": False
+                })
+
+            n_tail = max(1, min(5, round(target_count * 0.18)))
+            rem = target_count - len(slot_blueprints) - n_tail
+            n_climax = max(2, round(rem * 0.55))
+            n_diagrams = rem - n_climax
+
+            cur_slot = len(slot_blueprints) + 1
+            # Alternate climax and diagrams across chapters
+            plate_types = ["Full-Page Recto Plate", "Full-Page Verso Plate", "Full Bleed Plate"]
+            diag_types = ["Half-Page Top", "Half-Page Bottom", "Inline Diagram"]
+            
+            c_idx = 0
+            d_idx = 0
+            for i in range(n_climax + n_diagrams):
+                target_chapter = max(1, min(total_ch, int(1 + (i / max(1, n_climax + n_diagrams - 1)) * (total_ch - 1))))
+                if (i % 2 == 0 and c_idx < n_climax) or d_idx >= n_diagrams:
+                    p_type = plate_types[c_idx % len(plate_types)]
+                    slot_blueprints.append({
+                        "slot": cur_slot, "type": "climax_plate", "placement": p_type, "aspect_ratio": "2:3", "ch_target": target_chapter, "is_diagram": False, "is_tailpiece": False
+                    })
+                    c_idx += 1
+                else:
+                    d_type = diag_types[d_idx % len(diag_types)]
+                    slot_blueprints.append({
+                        "slot": cur_slot, "type": "forensic_diagram", "placement": d_type, "aspect_ratio": "16:9", "ch_target": target_chapter, "is_diagram": True, "is_tailpiece": False
+                    })
+                    d_idx += 1
+                cur_slot += 1
+
+            # Tailpieces
+            for t_idx in range(n_tail):
+                target_chapter = max(1, min(total_ch, int((t_idx + 1) * total_ch / n_tail)))
+                slot_blueprints.append({
+                    "slot": cur_slot, "type": "tailpiece_vignette", "placement": "Chapter End Tailpiece", "aspect_ratio": "1:1", "ch_target": target_chapter, "is_diagram": False, "is_tailpiece": True
+                })
+                cur_slot += 1
 
         assets = []
         for bp in slot_blueprints:
@@ -1826,8 +1854,8 @@ def generate_flux_prompt_for_slot(
 ) -> Dict[str, Any]:
     return ai_director_manager.generate_flux_prompt_for_slot(chapter_text, anchor_paragraph, placement, visual_bible, profile, use_llm=use_llm)
 
-def auto_plan_full_book_manifest(manuscript: Dict[str, Any], profile: Dict[str, Any] = None) -> List[Dict[str, Any]]:
-    return ai_director_manager.auto_plan_full_book_manifest(manuscript, profile)
+def auto_plan_full_book_manifest(manuscript: Dict[str, Any], profile: Dict[str, Any] = None, target_count: int = 16) -> List[Dict[str, Any]]:
+    return ai_director_manager.auto_plan_full_book_manifest(manuscript, profile, target_count=target_count)
 
 def generate_custom_svg_ornament_and_css(manuscript_sample: str, user_request: str) -> Dict[str, Any]:
     return ai_director_manager.generate_custom_svg_ornament_and_css(manuscript_sample, user_request)

@@ -17,7 +17,7 @@ Renders book manuscripts with exact book-production rules:
 import os
 import subprocess
 from typing import Dict, Any, List, Optional
-from app.profiles import BOOK_PROFILES, UNIVERSAL_PUBLISHING_SPECS
+from app.profiles import BOOK_PROFILES, UNIVERSAL_PUBLISHING_SPECS, get_profile
 from app.paginator import paginate_manuscript
 
 
@@ -46,7 +46,7 @@ def generate_pdf_html(
     custom_specs: Dict[str, Any] = None,
     custom_matter: Dict[str, Any] = None
 ) -> str:
-    profile = BOOK_PROFILES.get(profile_id, BOOK_PROFILES["book01"])
+    profile = get_profile(profile_id)
     specs = UNIVERSAL_PUBLISHING_SPECS
     cs = custom_specs or {}
     cm = custom_matter or {}

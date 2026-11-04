@@ -126,11 +126,16 @@
           <p class="wizard-card-subtitle">Choose an authentic historical typography theme profile and load your completed manuscript.</p>
         </div>
 
-        <!-- 1. Select Book Profile (1–5) -->
+        <!-- 1. Select Book Profile (1–5 or Custom) -->
         <div class="wizard-section">
-          <label class="wizard-section-label">1. Select Book Profile (1–5)</label>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <label class="wizard-section-label" style="margin-bottom:0;">1. Select Book Profile (or Create Custom)</label>
+            <button type="button" class="btn-secondary-action" style="background:linear-gradient(135deg, #2563EB, #1D4ED8); border-color:#3B82F6; color:#FFF; font-weight:700; padding:4px 12px; font-size:0.75rem;" onclick="openCreateProjectModal()">
+              + New Book Project
+            </button>
+          </div>
           <div class="theme-card-grid" id="step1-theme-grid">
-            <!-- Dynamically populated by JS: Book 01 to 05 -->
+            <!-- Dynamically populated by JS: Book 01 to 05 and custom projects -->
           </div>
         </div>
 
@@ -269,9 +274,20 @@
             <div class="action-num">1</div>
             <div class="action-content">
               <h4>Bind & Anchor Illustration Blueprint</h4>
-              <p>Match asset anchor texts against manuscript paragraphs, or import an external JSON manifest.</p>
+              <p>Match asset anchor texts against manuscript paragraphs, or plan custom asset counts dynamically.</p>
+
+              <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px; background:rgba(15,23,42,0.6); padding:10px 14px; border-radius:6px; border:1px solid #334155;">
+                <label for="target-plates-slider" style="font-size:0.82rem; color:#E2E8F0; font-weight:600; min-width:160px;">
+                  Target Illustration Count:
+                </label>
+                <input type="range" id="target-plates-slider" min="4" max="40" value="16" step="1" oninput="updateTargetPlatesBadge(this.value)" style="flex:1; cursor:pointer;">
+                <span id="target-plates-badge" style="background:#0F766E; color:#5EEAD4; font-weight:700; font-size:0.82rem; padding:3px 10px; border-radius:4px; border:1px solid #14B8A6; min-width:70px; text-align:center;">
+                  16 Plates
+                </span>
+              </div>
+
               <div class="action-buttons-row">
-                <button class="btn-secondary-action" style="background:linear-gradient(135deg, #059669, #0D9488); border-color:#10B981; color:#FFF; font-weight:700;" onclick="autoPlanFullBookManifestAI(this)">
+                <button id="btn-auto-plan-manifest" class="btn-secondary-action" style="background:linear-gradient(135deg, #059669, #0D9488); border-color:#10B981; color:#FFF; font-weight:700;" onclick="autoPlanFullBookManifestAI(this)">
                   🧠 AI Auto-Plan All 16 Book Illustrations (Qwen 2.5:14b)
                 </button>
 
@@ -281,7 +297,7 @@
                 <input type="file" id="wizard-manifest-file-input" style="display:none;" accept=".json" onchange="handleWizardManifestUpload(event)">
 
                 <button class="btn-secondary-action" onclick="useBuiltinBlueprint()">
-                  📋 Use Built-in 16-Asset Blueprint
+                  📋 Reset / Use Default Blueprint
                 </button>
 
                 <span id="step2-anchor-badge" class="badge-anchored">✓ 16 Illustration Slots Anchored</span>
@@ -355,8 +371,8 @@
             <button id="filter-chip-pending" class="filter-chip" onclick="setQueueFilter('pending')">⏳ Needs Artwork (16)</button>
           </div>
           <div class="batch-upload-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="btn-secondary-action" style="background:rgba(217,119,6,0.18); border-color:#D97706; color:#FBBF24; font-weight:600;" onclick="enhanceAllPromptsWithQwen(this)">
-              🧠 Rewrite All 16 Prompts (Qwen 2.5)
+            <button id="btn-rewrite-all-prompts" class="btn-secondary-action" style="background:rgba(217,119,6,0.18); border-color:#D97706; color:#FBBF24; font-weight:600;" onclick="enhanceAllPromptsWithQwen(this)">
+              🧠 Rewrite All Prompts (Qwen 2.5)
             </button>
             <button class="btn-secondary-action" style="background:rgba(16,185,129,0.18); border-color:#10B981; color:#34D399; font-weight:600;" onclick="batchGeneratePendingFlux(this)">
               ⚡ Batch Generate All Pending Plates (Local Flux)

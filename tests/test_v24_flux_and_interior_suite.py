@@ -157,3 +157,53 @@ def test_update_interior_design_endpoint():
     recto = spreads[1]["recto"]
     if recto and not recto.get("suppress_footer"):
         assert "[" in recto["folio_text"]
+
+
+def test_create_dynamic_project_endpoint():
+    """Verify POST /api/projects/create dynamically registers new book project with isolated settings and manuscript."""
+    res = client.post("/api/projects/create", json={
+        "title": "The Chronometric Crypt",
+        "author": "Margaret Sterling",
+        "short_title": "Chronometric Crypt",
+        "genre": "Victorian Steampunk",
+        "theme_base": "book02"
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert "book_id" in data
+    new_id = data["book_id"]
+    assert new_id.startswith("book_") or "chronometric" in new_id.lower()
+    assert data["project"]["title"] == "The Chronometric Crypt"
+    assert data["project"]["author"] == "Margaret Sterling"
+    
+    # Verify profile is discoverable in /api/profiles and /api/books
+    prof_res = client.get("/api/profiles")
+    assert prof_res.status_code == 200
+    assert new_id in prof_res.json()["profiles"]
+    
+    books_res = client.get("/api/books")
+    assert books_res.status_code == 200
+    book_ids = [b["id"] for b in books_res.json()["books"]]
+    assert new_id in book_ids
+    
+    # Verify book detail loads cleanly
+    book_res = client.get(f"/api/book/{new_id}")
+    assert book_res.status_code == 200
+    book_data = book_res.json()
+    assert book_data["profile"]["title"] == "The Chronometric Crypt"
+    assert book_data["manuscript"] is not None
+    assert book_data["pagination"] is not None
+
+
+def test_auto_plan_manifest_with_custom_target_count():
+    """Verify POST /api/ai/book01/auto-plan-manifest respects custom target_count (e.g. 8)."""
+    res = client.post("/api/ai/book01/auto-plan-manifest", json={
+        "target_count": 8
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    manifest = data["manifest"]
+    assert len(manifest["assets"]) == 8
+

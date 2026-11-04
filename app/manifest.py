@@ -252,6 +252,16 @@ class ManifestManager:
             self.data[book_id] = {"book_id": book_id, "assets": []}
         return self.data[book_id]
 
+    def get_builtin_default_manifest(self, book_id: str) -> Dict[str, Any]:
+        """Loads pristine built-in default blueprint from default_manifests.json, unaffected by runtime overrides."""
+        try:
+            with open(MANIFEST_FILE, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+            norm = normalize_manifest_dict(raw, default_book_id=book_id)
+            return norm.get(book_id, {"book_id": book_id, "assets": []})
+        except Exception:
+            return self.get_book_manifest(book_id)
+
     def save_book_manifest(self, book_id: str, manifest_or_assets: Any):
         if isinstance(manifest_or_assets, dict) and "assets" in manifest_or_assets:
             self.data[book_id] = manifest_or_assets

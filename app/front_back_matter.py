@@ -14,7 +14,7 @@ Builds publishing-ready front and back matter structures:
 """
 
 from typing import Dict, Any, List, Optional
-from app.profiles import BOOK_PROFILES
+from app.profiles import BOOK_PROFILES, get_profile
 
 
 def generate_front_matter_data(
@@ -22,7 +22,7 @@ def generate_front_matter_data(
     manuscript_meta: Dict[str, Any] = None,
     custom_matter: Dict[str, Any] = None
 ) -> Dict[str, Any]:
-    profile = BOOK_PROFILES.get(book_profile_id, BOOK_PROFILES["book01"])
+    profile = get_profile(book_profile_id)
     meta = manuscript_meta or {}
     cm = custom_matter or {}
     

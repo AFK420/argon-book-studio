@@ -18,14 +18,14 @@ def test_api_profiles():
     r = client.get("/api/profiles")
     assert r.status_code == 200
     data = r.json()
-    assert len(data["profiles"]) == 5
+    assert len(data["profiles"]) >= 5
     assert "trim_presets" in data
 
 def test_api_books():
     r = client.get("/api/books")
     assert r.status_code == 200
     books = r.json()["books"]
-    assert len(books) == 5
+    assert len(books) >= 5
 
 def test_api_book_book01():
     r = client.get("/api/book/book01")

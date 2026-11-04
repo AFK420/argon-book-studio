@@ -416,6 +416,153 @@ function handleHeaderProfileChange(bookId) {
   selectTheme(bookId);
 }
 
+// --- DYNAMIC PROJECT CREATOR MODAL ---
+function openCreateProjectModal() {
+  const modal = document.getElementById("modal-container");
+  if (!modal) return;
+
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="closeModal(event)">
+      <div class="modal-card" style="max-width:540px;" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3>📖 Create New Book Project</h3>
+          <button class="btn-close-modal" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="create-project-form" onsubmit="submitCreateProject(event)" style="display:flex; flex-direction:column; gap:14px;">
+            <div>
+              <label style="font-size:0.75rem; color:#AAA; font-weight:700; display:block; margin-bottom:4px;">
+                BOOK TITLE *
+              </label>
+              <input type="text" id="new-project-title" required placeholder="e.g. The Chronometric Crypt"
+                     style="width:100%; box-sizing:border-box; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; padding:8px 10px; border-radius:4px; font-size:0.88rem;">
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <div>
+                <label style="font-size:0.75rem; color:#AAA; font-weight:700; display:block; margin-bottom:4px;">
+                  AUTHOR
+                </label>
+                <input type="text" id="new-project-author" placeholder="e.g. Margaret Sterling"
+                       style="width:100%; box-sizing:border-box; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; padding:8px 10px; border-radius:4px; font-size:0.88rem;">
+              </div>
+              <div>
+                <label style="font-size:0.75rem; color:#AAA; font-weight:700; display:block; margin-bottom:4px;">
+                  SHORT TITLE / SLUG
+                </label>
+                <input type="text" id="new-project-short-title" placeholder="e.g. Chronometric Crypt"
+                       style="width:100%; box-sizing:border-box; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; padding:8px 10px; border-radius:4px; font-size:0.88rem;">
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <div>
+                <label style="font-size:0.75rem; color:#AAA; font-weight:700; display:block; margin-bottom:4px;">
+                  GENRE & AESTHETIC
+                </label>
+                <input type="text" id="new-project-genre" placeholder="e.g. Victorian Steampunk"
+                       style="width:100%; box-sizing:border-box; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; padding:8px 10px; border-radius:4px; font-size:0.88rem;">
+              </div>
+              <div>
+                <label style="font-size:0.75rem; color:#AAA; font-weight:700; display:block; margin-bottom:4px;">
+                  BASE AESTHETIC THEME
+                </label>
+                <select id="new-project-theme-base" style="width:100%; box-sizing:border-box; background:var(--bg-main); border:1px solid var(--border-subtle); color:#FFF; padding:8px 10px; border-radius:4px; font-size:0.88rem;">
+                  <option value="book01">Book 01: Cormac Vane (Cinzel & Garamond / Cyanotype)</option>
+                  <option value="book02">Book 02: Fourteen-Hour Barometer (Oswald & Lora / Slate)</option>
+                  <option value="book03">Book 03: Dead-Room Transcripts (Mono & Source / FSK)</option>
+                  <option value="book04">Book 04: Salt Orchard (Cormorant & Crimson / Ledger)</option>
+                  <option value="book05">Book 05: Provenance of Ashes (Decorative & Source / Cuneiform)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
+              <button type="button" class="btn-secondary-action" onclick="closeModal()">
+                Cancel
+              </button>
+              <button type="submit" id="btn-submit-new-project" class="btn-wizard-primary" style="font-weight:700;">
+                🚀 Create Project
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function closeCreateProjectModal(event) {
+  closeModal(event);
+}
+
+async function submitCreateProject(event) {
+  event.preventDefault();
+  const btn = document.getElementById("btn-submit-new-project");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⏳ Creating Project...";
+  }
+
+  const title = document.getElementById("new-project-title")?.value.trim();
+  const author = document.getElementById("new-project-author")?.value.trim() || "Anonymous";
+  const shortTitle = document.getElementById("new-project-short-title")?.value.trim() || title;
+  const genre = document.getElementById("new-project-genre")?.value.trim() || "Literary Fiction";
+  const themeBase = document.getElementById("new-project-theme-base")?.value || "book01";
+
+  if (!title) {
+    showToast("Please enter a book title", "warning");
+    if (btn) { btn.disabled = false; btn.innerText = "🚀 Create Project"; }
+    return;
+  }
+
+  showToast(`Creating custom project: "${title}"...`, "info");
+
+  try {
+    const res = await fetch("/api/projects/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: title,
+        author: author,
+        short_title: shortTitle,
+        genre: genre,
+        theme_base: themeBase
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Project creation failed" }));
+      throw new Error(err.detail || "Project creation failed");
+    }
+
+    const data = await res.json();
+    showToast(`✓ Custom project "${title}" created successfully!`, "success");
+
+    closeModal();
+
+    // Reload books list
+    const booksRes = await fetchAPI("/api/books");
+    state.books = booksRes.books;
+
+    // Load newly created book
+    await loadBook(data.book_id);
+
+    // Refresh UI
+    renderHeader();
+    renderStep1();
+    goToStep(1);
+  } catch (err) {
+    console.error("Create project error:", err);
+    showToast(`Failed to create project: ${err.message}`, "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "🚀 Create Project";
+    }
+  }
+}
+
 async function handleWizardManuscriptUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -450,6 +597,13 @@ async function useSampleManuscriptForActiveBook() {
 }
 
 // --- STEP 2: AUTO-STYLE & BLUEPRINT ---
+function updateTargetPlatesBadge(val) {
+  const badge = document.getElementById("target-plates-badge");
+  if (badge) badge.innerText = `${val} Plates`;
+  const btn = document.getElementById("btn-auto-plan-manifest");
+  if (btn) btn.innerText = `🧠 AI Auto-Plan All ${val} Book Illustrations (Qwen 2.5:14b)`;
+}
+
 function renderStep2() {
   if (!state.manuscript) return;
   checkLocalAIStatus();
@@ -461,6 +615,17 @@ function renderStep2() {
   document.getElementById("step2-diag-chapters").innerText = chCount;
   document.getElementById("step2-diag-words").innerText = wordCount.toLocaleString();
   document.getElementById("step2-diag-slots").innerText = slotCount;
+
+  const anchorBadge = document.getElementById("step2-anchor-badge");
+  if (anchorBadge) {
+    anchorBadge.innerText = `✓ ${slotCount} Illustration Slots Anchored`;
+  }
+
+  const slider = document.getElementById("target-plates-slider");
+  if (slider && !slider.matches(":active")) {
+    slider.value = slotCount;
+    updateTargetPlatesBadge(slotCount);
+  }
 
   const containerCounts = {
     inworld_writ: 0,
@@ -509,7 +674,7 @@ function renderStep2() {
 }
 
 async function useBuiltinBlueprint() {
-  showToast("Anchoring built-in 16-asset blueprint to manuscript...", "info");
+  showToast("Anchoring built-in blueprint to manuscript...", "info");
   try {
     const res = await fetch(`/api/manifest/${state.activeBookId}/import`, {
       method: "POST",
@@ -520,7 +685,8 @@ async function useBuiltinBlueprint() {
     const data = await res.json();
     state.manifest = data.manifest;
     state.pagination = data.pagination;
-    showToast("✓ 16 illustration slots anchored to manuscript paragraphs!", "success");
+    const count = state.manifest?.assets?.length || 16;
+    showToast(`✓ ${count} illustration slots anchored to manuscript paragraphs!`, "success");
     renderStep2();
   } catch (err) {
     showToast(`Error anchoring blueprint: ${err.message}`, "error");
@@ -607,6 +773,11 @@ function renderStep3() {
   document.getElementById("filter-chip-all").innerText = `All Slots (${totalCount})`;
   document.getElementById("filter-chip-ready").innerText = `✓ Ready & Filtered (${readyCount})`;
   document.getElementById("filter-chip-pending").innerText = `⏳ Needs Artwork (${totalCount - readyCount})`;
+
+  const rewriteBtn = document.getElementById("btn-rewrite-all-prompts");
+  if (rewriteBtn) {
+    rewriteBtn.innerText = `🧠 Rewrite All ${totalCount} Prompts (Qwen 2.5)`;
+  }
 
   const filtered = assets.filter(a => {
     if (state.queueFilter === "ready") return isReady(a);
@@ -892,11 +1063,12 @@ async function enhanceSlotPrompt(assetId, btn) {
 }
 
 async function enhanceAllPromptsWithQwen(btn) {
+  const count = state.manifest?.assets?.length || 16;
   if (btn) {
     btn.disabled = true;
-    btn.innerText = "⏳ Rewriting 16 Prompts...";
+    btn.innerText = `⏳ Rewriting ${count} Prompts...`;
   }
-  showToast("Rewriting all 16 illustration prompts with Qwen 2.5:14b...", "info");
+  showToast(`Rewriting all ${count} illustration prompts with Qwen 2.5:14b...`, "info");
 
   try {
     const res = await fetch(`/api/ai/${state.activeBookId}/enhance-prompt`, {
@@ -908,7 +1080,7 @@ async function enhanceAllPromptsWithQwen(btn) {
     if (data.status === "success" && data.manifest) {
       state.manifest = data.manifest;
       renderStep3();
-      showToast(`✓ Rewrote ${data.enhanced_count || 16} prompts into 5-layer Flux T5 prose!`, "success");
+      showToast(`✓ Rewrote ${data.enhanced_count || count} prompts into 5-layer Flux T5 prose!`, "success");
     } else {
       showToast(data.detail || "Failed to enhance all prompts", "error");
     }
@@ -917,7 +1089,8 @@ async function enhanceAllPromptsWithQwen(btn) {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerText = "🧠 Rewrite All 16 Prompts (Qwen 2.5)";
+      const finalCount = state.manifest?.assets?.length || count;
+      btn.innerText = `🧠 Rewrite All ${finalCount} Prompts (Qwen 2.5)`;
     }
   }
 }
@@ -1015,21 +1188,25 @@ async function batchGeneratePendingFlux(btn) {
 }
 
 async function autoPlanFullBookManifestAI(btn) {
+  const targetCount = parseInt(document.getElementById("target-plates-slider")?.value || "16", 10);
   if (btn) {
     btn.disabled = true;
-    btn.innerText = "⏳ Planning 16 Assets with Qwen 2.5...";
+    btn.innerText = `⏳ Planning ${targetCount} Assets with Qwen 2.5...`;
   }
-  showToast("Autonomous Art Director (Qwen 2.5:14b) planning 16-asset pacing rhythm...", "info");
+  showToast(`Autonomous Art Director (Qwen 2.5:14b) planning ${targetCount}-asset pacing rhythm...`, "info");
 
   try {
     const res = await fetch(`/api/ai/${state.activeBookId}/auto-plan-manifest`, {
-      method: "POST"
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_count: targetCount })
     });
     const data = await res.json();
     if (data.status === "success") {
       if (data.manifest) state.manifest = data.manifest;
       if (data.pagination) state.pagination = data.pagination;
-      showToast("✓ AI Auto-Planned 16 visual assets with Qwen 2.5:14b!", "success");
+      const count = state.manifest?.assets?.length || targetCount;
+      showToast(`✓ AI Auto-Planned ${count} visual assets with Qwen 2.5:14b!`, "success");
       renderAll();
       if (state.currentStep === 2) renderStep2();
       if (state.currentStep === 3) renderStep3();
@@ -1041,7 +1218,8 @@ async function autoPlanFullBookManifestAI(btn) {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerText = "🧠 AI Auto-Plan All 16 Book Illustrations (Qwen 2.5:14b)";
+      const curCount = parseInt(document.getElementById("target-plates-slider")?.value || "16", 10);
+      btn.innerText = `🧠 AI Auto-Plan All ${curCount} Book Illustrations (Qwen 2.5:14b)`;
     }
   }
 }
@@ -1860,6 +2038,7 @@ function renderSinglePageHTML(page, sideClass) {
   const fontName = s.typography.body_font_name || s.body_font || profile.body_font_name;
   const displayFont = s.typography.display_font_name || s.heading_font || profile.display_font_name;
   const accentColor = s.typography.accent_color || profile.accent_color;
+  const brassAccent = profile.brass_accent || "#B8860B";
   const paperTint = s.typography.paper_tint || profile.paper_tint || "#FBF8F1";
   const fontSize = s.typography.body_font_size_pt || s.font_size_pt || 11;
   const lineHeightVal = s.line_height || 1.36;
@@ -2122,7 +2301,7 @@ function renderSinglePageHTML(page, sideClass) {
   const folioStyle = page.folio_style || state.settings?.interior_design?.folio_style || "classic_centered";
   let folioAlign = "center";
   if (folioStyle === "outer_brackets") {
-    folioAlign = sideClass === "verso" ? "left" : "right";
+    folioAlign = (sideClass === "page-verso" || isVerso) ? "left" : "right";
   }
 
   return `
@@ -4186,13 +4365,14 @@ async function runAIDirector() {
   btn.innerHTML = "⏳ AI Director Reading Manuscript...";
   btn.disabled = true;
 
-  showToast("Local AI Art Director analyzing manuscript & generating layout blueprint...", "info");
+  const targetCount = parseInt(document.getElementById("target-plates-slider")?.value || "16", 10);
+  showToast(`Local AI Art Director analyzing manuscript & generating ${targetCount}-slot blueprint...`, "info");
 
   try {
     const res = await fetch(`/api/ai/analyze/${state.activeBookId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ num_illustrations: 16 })
+      body: JSON.stringify({ num_illustrations: targetCount })
     });
     const data = await res.json();
 
@@ -4386,7 +4566,8 @@ async function applyAIDirectorBlueprint() {
       state.pagination = data.pagination;
       state.settings = data.settings;
 
-      showToast("🚀 AI Blueprint applied! Typography, 16 illustration slots & front matter locked.", "success");
+      const plateCount = state.manifest?.assets?.length || (state.lastAIBlueprint?.assets || []).length;
+      showToast(`🚀 AI Blueprint applied! Typography, ${plateCount} illustration slots & front matter locked.`, "success");
       renderAll();
 
       // Unlock Step 3
