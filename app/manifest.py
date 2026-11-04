@@ -20,6 +20,8 @@ PLACEMENT_NORM_MAP = {
     "half_page_bottom": "Half-Page Bottom",
     "inline_centered": "Inline Archival Insert",
     "inline_archival_insert": "Inline Archival Insert",
+    "inline_diagram": "Inline Diagram",
+    "half_page_diagram": "Inline Diagram",
     "chapter_header_vignette": "Chapter Opener Vignette",
     "chapter_tailpiece": "Chapter End Tailpiece"
 }
@@ -122,7 +124,9 @@ def normalize_manifest_dict(raw_data: Any, default_book_id: str = "book01") -> D
             # 4. Placement normalization
             raw_placement = str(asset.get("placement") or "Half-Page Top").strip()
             placement = PLACEMENT_NORM_MAP.get(raw_placement.lower(), raw_placement)
-            if "full-page verso" in placement.lower():
+            if "diagram" in raw_placement.lower() or "diagram" in placement.lower():
+                placement = "Inline Diagram"
+            elif "full-page verso" in placement.lower():
                 placement = "Full-Page Verso Plate"
             elif "full-page recto" in placement.lower():
                 placement = "Full-Page Recto Plate"
@@ -247,6 +251,15 @@ class ManifestManager:
         if book_id not in self.data:
             self.data[book_id] = {"book_id": book_id, "assets": []}
         return self.data[book_id]
+
+    def save_book_manifest(self, book_id: str, manifest_or_assets: Any):
+        if isinstance(manifest_or_assets, dict) and "assets" in manifest_or_assets:
+            self.data[book_id] = manifest_or_assets
+        elif isinstance(manifest_or_assets, list):
+            self.data[book_id] = {"book_id": book_id, "assets": manifest_or_assets}
+        else:
+            self.data[book_id] = {"book_id": book_id, "assets": []}
+        self.save()
 
     def update_anchor(self, book_id: str, asset_id: str, new_anchor: str) -> bool:
         book = self.get_book_manifest(book_id)

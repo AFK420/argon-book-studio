@@ -116,6 +116,19 @@ def get_default_settings_for_book(book_id: str) -> Dict[str, Any]:
             "vignette_strength": 0.38,
             "brightness": 1.0,
             "target_dpi": 300
+        },
+        "interior_design": {
+            "chapter_opener_layout": "classic_centered",  # "classic_centered" | "asymmetric_ledger" | "framed_cartouche" | "botanical_sinkage" | "technical_dossier"
+            "page_border_style": "none",                  # "none" | "hairline_margin_box" | "corner_registration_ticks" | "double_victorian_frame"
+            "folio_style": "classic_centered",            # "classic_centered" | "outer_brackets" | "fleuron_flanked" | "imperial_roman_chapter"
+            "custom_containers": {},
+            "custom_svg_scene_break": None,
+            "custom_svg_tailpiece": None
+        },
+        "visual_bible": {
+            "characters": {},
+            "setting_architecture": "1890s sub-polar basalt cliff port, riveted iron diving bells, gasoliers, frost-rimmed quartz",
+            "art_medium_lock": "19th-century Victorian cyanotype and copperplate intaglio engraving on heavy cotton rag paper"
         }
     }
 
@@ -131,17 +144,25 @@ class ProjectSettingsManager:
         if book_id in self.cache:
             return self.cache[book_id]
             
+        default = get_default_settings_for_book(book_id)
         fpath = self._file_path(book_id)
         if os.path.exists(fpath):
             try:
                 with open(fpath, "r", encoding="utf-8") as f:
                     data = json.load(f)
+                    # Backfill any missing top-level sections
+                    for sec, sec_val in default.items():
+                        if sec not in data:
+                            data[sec] = sec_val
+                        elif isinstance(sec_val, dict) and isinstance(data[sec], dict):
+                            for sub_k, sub_v in sec_val.items():
+                                if sub_k not in data[sec]:
+                                    data[sec][sub_k] = sub_v
                     self.cache[book_id] = data
                     return data
             except Exception:
                 pass
                 
-        default = get_default_settings_for_book(book_id)
         self.cache[book_id] = default
         return default
 

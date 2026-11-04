@@ -652,6 +652,12 @@ function renderStep3() {
         <div class="queue-thumb-row">
           <img src="${asset.image_url}" class="queue-thumb-img" alt="Artwork Preview" onclick="openPlateInspector('${asset.id}')">
           <div class="queue-actions-col">
+            <button class="btn-queue-action" style="background:rgba(217,119,6,0.18); border-color:#D97706; color:#FBBF24; font-weight:600;" onclick="enhanceSlotPrompt('${asset.id}', this)">
+              ✨ Rewrite Prompt with Qwen 2.5
+            </button>
+            <button class="btn-queue-action" style="background:rgba(16,185,129,0.18); border-color:#10B981; color:#34D399; font-weight:600;" onclick="generateSlotWithFlux('${asset.id}', this)">
+              ⚡ Generate with Local Flux
+            </button>
             <input type="file" id="queue-file-${asset.id}" style="display:none;" accept="image/*" onchange="uploadQueueImage('${asset.id}', this.files[0])">
             <button class="btn-queue-action" onclick="document.getElementById('queue-file-${asset.id}').click()">
               📤 Drop / Upload Image
@@ -848,6 +854,540 @@ function copyPlatePromptFromCard(btn, plateIdx) {
     }
   }
   copyTextToClipboard(text, btn);
+}
+
+// ======================================================================
+// AI FLUX PROMPT ARCHITECT & LOCAL FLUX BRIDGE HANDLERS
+// ======================================================================
+
+async function enhanceSlotPrompt(assetId, btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⏳ Enhancing...";
+  }
+  showToast(`Rewriting prompt for ${assetId} with Qwen 2.5:14b...`, "info");
+  
+  try {
+    const res = await fetch(`/api/ai/${state.activeBookId}/enhance-prompt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ asset_id: assetId, all_slots: false })
+    });
+    const data = await res.json();
+    if (data.status === "success" && data.manifest) {
+      state.manifest = data.manifest;
+      renderStep3();
+      showToast("✓ Rewrote 5-layer Flux prompt with Qwen 2.5!", "success");
+    } else {
+      showToast(data.detail || "Failed to rewrite prompt", "error");
+    }
+  } catch (err) {
+    showToast(`AI prompt rewrite failed: ${err.message}`, "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "✨ Rewrite Prompt with Qwen 2.5";
+    }
+  }
+}
+
+async function enhanceAllPromptsWithQwen(btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⏳ Rewriting 16 Prompts...";
+  }
+  showToast("Rewriting all 16 illustration prompts with Qwen 2.5:14b...", "info");
+
+  try {
+    const res = await fetch(`/api/ai/${state.activeBookId}/enhance-prompt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ all_slots: true })
+    });
+    const data = await res.json();
+    if (data.status === "success" && data.manifest) {
+      state.manifest = data.manifest;
+      renderStep3();
+      showToast(`✓ Rewrote ${data.enhanced_count || 16} prompts into 5-layer Flux T5 prose!`, "success");
+    } else {
+      showToast(data.detail || "Failed to enhance all prompts", "error");
+    }
+  } catch (err) {
+    showToast(`Batch prompt rewrite failed: ${err.message}`, "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "🧠 Rewrite All 16 Prompts (Qwen 2.5)";
+    }
+  }
+}
+
+async function generateSlotWithFlux(assetId, btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⚡ Generating...";
+  }
+  showToast(`Generating plate for ${assetId} with local Flux...`, "info");
+
+  try {
+    const res = await fetch(`/api/flux/${state.activeBookId}/generate/${assetId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (data.status === "success" && data.asset) {
+      const idx = state.manifest.assets.findIndex(a => a.id === assetId);
+      if (idx !== -1) {
+        state.manifest.assets[idx] = data.asset;
+      }
+      renderStep3();
+      showToast("✓ Flux plate generated & 300 DPI filtered!", "success");
+    } else {
+      showToast(data.detail || "Failed to generate image with Flux", "error");
+    }
+  } catch (err) {
+    showToast(`Flux generation failed: ${err.message}`, "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "⚡ Generate with Local Flux";
+    }
+  }
+}
+
+async function batchGeneratePendingFlux(btn) {
+  const assets = state.manifest?.assets || [];
+  const pending = assets.filter(a => !a.filter_applied || (a.image_url && a.image_url.includes("placeholder")));
+
+  if (pending.length === 0) {
+    showToast("All illustration plates are already filtered and ready!", "info");
+    return;
+  }
+
+  const pWrap = document.getElementById("flux-batch-progress-wrap");
+  const pFill = document.getElementById("flux-batch-progress-fill");
+  const pPct = document.getElementById("flux-batch-pct");
+  const pText = document.getElementById("flux-batch-status-text");
+
+  if (pWrap) pWrap.style.display = "block";
+  if (btn) btn.disabled = true;
+
+  let completed = 0;
+  for (let i = 0; i < pending.length; i++) {
+    const asset = pending[i];
+    const pct = Math.round((i / pending.length) * 100);
+    if (pFill) pFill.style.width = `${pct}%`;
+    if (pPct) pPct.innerText = `${pct}%`;
+    if (pText) pText.innerText = `⚡ Generating slot #${i + 1}/${pending.length}: ${asset.title || asset.id}...`;
+
+    try {
+      const res = await fetch(`/api/flux/${state.activeBookId}/generate/${asset.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+      if (data.status === "success" && data.asset) {
+        const aIdx = state.manifest.assets.findIndex(a => a.id === asset.id);
+        if (aIdx !== -1) {
+          state.manifest.assets[aIdx] = data.asset;
+        }
+        completed++;
+      }
+    } catch (e) {
+      console.warn(`Error generating plate ${asset.id}:`, e);
+    }
+  }
+
+  if (pFill) pFill.style.width = "100%";
+  if (pPct) pPct.innerText = "100%";
+  if (pText) pText.innerText = `✓ Complete: Generated ${completed} plates with Local Flux!`;
+
+  setTimeout(() => {
+    if (pWrap) pWrap.style.display = "none";
+    if (btn) btn.disabled = false;
+  }, 2500);
+
+  renderStep3();
+  renderAll();
+  showToast(`✓ Batch complete: ${completed} plates generated with Local Flux!`, "success");
+}
+
+async function autoPlanFullBookManifestAI(btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⏳ Planning 16 Assets with Qwen 2.5...";
+  }
+  showToast("Autonomous Art Director (Qwen 2.5:14b) planning 16-asset pacing rhythm...", "info");
+
+  try {
+    const res = await fetch(`/api/ai/${state.activeBookId}/auto-plan-manifest`, {
+      method: "POST"
+    });
+    const data = await res.json();
+    if (data.status === "success") {
+      if (data.manifest) state.manifest = data.manifest;
+      if (data.pagination) state.pagination = data.pagination;
+      showToast("✓ AI Auto-Planned 16 visual assets with Qwen 2.5:14b!", "success");
+      renderAll();
+      if (state.currentStep === 2) renderStep2();
+      if (state.currentStep === 3) renderStep3();
+    } else {
+      showToast(data.detail || "Auto-planning failed", "error");
+    }
+  } catch (err) {
+    showToast(`AI Auto-plan failed: ${err.message}`, "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "🧠 AI Auto-Plan All 16 Book Illustrations (Qwen 2.5:14b)";
+    }
+  }
+}
+
+// ======================================================================
+// AI INTERIOR DESIGN STUDIO MODAL
+// ======================================================================
+
+function openAiDesignStudioModal() {
+  const modal = document.getElementById("modal-container");
+  if (!modal) return;
+
+  const interior = state.settings?.interior_design || {};
+  const currentOpener = interior.chapter_opener_layout || "classic_centered";
+  const currentBorder = interior.page_border_style || "none";
+  const currentFolio = interior.folio_style || "classic_centered";
+  const bible = state.settings?.visual_bible || {};
+  const chars = bible.characters || {};
+
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="closeModal(event)">
+      <div class="modal-content" style="width:780px; max-width:94vw; max-height:88vh; display:flex; flex-direction:column; padding:0; overflow:hidden;" onclick="event.stopPropagation()">
+        
+        <!-- Header -->
+        <div style="padding:16px 20px; background:#0F172A; border-bottom:1px solid #334155; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <h3 style="margin:0; font-size:1.05rem; color:#38BDF8; display:flex; align-items:center; gap:8px;">
+              🎨 AI Interior Book Design & Visual Architecture Studio
+            </h3>
+            <div style="font-size:0.75rem; color:#94A3B8; margin-top:2px;">
+              Powered by Local Ollama (Qwen 2.5:14b) • Geometry, Ornaments & Visual Continuity
+            </div>
+          </div>
+          <button onclick="closeModal()" style="background:none; border:none; color:#AAA; font-size:1.4rem; cursor:pointer;">&times;</button>
+        </div>
+
+        <!-- Tab Strip -->
+        <div style="display:flex; gap:2px; background:#1E293B; border-bottom:1px solid #334155; padding:4px 16px 0 16px;">
+          <button class="ai-studio-tab active" id="tab-btn-ornaments" onclick="switchAiDesignTab('ornaments')">✨ SVG Ornaments</button>
+          <button class="ai-studio-tab" id="tab-btn-containers" onclick="switchAiDesignTab('containers')">📜 Custom Artifact Boxes</button>
+          <button class="ai-studio-tab" id="tab-btn-bible" onclick="switchAiDesignTab('bible')">👤 Visual Continuity Bible</button>
+          <button class="ai-studio-tab" id="tab-btn-architecture" onclick="switchAiDesignTab('architecture')">🏛️ Interior Architecture & Framing</button>
+        </div>
+
+        <!-- Body Area -->
+        <div style="padding:20px; overflow-y:auto; flex:1; background:#0B1329;">
+          
+          <!-- TAB 1: SVG ORNAMENTS -->
+          <div id="ai-tab-ornaments" class="ai-studio-pane" style="display:block;">
+            <div style="font-size:0.82rem; color:#94A3B8; margin-bottom:12px;">
+              Generate bespoke Victorian vector ornaments (dividers and chapter end tailpieces) matching any thematic motif via Qwen 2.5:14b.
+            </div>
+            
+            <div style="margin-bottom:12px;">
+              <label style="font-size:0.75rem; color:#FBBF24; font-weight:700; text-transform:uppercase;">Describe Desired Ornament Motif</label>
+              <input type="text" id="ai-ornament-motif-input" class="studio-input" style="width:100%; margin-top:4px;" value="An antique brass sextant crossed with an eagle quill pen and nautical caliper">
+            </div>
+
+            <div style="margin-bottom:16px;">
+              <button class="btn-secondary-action" style="background:#0F766E; border-color:#0D9488; color:#FFF; font-weight:700;" onclick="generateAiSvgOrnament(this)">
+                ✨ Generate Vector Ornament (Qwen 2.5)
+              </button>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+              <div style="background:#020617; border:1px solid #1E293B; border-radius:6px; padding:12px; text-align:center;">
+                <div style="font-size:0.72rem; color:#64748B; text-transform:uppercase; margin-bottom:8px;">Live Scene-Break Divider Preview (240 × 32)</div>
+                <div id="ai-svg-scene-preview" style="background:#FFF; padding:12px; border-radius:4px; min-height:48px; display:flex; align-items:center; justify-content:center;">
+                  ${state.settings?.interior_design?.custom_svg_scene_break || state.currentProfile?.scene_break_svg || 'No custom SVG loaded.'}
+                </div>
+              </div>
+              <div style="background:#020617; border:1px solid #1E293B; border-radius:6px; padding:12px; text-align:center;">
+                <div style="font-size:0.72rem; color:#64748B; text-transform:uppercase; margin-bottom:8px;">Live Chapter Tailpiece Preview (160 × 80)</div>
+                <div id="ai-svg-tail-preview" style="background:#FFF; padding:12px; border-radius:4px; min-height:48px; display:flex; align-items:center; justify-content:center;">
+                  ${state.settings?.interior_design?.custom_svg_tailpiece || state.currentProfile?.tailpiece_svg || 'No custom tailpiece loaded.'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: CUSTOM CONTAINERS -->
+          <div id="ai-tab-containers" class="ai-studio-pane" style="display:none;">
+            <div style="font-size:0.82rem; color:#94A3B8; margin-bottom:12px;">
+              Describe any in-world document type, telegram, or laboratory log. Qwen 2.5:14b will generate the CSS typography rules and register it into the Paragraph Inspector.
+            </div>
+
+            <div style="margin-bottom:12px;">
+              <label style="font-size:0.75rem; color:#FBBF24; font-weight:700; text-transform:uppercase;">Describe In-World Artifact Box</label>
+              <input type="text" id="ai-container-motif-input" class="studio-input" style="width:100%; margin-top:4px;" value="1960s cold-war redacted intelligence cable with classified stamp and typewriter font">
+            </div>
+
+            <div style="margin-bottom:16px;">
+              <button class="btn-secondary-action" style="background:#0F766E; border-color:#0D9488; color:#FFF; font-weight:700;" onclick="generateAiContainerCss(this)">
+                ✨ Design Custom Container (Qwen 2.5)
+              </button>
+            </div>
+
+            <div id="ai-container-preview-box" style="margin-bottom:12px; padding:12px; background:#020617; border:1px solid #1E293B; border-radius:6px;">
+              <div style="font-size:0.72rem; color:#64748B; text-transform:uppercase; margin-bottom:8px;">Live Rendered Artifact Preview:</div>
+              <div id="ai-container-rendered" style="background:#FFF; padding:12px; border-radius:4px; color:#000;">
+                <div style="font-family:'JetBrains Mono', monospace; font-size:0.8rem; border-left:4px solid #1E293B; padding-left:8px;">
+                  [SAMPLE TELEMETRY RECORD // DEEP-BRINE GRID LEVEL IV]
+                </div>
+              </div>
+              <pre id="ai-container-css-code" style="margin-top:10px; font-size:0.72rem; color:#38BDF8; background:#0F172A; padding:8px; border-radius:4px; max-height:100px; overflow-y:auto;"></pre>
+            </div>
+          </div>
+
+          <!-- TAB 3: VISUAL CONTINUITY BIBLE -->
+          <div id="ai-tab-bible" class="ai-studio-pane" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <div style="font-size:0.82rem; color:#94A3B8;">
+                Locked character physical constants and period architecture injected into every Flux.1 prompt.
+              </div>
+              <button class="btn-secondary-action" style="font-size:0.75rem; padding:4px 10px;" onclick="reExtractVisualBible(this)">
+                🧠 Re-Extract from Manuscript (Qwen 2.5)
+              </button>
+            </div>
+
+            <div style="margin-bottom:12px;">
+              <label style="font-size:0.75rem; color:#38BDF8; font-weight:700; text-transform:uppercase;">Art Medium Lock Prefix (FLUX.1)</label>
+              <input type="text" id="ai-bible-medium-input" class="studio-input" style="width:100%; margin-top:4px;" value="${bible.art_medium_lock || '19th-century Victorian cyanotype and copperplate intaglio engraving on heavy cotton rag paper'}">
+            </div>
+
+            <div style="margin-bottom:16px;">
+              <label style="font-size:0.75rem; color:#38BDF8; font-weight:700; text-transform:uppercase;">Setting Architecture & Lighting Physics</label>
+              <textarea id="ai-bible-setting-input" class="studio-input" style="width:100%; height:60px; margin-top:4px; font-size:0.8rem;">${bible.setting_architecture || '1890s sub-polar basalt cliff port, riveted iron diving bells, gasoliers, frost-rimmed quartz'}</textarea>
+            </div>
+
+            <div style="font-size:0.75rem; color:#FBBF24; font-weight:700; text-transform:uppercase; margin-bottom:6px;">Locked Characters (${Object.keys(chars).length})</div>
+            <div style="display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto;">
+              ${Object.entries(chars).map(([name, c]) => `
+                <div style="background:#0F172A; border:1px solid #1E293B; border-radius:4px; padding:8px 12px; font-size:0.78rem;">
+                  <strong style="color:#FFF;">👤 ${name} (${c.age || 'Adult'} yo)</strong>
+                  <div style="color:#94A3B8; font-size:0.72rem; margin-top:2px;"><strong>Features:</strong> ${c.facial_features}</div>
+                  <div style="color:#94A3B8; font-size:0.72rem;"><strong>Attire:</strong> ${c.signature_clothing}</div>
+                  <div style="color:#94A3B8; font-size:0.72rem;"><strong>Tools/Marks:</strong> ${c.distinguishing_marks_or_tools}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- TAB 4: INTERIOR ARCHITECTURE & FRAMING -->
+          <div id="ai-tab-architecture" class="ai-studio-pane" style="display:none;">
+            <div style="font-size:0.82rem; color:#94A3B8; margin-bottom:14px;">
+              Select the chapter opening architectural layout, page border margin framing, and running folio style applied across the entire book.
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr; gap:14px;">
+              
+              <!-- Chapter Opener Layout -->
+              <div style="background:#0F172A; border:1px solid #1E293B; border-radius:6px; padding:12px;">
+                <label style="font-size:0.75rem; color:#FBBF24; font-weight:700; text-transform:uppercase;">1. Chapter-Opener Architectural Layout</label>
+                <select id="interior-opener-select" class="studio-input" style="width:100%; margin-top:6px;">
+                  <option value="classic_centered" ${currentOpener === 'classic_centered' ? 'selected' : ''}>Classic Centered — Small caps chapter numeral, display title & centered ornament</option>
+                  <option value="asymmetric_ledger" ${currentOpener === 'asymmetric_ledger' ? 'selected' : ''}>Asymmetric Ledger Rail — Large 42pt outer numeral rail, left-aligned title & double rule</option>
+                  <option value="framed_cartouche" ${currentOpener === 'framed_cartouche' ? 'selected' : ''}>Framed Cartouche — Enclosed double-brass/ink architectural box framing chapter title</option>
+                  <option value="botanical_sinkage" ${currentOpener === 'botanical_sinkage' ? 'selected' : ''}>Botanical Sinkage — Deep 2.2-inch sinkage with ornate top decorative border</option>
+                  <option value="technical_dossier" ${currentOpener === 'technical_dossier' ? 'selected' : ''}>Technical Dossier — Monospace classification bar, hairline grid table header</option>
+                </select>
+              </div>
+
+              <!-- Page Border Style -->
+              <div style="background:#0F172A; border:1px solid #1E293B; border-radius:6px; padding:12px;">
+                <label style="font-size:0.75rem; color:#38BDF8; font-weight:700; text-transform:uppercase;">2. Page Border & Margin Framing Style</label>
+                <select id="interior-border-select" class="studio-input" style="width:100%; margin-top:6px;">
+                  <option value="none" ${currentBorder === 'none' ? 'selected' : ''}>None — Clean, open traditional trade book margins</option>
+                  <option value="hairline_margin_box" ${currentBorder === 'hairline_margin_box' ? 'selected' : ''}>Delicate 0.5pt Hairline Margin Box — Classic 19th-century Admiralty/ledger edition</option>
+                  <option value="corner_registration_ticks" ${currentBorder === 'corner_registration_ticks' ? 'selected' : ''}>Corner Registration Ticks — Technical blueprint crosshairs at four corners</option>
+                  <option value="double_victorian_frame" ${currentBorder === 'double_victorian_frame' ? 'selected' : ''}>Double Victorian Frame — Outer 1pt rule + inner 0.5pt rule with corner diamond accents</option>
+                </select>
+              </div>
+
+              <!-- Folio Style -->
+              <div style="background:#0F172A; border:1px solid #1E293B; border-radius:6px; padding:12px;">
+                <label style="font-size:0.75rem; color:#34D399; font-weight:700; text-transform:uppercase;">3. Running Page Number / Folio Style</label>
+                <select id="interior-folio-select" class="studio-input" style="width:100%; margin-top:6px;">
+                  <option value="classic_centered" ${currentFolio === 'classic_centered' ? 'selected' : ''}>Classic Centered — Centered old-style figure (14)</option>
+                  <option value="outer_brackets" ${currentFolio === 'outer_brackets' ? 'selected' : ''}>Outer Tracked Brackets — Outer margin bracketed folio ([ 14 ])</option>
+                  <option value="fleuron_flanked" ${currentFolio === 'fleuron_flanked' ? 'selected' : ''}>Fleuron Flanked — Centered folio flanked by decorative fleuron (— ❖ 14 ❖ —)</option>
+                  <option value="imperial_roman_chapter" ${currentFolio === 'imperial_roman_chapter' ? 'selected' : ''}>Imperial Roman Chapter — Chapter Roman Numeral + Page Number (I · 14)</option>
+                </select>
+              </div>
+
+            </div>
+
+            <div style="margin-top:16px;">
+              <button class="btn-wizard-primary" style="padding:8px 18px;" onclick="saveAiInteriorArchitecture(this)">
+                💾 Save & Apply Interior Architecture
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function switchAiDesignTab(tabId) {
+  const tabs = ["ornaments", "containers", "bible", "architecture"];
+  tabs.forEach(t => {
+    const pane = document.getElementById(`ai-tab-${t}`);
+    const btn = document.getElementById(`tab-btn-${t}`);
+    if (pane) pane.style.display = (t === tabId) ? "block" : "none";
+    if (btn) btn.classList.toggle("active", t === tabId);
+  });
+}
+
+async function generateAiSvgOrnament(btn) {
+  const motifInput = document.getElementById("ai-ornament-motif-input");
+  const motif = motifInput ? motifInput.value : "antique brass sextant and quill";
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⏳ Generating SVG with Qwen 2.5...";
+  }
+
+  try {
+    const res = await fetch(`/api/ai/${state.activeBookId}/generate-svg`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ request: motif, apply_to_book: true })
+    });
+    const data = await res.json();
+    if (data.status === "success" && data.result) {
+      const sceneEl = document.getElementById("ai-svg-scene-preview");
+      const tailEl = document.getElementById("ai-svg-tail-preview");
+      if (sceneEl) sceneEl.innerHTML = data.result.scene_break_svg;
+      if (tailEl) tailEl.innerHTML = data.result.tailpiece_svg;
+      showToast("✓ Generated & applied vector ornaments!", "success");
+      renderAll();
+    } else {
+      showToast(data.detail || "SVG generation failed", "error");
+    }
+  } catch (err) {
+    showToast(`SVG generation error: ${err.message}`, "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "✨ Generate Vector Ornament (Qwen 2.5)";
+    }
+  }
+}
+
+async function generateAiContainerCss(btn) {
+  const motifInput = document.getElementById("ai-container-motif-input");
+  const motif = motifInput ? motifInput.value : "1960s cold-war redacted cable";
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⏳ Designing Container with Qwen 2.5...";
+  }
+
+  try {
+    const res = await fetch(`/api/ai/${state.activeBookId}/generate-container-css`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ request: motif })
+    });
+    const data = await res.json();
+    if (data.status === "success") {
+      const codeEl = document.getElementById("ai-container-css-code");
+      if (codeEl) codeEl.innerText = data.container_css;
+      showToast(`✓ Registered custom container: ${data.container_label}!`, "success");
+      renderAll();
+    } else {
+      showToast(data.detail || "Container generation failed", "error");
+    }
+  } catch (err) {
+    showToast(`Container error: ${err.message}`, "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "✨ Design Custom Container (Qwen 2.5)";
+    }
+  }
+}
+
+async function reExtractVisualBible(btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⏳ Extracting...";
+  }
+
+  try {
+    const res = await fetch(`/api/ai/${state.activeBookId}/extract-bible`, { method: "POST" });
+    const data = await res.json();
+    if (data.status === "success" && data.visual_bible) {
+      if (!state.settings) state.settings = {};
+      state.settings.visual_bible = data.visual_bible;
+      showToast("✓ Visual Continuity Bible extracted & locked!", "success");
+      openAiDesignStudioModal();
+      switchAiDesignTab('bible');
+    } else {
+      showToast(data.detail || "Visual bible extraction failed", "error");
+    }
+  } catch (err) {
+    showToast(`Extraction failed: ${err.message}`, "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "🧠 Re-Extract from Manuscript (Qwen 2.5)";
+    }
+  }
+}
+
+async function saveAiInteriorArchitecture(btn) {
+  const opener = document.getElementById("interior-opener-select")?.value || "classic_centered";
+  const border = document.getElementById("interior-border-select")?.value || "none";
+  const folio = document.getElementById("interior-folio-select")?.value || "classic_centered";
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⏳ Applying...";
+  }
+
+  try {
+    const res = await fetch(`/api/interior/${state.activeBookId}/update`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chapter_opener_layout: opener,
+        page_border_style: border,
+        folio_style: folio
+      })
+    });
+    const data = await res.json();
+    if (data.status === "success") {
+      if (!state.settings) state.settings = {};
+      state.settings.interior_design = data.interior_design;
+      if (data.pagination) state.pagination = data.pagination;
+      showToast("✓ Applied interior architecture & repaginated!", "success");
+      renderAll();
+      closeModal();
+    } else {
+      showToast(data.detail || "Failed to update interior design", "error");
+    }
+  } catch (err) {
+    showToast(`Interior design update failed: ${err.message}`, "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "💾 Save & Apply Interior Architecture";
+    }
+  }
 }
 
 // --- STEP 4: SPREAD REVIEW & POLISH ---
@@ -1408,13 +1948,63 @@ function renderSinglePageHTML(page, sideClass) {
         </div>
       `;
     } else if (elem.type === "chapter_header") {
-      elementsHTML += `
-        <div class="chapter-sinkage-box" style="height:${sinkage * 48}px;">
-          <div class="ch-label">Chapter ${elem.chapter_number}</div>
-          <h1 class="ch-title" style="font-family:${displayFont}; color:${accentColor};">${elem.title}</h1>
-          <div class="ornament-wrap">${elem.ornament_svg}</div>
-        </div>
-      `;
+      const openerLayout = page.chapter_opener_layout || state.settings?.interior_design?.chapter_opener_layout || "classic_centered";
+      const ornamentSvg = state.settings?.interior_design?.custom_svg_scene_break || elem.ornament_svg;
+
+      if (openerLayout === "asymmetric_ledger") {
+        elementsHTML += `
+          <div class="chapter-sinkage-box layout-asymmetric-ledger" style="padding-top:${sinkage * 36}px; margin-bottom:20px;">
+            <div style="display:flex; align-items:flex-end; gap:14px; border-bottom:2px solid ${accentColor}; padding-bottom:6px;">
+              <div style="font-family:'JetBrains Mono',monospace; font-size:2.4rem; font-weight:800; line-height:1; color:${brassAccent};">${elem.chapter_number}</div>
+              <div style="flex:1;">
+                <div style="font-family:'JetBrains Mono',monospace; font-size:0.62rem; letter-spacing:0.18em; text-transform:uppercase; color:#64748B;">ARCHIVE RECORD // CHAPTER ${elem.chapter_number}</div>
+                <h1 class="ch-title" style="margin:0; text-align:left; font-size:1.15rem; font-family:${displayFont}; color:${accentColor};">${elem.title}</h1>
+              </div>
+            </div>
+            <div style="height:1px; background:${accentColor}; margin-top:2px; margin-bottom:12px;"></div>
+          </div>
+        `;
+      } else if (openerLayout === "framed_cartouche") {
+        elementsHTML += `
+          <div class="chapter-sinkage-box layout-framed-cartouche" style="padding-top:${sinkage * 28}px; margin-bottom:16px;">
+            <div style="border:1.5px solid ${accentColor}; outline:1px solid ${brassAccent}; outline-offset:3px; padding:10px 14px; text-align:center; background:rgba(0,0,0,0.02);">
+              <div class="ch-label" style="letter-spacing:0.2em; font-weight:700;">— CHAPTER ${elem.chapter_number} —</div>
+              <h1 class="ch-title" style="margin:4px 0; font-family:${displayFont}; color:${accentColor};">${elem.title}</h1>
+              <div class="ornament-wrap" style="margin-top:4px;">${ornamentSvg}</div>
+            </div>
+          </div>
+        `;
+      } else if (openerLayout === "botanical_sinkage") {
+        elementsHTML += `
+          <div class="chapter-sinkage-box layout-botanical-sinkage" style="padding-top:${Math.max(120, sinkage * 60)}px; text-align:center;">
+            <div style="border-top:1px solid ${brassAccent}; border-bottom:1px solid ${brassAccent}; padding:3px 14px; display:inline-block; margin-bottom:8px;">
+              <div class="ch-label" style="letter-spacing:0.18em;">CHAPTER ${elem.chapter_number}</div>
+            </div>
+            <h1 class="ch-title" style="margin:6px 0 10px 0; font-family:${displayFont}; color:${accentColor};">${elem.title}</h1>
+            <div class="ornament-wrap">${ornamentSvg}</div>
+          </div>
+        `;
+      } else if (openerLayout === "technical_dossier") {
+        elementsHTML += `
+          <div class="chapter-sinkage-box layout-technical-dossier" style="padding-top:${sinkage * 28}px; margin-bottom:16px;">
+            <div style="background:${accentColor}; color:#FFF; font-family:'JetBrains Mono',monospace; font-size:0.65rem; padding:3px 8px; letter-spacing:0.14em; text-transform:uppercase; font-weight:700;">
+              SECTION // ARCHIVE LOG ${elem.chapter_number} • COURT OF RESIDUAL CLAIMS
+            </div>
+            <div style="border:1px solid #CBD5E1; border-top:none; padding:10px 12px; background:#F8FAFC;">
+              <h1 class="ch-title" style="text-align:left; margin:0; font-size:1.15rem; font-family:${displayFont}; color:#0F172A;">${elem.title}</h1>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:0.62rem; color:#64748B; margin-top:4px;">RECORD CLASSIFICATION: LEVEL-IV FORENSIC • LOG #${elem.chapter_number}</div>
+            </div>
+          </div>
+        `;
+      } else {
+        elementsHTML += `
+          <div class="chapter-sinkage-box layout-classic-centered" style="height:${sinkage * 48}px;">
+            <div class="ch-label">Chapter ${elem.chapter_number}</div>
+            <h1 class="ch-title" style="font-family:${displayFont}; color:${accentColor};">${elem.title}</h1>
+            <div class="ornament-wrap">${ornamentSvg}</div>
+          </div>
+        `;
+      }
     } else if (elem.type === "chapter_subtitle" || elem.block_type === "chapter_subtitle") {
       elementsHTML += `
         <div class="chapter-subtitle" data-p-id="${elem.id}" ondblclick="openParagraphInspector('${elem.id}')">
@@ -1520,8 +2110,23 @@ function renderSinglePageHTML(page, sideClass) {
     }
   });
 
+  const borderStyle = page.page_border_style || state.settings?.interior_design?.page_border_style || "none";
+  let borderClass = "";
+  if (page.page_type === "body") {
+    if (borderStyle === "hairline_margin_box") borderClass = " page-border-hairline";
+    else if (borderStyle === "double_victorian_frame") borderClass = " page-border-double";
+    else if (borderStyle === "corner_registration_ticks") borderClass = " page-border-ticks";
+  }
+
+  const folioText = page.folio_text || page.page_number;
+  const folioStyle = page.folio_style || state.settings?.interior_design?.folio_style || "classic_centered";
+  let folioAlign = "center";
+  if (folioStyle === "outer_brackets") {
+    folioAlign = sideClass === "verso" ? "left" : "right";
+  }
+
   return `
-    <div class="spread-page ${sideClass}" style="background-color:${paperTint};">
+    <div class="spread-page ${sideClass}${borderClass}" style="background-color:${paperTint};">
       ${state.showMargins ? '<div class="margin-guide-overlay"></div>' : ''}
       ${state.showBleed ? '<div class="bleed-guide-line"></div>' : ''}
       
@@ -1531,7 +2136,7 @@ function renderSinglePageHTML(page, sideClass) {
         ${elementsHTML}
       </div>
       
-      ${!page.suppress_footer ? `<div class="page-footer-running" style="font-family:${fontName};">${page.page_number}</div>` : ''}
+      ${!page.suppress_footer ? `<div class="page-footer-running" style="font-family:${fontName}; text-align:${folioAlign};">${folioText}</div>` : ''}
     </div>
   `;
 }

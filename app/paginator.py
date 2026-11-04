@@ -36,6 +36,10 @@ class BookPage:
         self.is_chapter_end = False
         self.short_ending = False
         self.has_plate = False
+        self.folio_text = str(page_number)
+        self.chapter_opener_layout = "classic_centered"
+        self.page_border_style = "none"
+        self.folio_style = "classic_centered"
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -55,6 +59,10 @@ class BookPage:
             "is_chapter_end": self.is_chapter_end,
             "short_ending": self.short_ending,
             "has_plate": self.has_plate,
+            "folio_text": self.folio_text,
+            "chapter_opener_layout": self.chapter_opener_layout,
+            "page_border_style": self.page_border_style,
+            "folio_style": self.folio_style,
             "elements": self.elements
         }
 
@@ -123,6 +131,11 @@ def paginate_manuscript(
     body_leading = float(cs.get("typography", {}).get("body_leading_pt", cs.get("body_leading_pt", 15.0)))
     header_style = cs.get("typography", {}).get("running_header_style", "Small Caps Centered")
     
+    interior = cs.get("interior_design", {})
+    chapter_opener_layout = interior.get("chapter_opener_layout", cs.get("chapter_opener_layout", "classic_centered"))
+    page_border_style = interior.get("page_border_style", cs.get("page_border_style", "none"))
+    folio_style = interior.get("folio_style", cs.get("folio_style", "classic_centered"))
+
     cap = calculate_line_capacity(
         trim_width_in=trim_w,
         trim_height_in=trim_h,
@@ -469,7 +482,7 @@ def paginate_manuscript(
                     cur_page.has_plate = True
                     cur_page_lines += 14
                     continue
-                elif placement in ["Inline Centered", "Inline Archival Insert"]:
+                elif placement in ["Inline Centered", "Inline Archival Insert", "Inline Diagram", "Half-Page Diagram"] or "diagram" in placement.lower():
                     if cur_page_lines + 10 > page_capacity:
                         cur_page = BookPage(page_number=current_page_num, page_type="body")
                         cur_page.chapter_title = ch_title
@@ -699,6 +712,32 @@ def paginate_manuscript(
         trailing_blank.suppress_header = True
         trailing_blank.suppress_footer = True
         pages.append(trailing_blank)
+
+    roman_map = {
+        1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X",
+        11: "XI", 12: "XII", 13: "XIII", 14: "XIV", 15: "XV", 16: "XVI", 17: "XVII", 18: "XVIII", 19: "XIX", 20: "XX",
+        21: "XXI", 22: "XXII", 23: "XXIII", 24: "XXIV"
+    }
+
+    for p in pages:
+        p.chapter_opener_layout = chapter_opener_layout
+        p.page_border_style = page_border_style
+        p.folio_style = folio_style
+        
+        p_num = p.page_number
+        if folio_style == "outer_brackets":
+            p.folio_text = f"[ {p_num} ]"
+        elif folio_style == "fleuron_flanked":
+            p.folio_text = f"— ❖ {p_num} ❖ —"
+        elif folio_style == "imperial_roman_chapter":
+            try:
+                c_int = int(p.chapter_number) if str(p.chapter_number).isdigit() else 1
+                r_num = roman_map.get(c_int, str(c_int))
+                p.folio_text = f"{r_num} · {p_num}"
+            except Exception:
+                p.folio_text = f"{p_num}"
+        else:
+            p.folio_text = f"{p_num}"
 
     # Group into 2-Page Spreads
     spreads: List[Dict[str, Any]] = []

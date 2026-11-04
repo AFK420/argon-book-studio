@@ -271,6 +271,10 @@
               <h4>Bind & Anchor Illustration Blueprint</h4>
               <p>Match asset anchor texts against manuscript paragraphs, or import an external JSON manifest.</p>
               <div class="action-buttons-row">
+                <button class="btn-secondary-action" style="background:linear-gradient(135deg, #059669, #0D9488); border-color:#10B981; color:#FFF; font-weight:700;" onclick="autoPlanFullBookManifestAI(this)">
+                  🧠 AI Auto-Plan All 16 Book Illustrations (Qwen 2.5:14b)
+                </button>
+
                 <button class="btn-secondary-action" onclick="document.getElementById('wizard-manifest-file-input').click()">
                   📂 Load Custom Manifest JSON
                 </button>
@@ -295,6 +299,18 @@
                 ✨ Run 1-Click Auto-Styler & Lock Blueprint
               </button>
               <div id="step2-autostyle-result" style="display:none;" class="autostyle-result-banner"></div>
+            </div>
+          </div>
+
+          <!-- Action 3: Interior Architecture & AI Design Studio -->
+          <div class="blueprint-action-box">
+            <div class="action-num">3</div>
+            <div class="action-content">
+              <h4>Interior Architecture & AI Design Studio</h4>
+              <p>Customize chapter opener layouts, page border framing styles, folios, custom SVG ornaments, and in-world artifact CSS containers with Qwen 2.5:14b.</p>
+              <button class="btn-secondary-action" style="background:#0F766E; border-color:#0D9488; color:#FFF; font-weight:700;" onclick="openAiDesignStudioModal()">
+                🎨 AI Interior Design Studio (Qwen 2.5:14b)
+              </button>
             </div>
           </div>
         </div>
@@ -338,11 +354,28 @@
             <button id="filter-chip-ready" class="filter-chip" onclick="setQueueFilter('ready')">✓ Ready & Filtered (0)</button>
             <button id="filter-chip-pending" class="filter-chip" onclick="setQueueFilter('pending')">⏳ Needs Artwork (16)</button>
           </div>
-          <div class="batch-upload-actions">
+          <div class="batch-upload-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn-secondary-action" style="background:rgba(217,119,6,0.18); border-color:#D97706; color:#FBBF24; font-weight:600;" onclick="enhanceAllPromptsWithQwen(this)">
+              🧠 Rewrite All 16 Prompts (Qwen 2.5)
+            </button>
+            <button class="btn-secondary-action" style="background:rgba(16,185,129,0.18); border-color:#10B981; color:#34D399; font-weight:600;" onclick="batchGeneratePendingFlux(this)">
+              ⚡ Batch Generate All Pending Plates (Local Flux)
+            </button>
             <button class="btn-secondary-action" onclick="document.getElementById('step3-batch-upload-input').click()">
               📦 Batch Upload Folder / Multiple Images
             </button>
             <input type="file" id="step3-batch-upload-input" style="display:none;" multiple accept="image/*" onchange="handleStep3BatchUpload(event)">
+          </div>
+        </div>
+
+        <!-- Live Flux Batch Progress Bar -->
+        <div id="flux-batch-progress-wrap" style="display:none; margin: 10px 0 16px 0; background:rgba(15,23,42,0.9); border-radius:6px; padding:10px 14px; border:1px solid #334155;">
+          <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:6px;">
+            <span id="flux-batch-status-text" style="color:#38BDF8; font-weight:600;">⚡ Generating Plates with Local Flux...</span>
+            <span id="flux-batch-pct" style="color:#FFF; font-weight:700;">0%</span>
+          </div>
+          <div style="background:#1E293B; height:8px; border-radius:4px; overflow:hidden;">
+            <div id="flux-batch-progress-fill" style="width:0%; height:100%; background:linear-gradient(90deg, #10B981, #38BDF8); transition:width 0.3s ease;"></div>
           </div>
         </div>
 
@@ -372,7 +405,10 @@
               ✨ Auto-Balance All Short Chapter Endings (<span id="polish-short-count">0</span> Found)
             </button>
             <button id="btn-toggle-drawer" class="btn-polish-drawer" onclick="toggleTypographyDrawer()">
-              🎨 Toggle Typography & Margin Drawer
+              📐 Geometry & Margins
+            </button>
+            <button class="btn-polish-drawer" style="background:#0F766E; border-color:#0D9488; color:#FFF; font-weight:600;" onclick="openAiDesignStudioModal()">
+              🎨 AI Interior Design Studio (Qwen 2.5:14b)
             </button>
           </div>
 

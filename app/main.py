@@ -31,7 +31,14 @@ from app.filters import (
 )
 from app.paginator import paginate_manuscript
 from app.front_back_matter import generate_front_matter_data
-from app.ai_director import ai_director_manager
+from app.ai_director import (
+    ai_director_manager,
+    extract_visual_bible,
+    generate_flux_prompt_for_slot,
+    auto_plan_full_book_manifest,
+    generate_custom_svg_ornament_and_css
+)
+from app.flux_bridge import flux_bridge_manager
 from app.exporters.pdf_exporter import export_pdf
 from app.exporters.docx_exporter import export_docx
 from app.exporters.epub_exporter import export_epub
@@ -857,6 +864,373 @@ async def apply_ai_blueprint(
         "blueprint": blueprint,
         "manifest": updated_manifest,
         "settings": updated_settings,
+        "pagination": pagination
+    }
+
+
+# ======================================================================
+# AI DIRECTORY & LOCAL FLUX BRIDGE EXTENSIONS
+# ======================================================================
+
+@app.post("/api/ai/config")
+async def save_ai_and_flux_config(payload: Dict[str, Any] = Body(...)):
+    """Saves and verifies configuration for Ollama and Local Flux."""
+    ai_updates = {}
+    flux_updates = {}
+    
+    if "endpoint_url" in payload:
+        ai_updates["endpoint_url"] = payload["endpoint_url"]
+    if "model" in payload:
+        ai_updates["model"] = payload["model"]
+    if "temperature" in payload:
+        ai_updates["temperature"] = float(payload["temperature"])
+    if "timeout_sec" in payload:
+        ai_updates["timeout_sec"] = float(payload["timeout_sec"])
+        
+    if "flux_backend" in payload:
+        flux_updates["backend"] = payload["flux_backend"]
+    if "flux_url" in payload:
+        if payload.get("flux_backend") == "forge":
+            flux_updates["forge_url"] = payload["flux_url"]
+        else:
+            flux_updates["comfyui_url"] = payload["flux_url"]
+    if "comfyui_url" in payload:
+        flux_updates["comfyui_url"] = payload["comfyui_url"]
+    if "forge_url" in payload:
+        flux_updates["forge_url"] = payload["forge_url"]
+    if "flux_steps" in payload:
+        flux_updates["steps"] = int(payload["flux_steps"])
+    if "flux_cfg" in payload:
+        flux_updates["cfg_scale"] = float(payload["flux_cfg"])
+
+    ai_conf = ai_director_manager.update_config(ai_updates) if ai_updates else ai_director_manager.get_config()
+    flux_conf = flux_bridge_manager.save_config(flux_updates) if flux_updates else flux_bridge_manager.config
+    
+    ollama_conn = ai_director_manager.check_connection()
+    flux_conn = await flux_bridge_manager.check_connection()
+    
+    return {
+        "status": "success",
+        "ai_config": ai_conf,
+        "flux_config": flux_conf,
+        "ollama_status": ollama_conn,
+        "flux_status": flux_conn
+    }
+
+
+@app.post("/api/ai/{book_id}/extract-bible")
+async def extract_book_visual_bible(book_id: str):
+    """
+    Stage 1: Runs Visual Continuity Bible extraction via Qwen 2.5:14b
+    and stores it in project settings.
+    """
+    manuscript = load_book_manuscript(book_id)
+    profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"])
+    bible = extract_visual_bible(manuscript, profile)
+    
+    settings_manager.update_settings(book_id, {"visual_bible": bible})
+    return {
+        "status": "success",
+        "book_id": book_id,
+        "visual_bible": bible
+    }
+
+
+@app.post("/api/ai/{book_id}/enhance-prompt")
+async def enhance_flux_prompt(book_id: str, payload: Dict[str, Any] = Body(...)):
+    """
+    Stage 2: Rewrites a single slot or all 16 slots into 5-layer Flux T5 prose
+    using the Visual Bible and manuscript paragraph context.
+    """
+    manuscript = load_book_manuscript(book_id)
+    profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"])
+    settings = settings_manager.get_settings(book_id)
+    visual_bible = settings.get("visual_bible") or extract_visual_bible(manuscript, profile)
+    manifest = manifest_manager.get_book_manifest(book_id)
+    
+    asset_id = payload.get("asset_id")
+    all_slots = payload.get("all_slots", False)
+    assets = manifest.get("assets", [])
+    chapters = manuscript.get("chapters", [])
+    enhanced_count = 0
+
+    # Build paragraph lookup dict
+    p_lookup = {}
+    for ch in chapters:
+        c_text = " ".join([p.get("text", "") for p in ch.get("elements", []) if p.get("type") == "paragraph"][:8])
+        for el in ch.get("elements", []):
+            if el.get("type") == "paragraph":
+                p_lookup[el.get("id")] = (el.get("text", ""), c_text)
+
+    for asset in assets:
+        if all_slots or asset.get("id") == asset_id:
+            anchor_id = asset.get("anchor")
+            p_text, c_text = p_lookup.get(anchor_id, (asset.get("prompt", ""), "Chapter scene"))
+            
+            res = generate_flux_prompt_for_slot(
+                chapter_text=c_text,
+                anchor_paragraph=p_text or asset.get("prompt", ""),
+                placement=asset.get("placement", "Half-Page Top"),
+                visual_bible=visual_bible,
+                profile=profile
+            )
+            
+            asset["prompt"] = res["flux_prompt"]
+            if res.get("caption"):
+                asset["caption"] = res["caption"]
+            if res.get("title"):
+                asset["title"] = res["title"]
+            if res.get("callouts"):
+                asset["vector_callouts"] = res["callouts"]
+            enhanced_count += 1
+            
+            if not all_slots:
+                break
+
+    manifest_manager.save_book_manifest(book_id, manifest)
+    return {
+        "status": "success",
+        "book_id": book_id,
+        "enhanced_count": enhanced_count,
+        "manifest": manifest
+    }
+
+
+@app.post("/api/ai/{book_id}/auto-plan-manifest")
+async def auto_plan_manifest_endpoint(book_id: str):
+    """
+    Stage 3: 1-Click 16-Asset Autonomous Book Manifest Planner.
+    Generates the optimal 16-asset pacing rhythm with 5-layer Flux prompts
+    and binds vector callouts across the manuscript.
+    """
+    manuscript = load_book_manuscript(book_id)
+    profile = BOOK_PROFILES.get(book_id, BOOK_PROFILES["book01"])
+    
+    # 1. Extract visual bible
+    bible = extract_visual_bible(manuscript, profile)
+    settings_manager.update_settings(book_id, {"visual_bible": bible})
+    
+    # 2. Plan 16-slot manifest
+    new_assets = auto_plan_full_book_manifest(manuscript, profile)
+    manifest_manager.import_manifest(book_id, {"assets": new_assets}, manuscript)
+    manifest_manager.bind_anchors_to_manuscript(book_id, manuscript)
+    
+    invalidate_pdf_cache(book_id)
+    updated_manifest = manifest_manager.get_book_manifest(book_id)
+    updated_settings = settings_manager.get_settings(book_id)
+    tailpieces = STATE["auto_tailpieces"].get(book_id, {})
+    pagination = paginate_manuscript(
+        manuscript,
+        updated_manifest,
+        book_id,
+        auto_tailpieces=tailpieces,
+        custom_specs=updated_settings,
+        custom_matter=updated_settings.get("front_back_matter")
+    )
+    
+    return {
+        "status": "success",
+        "book_id": book_id,
+        "manifest": updated_manifest,
+        "pagination": pagination,
+        "visual_bible": bible
+    }
+
+
+@app.post("/api/ai/{book_id}/generate-svg")
+async def generate_svg_endpoint(book_id: str, payload: Dict[str, Any] = Body(...)):
+    """Generates custom SVG scene-break and tailpiece ornaments via Qwen 2.5:14b."""
+    manuscript = load_book_manuscript(book_id)
+    req = payload.get("request", "antique brass sextant and quill pen")
+    sample_text = manuscript.get("title", "")
+    
+    res = generate_custom_svg_ornament_and_css(sample_text, req)
+    
+    apply_to_book = payload.get("apply_to_book", True)
+    if apply_to_book:
+        settings_manager.update_settings(book_id, {
+            "interior_design": {
+                "custom_svg_scene_break": res["scene_break_svg"],
+                "custom_svg_tailpiece": res["tailpiece_svg"]
+            }
+        })
+        invalidate_pdf_cache(book_id)
+
+    return {
+        "status": "success",
+        "result": res
+    }
+
+
+@app.post("/api/ai/{book_id}/generate-container-css")
+async def generate_container_css_endpoint(book_id: str, payload: Dict[str, Any] = Body(...)):
+    """Generates and registers custom in-world CSS document containers via Qwen 2.5:14b."""
+    manuscript = load_book_manuscript(book_id)
+    req = payload.get("request", "1960s redacted intelligence cable")
+    sample_text = manuscript.get("title", "")
+    
+    res = generate_custom_svg_ornament_and_css(sample_text, req)
+    tag = res["container_tag"]
+    
+    # Register into settings
+    settings = settings_manager.get_settings(book_id)
+    interior = settings.setdefault("interior_design", {})
+    containers = interior.setdefault("custom_containers", {})
+    containers[tag] = {
+        "tag": tag,
+        "label": res["container_label"],
+        "css": res["container_css"]
+    }
+    settings_manager.update_settings(book_id, {"interior_design": interior})
+    invalidate_pdf_cache(book_id)
+
+    return {
+        "status": "success",
+        "container_tag": tag,
+        "container_label": res["container_label"],
+        "container_css": res["container_css"],
+        "all_containers": containers
+    }
+
+
+@app.post("/api/flux/{book_id}/generate/{asset_id}")
+async def generate_single_flux_plate(book_id: str, asset_id: str, payload: Optional[Dict[str, Any]] = Body(None)):
+    """
+    Sends slot's Flux prompt to local Flux endpoint, saves raw image,
+    runs 300 DPI print texture filter and vector callouts, and updates manifest.
+    """
+    manifest = manifest_manager.get_book_manifest(book_id)
+    assets = manifest.get("assets", [])
+    asset = next((a for a in assets if a.get("id") == asset_id), None)
+    if not asset:
+        raise HTTPException(status_code=404, detail=f"Asset {asset_id} not found in manifest")
+
+    p = payload or {}
+    prompt = p.get("prompt") or asset.get("prompt")
+    placement = asset.get("placement", "Half-Page Top")
+    aspect_ratio = asset.get("aspect_ratio", "16:9")
+    filter_preset = asset.get("filter_preset") or "cyanotype_silver_plate"
+    callouts = asset.get("vector_callouts") or []
+    frame_style = asset.get("frame_style", "none")
+
+    result = await flux_bridge_manager.generate_flux_image(
+        book_id=book_id,
+        asset_id=asset_id,
+        prompt=prompt,
+        placement=placement,
+        aspect_ratio=aspect_ratio,
+        filter_preset=filter_preset,
+        callouts=callouts,
+        frame_style=frame_style,
+        profile_id=book_id,
+        title=asset.get("title", "Archival Plate")
+    )
+
+    # Update asset in manifest
+    asset["image_url"] = result["image_url"]
+    asset["raw_image_path"] = result["raw_image_path"]
+    asset["filter_applied"] = True
+    manifest_manager.save_book_manifest(book_id, manifest)
+    invalidate_pdf_cache(book_id)
+
+    return {
+        "status": "success",
+        "book_id": book_id,
+        "asset": asset,
+        "result": result
+    }
+
+
+@app.post("/api/flux/{book_id}/batch-generate")
+async def batch_generate_flux_plates(book_id: str):
+    """
+    Batch generates all pending artwork plates in the book manifest
+    via the local Flux engine, applying 300 DPI print filters.
+    """
+    manifest = manifest_manager.get_book_manifest(book_id)
+    assets = manifest.get("assets", [])
+    processed_count = 0
+    results = []
+
+    for asset in assets:
+        # Check if asset needs artwork
+        is_pending = not asset.get("filter_applied", False) or "placeholder" in asset.get("image_url", "")
+        if is_pending:
+            try:
+                res = await flux_bridge_manager.generate_flux_image(
+                    book_id=book_id,
+                    asset_id=asset["id"],
+                    prompt=asset.get("prompt", "Historical fine-press book engraving"),
+                    placement=asset.get("placement", "Half-Page Top"),
+                    aspect_ratio=asset.get("aspect_ratio", "16:9"),
+                    filter_preset=asset.get("filter_preset", "cyanotype_silver_plate"),
+                    callouts=asset.get("vector_callouts", []),
+                    frame_style=asset.get("frame_style", "none"),
+                    profile_id=book_id,
+                    title=asset.get("title", "Archival Plate")
+                )
+                asset["image_url"] = res["image_url"]
+                asset["raw_image_path"] = res["raw_image_path"]
+                asset["filter_applied"] = True
+                processed_count += 1
+                results.append(res)
+            except Exception as e:
+                logger.warning(f"Error generating Flux asset {asset.get('id')}: {e}")
+
+    manifest_manager.save_book_manifest(book_id, manifest)
+    invalidate_pdf_cache(book_id)
+    
+    manuscript = load_book_manuscript(book_id)
+    settings = settings_manager.get_settings(book_id)
+    tailpieces = STATE["auto_tailpieces"].get(book_id, {})
+    pagination = paginate_manuscript(
+        manuscript,
+        manifest,
+        book_id,
+        auto_tailpieces=tailpieces,
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
+
+    return {
+        "status": "success",
+        "book_id": book_id,
+        "processed_count": processed_count,
+        "total_assets": len(assets),
+        "manifest": manifest,
+        "pagination": pagination
+    }
+
+
+@app.post("/api/interior/{book_id}/update")
+async def update_interior_design(book_id: str, payload: Dict[str, Any] = Body(...)):
+    """Updates interior architecture: chapter_opener_layout, page_border_style, folio_style."""
+    settings = settings_manager.get_settings(book_id)
+    interior = settings.setdefault("interior_design", {})
+    
+    for k in ["chapter_opener_layout", "page_border_style", "folio_style"]:
+        if k in payload:
+            interior[k] = payload[k]
+            
+    settings_manager.update_settings(book_id, {"interior_design": interior})
+    invalidate_pdf_cache(book_id)
+    
+    manuscript = load_book_manuscript(book_id)
+    manifest = manifest_manager.get_book_manifest(book_id)
+    tailpieces = STATE["auto_tailpieces"].get(book_id, {})
+    pagination = paginate_manuscript(
+        manuscript,
+        manifest,
+        book_id,
+        auto_tailpieces=tailpieces,
+        custom_specs=settings,
+        custom_matter=settings.get("front_back_matter")
+    )
+
+    return {
+        "status": "success",
+        "book_id": book_id,
+        "interior_design": interior,
         "pagination": pagination
     }
 

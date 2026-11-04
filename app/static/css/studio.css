@@ -2599,3 +2599,87 @@ input[type="range"] {
   background: rgba(56, 189, 248, 0.35);
 }
 
+/* ======================================================================
+   AI INTERIOR DESIGN STUDIO & ADVANCED GEOMETRY STYLES
+   ====================================================================== */
+
+.ai-studio-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #94A3B8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ai-studio-tab:hover {
+  color: #F8FAFC;
+}
+
+.ai-studio-tab.active {
+  color: #38BDF8;
+  border-bottom: 2px solid #38BDF8;
+  background: rgba(56, 189, 248, 0.08);
+}
+
+/* Page Border & Margin Framing Styles */
+.spread-page.page-border-hairline {
+  box-shadow: inset 0 0 0 1px #94A3B8;
+}
+
+.spread-page.page-border-double {
+  box-shadow: inset 0 0 0 2px #334155, inset 0 0 0 4px #FBF8F1, inset 0 0 0 5px #94A3B8;
+}
+
+.spread-page.page-border-ticks {
+  border: 1px dashed rgba(100, 116, 139, 0.4);
+}
+
+/* Chapter Opener Layouts */
+.layout-asymmetric-ledger .ch-title {
+  letter-spacing: -0.01em;
+}
+
+.layout-framed-cartouche {
+  animation: fadeIn 0.3s ease;
+}
+
+.layout-technical-dossier {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Container CSS additions */
+.custom-container.intelligence-cable,
+.custom-container.redacted-cable {
+  background: #F4F1EA;
+  border-left: 4px solid #1E293B;
+  border-top: 1px dashed #64748B;
+  border-bottom: 1px dashed #64748B;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 8.5pt;
+  line-height: 1.35;
+  padding: 10px 14px;
+  margin: 14pt 0;
+  color: #0F172A;
+}
+
+.custom-container.poison-label,
+.custom-container.apothecary-label {
+  background: #FFFDF7;
+  border: 2px solid #78350F;
+  outline: 1px solid #D97706;
+  outline-offset: -4px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 9.5pt;
+  line-height: 1.4;
+  padding: 12px 18px;
+  margin: 16pt 10px;
+  color: #451A03;
+  text-align: center;
+}
+
+

@@ -69,6 +69,8 @@ def generate_pdf_html(
     display_font = cs.get("typography", {}).get("display_font", profile["display_font"])
     accent_color = cs.get("typography", {}).get("accent_color", profile["accent_color"])
     paper_tint = cs.get("typography", {}).get("paper_tint", profile["paper_tint"])
+    brass_accent = profile.get("brass_accent", "#B8860B")
+    mono_font = "'JetBrains Mono', 'Courier New', monospace"
     
     running_header_text = cs.get("typography", {}).get("running_header_override") or profile["short_title"].upper()
     rh_style = cs.get("typography", {}).get("running_header_style", "Small Caps Centered")
@@ -96,6 +98,10 @@ def generate_pdf_html(
         custom_matter=cm
     )
     pages = paginated_res.get("pages", [])
+
+    # Build custom container CSS rules
+    custom_containers = cs.get("interior_design", {}).get("custom_containers", {})
+    custom_container_rules = "\n".join([rule_val.get("css", "") if isinstance(rule_val, dict) else str(rule_val) for rule_val in custom_containers.values()])
 
     css = f"""
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&family=Lora:ital,wght@0,400;0,600;1,400&family=Oswald:wght@400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap');
@@ -383,9 +389,40 @@ def generate_pdf_html(
         margin-bottom: 8pt;
         font-size: 10pt;
     }}
+
+    /* Page Border & Margin Framing Styles */
+    .page-border-hairline {{
+        border: 0.5pt solid #666;
+        padding: 6pt;
+        height: 98%;
+        box-sizing: border-box;
+    }}
+
+    .page-border-double {{
+        border: 1pt solid #222;
+        outline: 0.5pt solid #888;
+        outline-offset: 3pt;
+        padding: 6pt;
+        height: 98%;
+        box-sizing: border-box;
+    }}
+
+    .page-border-ticks {{
+        border: 0.5pt dashed #94A3B8;
+        padding: 6pt;
+        height: 98%;
+        box-sizing: border-box;
+    }}
+
+    {custom_container_rules}
     """
 
     body_pages_html = ""
+
+    interior = custom_specs.get("interior_design", {})
+    global_border_style = interior.get("page_border_style", "none")
+    global_opener_layout = interior.get("chapter_opener_layout", "classic_centered")
+    global_folio_style = interior.get("folio_style", "classic_centered")
 
     for page in pages:
         p_num = page.get("page_number", 1)
@@ -394,7 +431,20 @@ def generate_pdf_html(
         suppress_header = page.get("suppress_header", False) or (rh_style == "Hidden")
         suppress_footer = page.get("suppress_footer", False)
         
-        page_cls = "page-verso" if is_verso else "page-recto"
+        page_border = page.get("page_border_style") or global_border_style
+        opener_layout = page.get("chapter_opener_layout") or global_opener_layout
+        folio_style = page.get("folio_style") or global_folio_style
+        
+        border_cls = ""
+        if page_type == "body":
+            if page_border == "hairline_margin_box":
+                border_cls = " page-border-hairline"
+            elif page_border == "double_victorian_frame":
+                border_cls = " page-border-double"
+            elif page_border == "corner_registration_ticks":
+                border_cls = " page-border-ticks"
+
+        page_cls = ("page-verso" if is_verso else "page-recto") + border_cls
         if page_type == "full_plate":
             page_cls += " page-full-plate"
 
@@ -419,9 +469,15 @@ def generate_pdf_html(
         if not suppress_header and h_text.strip():
             header_markup = f'<div class="pdf-running-header" style="{h_align} {h_border}">{h_text}</div>'
 
+        # Folio resolution
+        folio_val = page.get("folio_text") or str(p_num)
+        f_align = "text-align: center;"
+        if folio_style == "outer_brackets":
+            f_align = "text-align: left;" if is_verso else "text-align: right;"
+
         footer_markup = ""
         if not suppress_footer:
-            footer_markup = f'<div class="pdf-running-footer">{p_num}</div>'
+            footer_markup = f'<div class="pdf-running-footer" style="{f_align}">{folio_val}</div>'
 
         # Render page elements
         elem_markup = ""
@@ -432,13 +488,62 @@ def generate_pdf_html(
                 c_num = elem.get("chapter_number") or elem.get("number", "")
                 c_title = elem.get("title", "")
                 ornament = elem.get("ornament_svg") or profile["scene_break_svg"]
-                elem_markup += f"""
-                <div class="chapter-start-header" style="padding-top: {sinkage}in;">
-                    <div class="chapter-num-label">Chapter {c_num}</div>
-                    <h1 class="chapter-title">{c_title}</h1>
-                    <div class="chapter-ornament">{ornament}</div>
-                </div>
-                """
+                
+                if opener_layout == "asymmetric_ledger":
+                    elem_markup += f"""
+                    <div class="chapter-start-header layout-asymmetric-ledger" style="padding-top: {sinkage}in; margin-bottom: 24pt;">
+                        <table style="width:100%; border-bottom: 2pt solid {accent_color}; margin-bottom: 4pt;">
+                            <tr>
+                                <td style="width:60pt; font-family:{mono_font}; font-size:36pt; font-weight:bold; color:{brass_accent}; vertical-align:bottom;">{c_num}</td>
+                                <td style="vertical-align:bottom; padding-left:10pt;">
+                                    <div style="font-family:{mono_font}; font-size:8pt; letter-spacing:0.18em; text-transform:uppercase; color:#64748B;">ARCHIVE RECORD // CHAPTER {c_num}</div>
+                                    <h1 class="chapter-title" style="margin:0; text-align:left; font-size:17pt;">{c_title}</h1>
+                                </td>
+                            </tr>
+                        </table>
+                        <div style="height:1pt; background:{accent_color}; margin-bottom:12pt;"></div>
+                    </div>
+                    """
+                elif opener_layout == "framed_cartouche":
+                    elem_markup += f"""
+                    <div class="chapter-start-header layout-framed-cartouche" style="padding-top: {sinkage * 0.7}in; margin-bottom: 18pt;">
+                        <div style="border: 1.5pt solid {accent_color}; outline: 0.5pt solid {brass_accent}; outline-offset: 3pt; padding: 12pt 16pt; text-align: center; background: #FCFAF2;">
+                            <div class="chapter-num-label" style="letter-spacing: 0.22em; font-weight:700;">— CHAPTER {c_num} —</div>
+                            <h1 class="chapter-title" style="margin: 6pt 0; font-size:16pt;">{c_title}</h1>
+                            <div class="chapter-ornament" style="margin-top: 4pt;">{ornament}</div>
+                        </div>
+                    </div>
+                    """
+                elif opener_layout == "botanical_sinkage":
+                    elem_markup += f"""
+                    <div class="chapter-start-header layout-botanical-sinkage" style="padding-top: 2.2in; text-align: center;">
+                        <div style="border-top: 1pt solid {brass_accent}; border-bottom: 1pt solid {brass_accent}; padding: 3pt 16pt; display: inline-block; margin-bottom: 8pt;">
+                            <div class="chapter-num-label" style="letter-spacing:0.16em;">CHAPTER {c_num}</div>
+                        </div>
+                        <h1 class="chapter-title" style="margin:6pt 0 10pt 0;">{c_title}</h1>
+                        <div class="chapter-ornament">{ornament}</div>
+                    </div>
+                    """
+                elif opener_layout == "technical_dossier":
+                    elem_markup += f"""
+                    <div class="chapter-start-header layout-technical-dossier" style="padding-top: {sinkage * 0.75}in; margin-bottom: 18pt;">
+                        <div style="background: {accent_color}; color: #FFF; font-family: {mono_font}; font-size: 7.5pt; padding: 3pt 8pt; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700;">
+                            SECTION // ARCHIVE LOG {c_num} • COURT OF RESIDUAL CLAIMS
+                        </div>
+                        <div style="border: 1px solid #94A3B8; border-top: none; padding: 10pt 12pt; background: #F8FAFC;">
+                            <h1 class="chapter-title" style="text-align: left; margin: 0; font-size: 16pt; font-family: {display_font};">{c_title}</h1>
+                            <div style="font-family: {mono_font}; font-size: 7pt; color: #475569; margin-top: 4pt;">RECORD CLASSIFICATION: LEVEL-IV FORENSIC • LOG #{c_num}</div>
+                        </div>
+                    </div>
+                    """
+                else:
+                    elem_markup += f"""
+                    <div class="chapter-start-header layout-classic-centered" style="padding-top: {sinkage}in;">
+                        <div class="chapter-num-label">Chapter {c_num}</div>
+                        <h1 class="chapter-title">{c_title}</h1>
+                        <div class="chapter-ornament">{ornament}</div>
+                    </div>
+                    """
             elif etype == "paragraph":
                 btype = elem.get("block_type", "body")
                 is_first = elem.get("is_first_after_break") or elem.get("is_first", False)
