@@ -202,18 +202,19 @@ def parse_markdown_manuscript(content: str) -> Dict[str, Any]:
         if not current_chapter and stripped.startswith("# ") and not stripped.startswith("# Chapter") and book_title == "Untitled Manuscript":
             book_title = stripped[2:].strip()
             continue
+        elif not current_chapter and (stripped.startswith("*By ") or stripped.startswith("*Author:")):
+            book_author = stripped.strip("*").replace("By ", "").strip()
+            continue
         elif not current_chapter and (
             stripped.startswith("*Being ") or
             stripped.startswith("*Subtitle:") or
             stripped.startswith("*Telemetry") or
             stripped.startswith("*The Audio") or
             stripped.startswith("*Field Studies") or
-            stripped.startswith("*Neutron")
+            stripped.startswith("*Neutron") or
+            (stripped.startswith("*") and stripped.endswith("*") and not book_subtitle)
         ):
             book_subtitle = stripped.strip("*").strip()
-            continue
-        elif not current_chapter and (stripped.startswith("*By ") or stripped.startswith("*Author:")):
-            book_author = stripped.strip("*").replace("By ", "").strip()
             continue
 
         # Check for custom container opening/closing :::tag
@@ -495,6 +496,9 @@ def parse_docx_manuscript(file_path: str) -> Dict[str, Any]:
 
         # Normal body paragraph or auto-detected block
         if current_chapter is None:
+            # Before the first chapter heading: if it's metadata/front-matter, treat as document metadata
+            if len(text) < 180 and any(k in text.lower() for k in ["edition", "archive", "court of", "published", "copyright", "press"]):
+                continue
             ch_counter = 1
             current_chapter = {"chapter_index": 1, "chapter_number": "1", "title": "Chapter 1", "elements": []}
             chapters.append(current_chapter)

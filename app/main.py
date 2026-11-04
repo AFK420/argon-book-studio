@@ -86,10 +86,49 @@ def invalidate_pdf_cache(book_id: str):
             pass
 
 
+REGISTRY_FILE = os.path.join(UPLOADS_DIR, "manuscript_registry.json")
+
+
+def load_manuscript_registry() -> Dict[str, str]:
+    if os.path.exists(REGISTRY_FILE):
+        try:
+            with open(REGISTRY_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+
+def save_manuscript_registry(registry: Dict[str, str]):
+    try:
+        with open(REGISTRY_FILE, "w", encoding="utf-8") as f:
+            json.dump(registry, f, indent=2)
+    except Exception:
+        pass
+
+
 def load_book_manuscript(book_id: str) -> Dict[str, Any]:
     if book_id in STATE["custom_manuscripts"]:
         return STATE["custom_manuscripts"][book_id]
         
+    # Check disk registry for any previously uploaded custom manuscript
+    registry = load_manuscript_registry()
+    if book_id in registry:
+        uploaded_path = registry[book_id]
+        if os.path.exists(uploaded_path):
+            try:
+                ext = os.path.splitext(uploaded_path)[1].lower()
+                if ext == ".docx":
+                    parsed = parse_docx_manuscript(uploaded_path)
+                else:
+                    with open(uploaded_path, "r", encoding="utf-8", errors="replace") as f:
+                        content = f.read()
+                    parsed = parse_markdown_manuscript(content)
+                STATE["custom_manuscripts"][book_id] = parsed
+                return parsed
+            except Exception as e:
+                logger.warning(f"Could not load registered manuscript for {book_id}: {e}")
+
     sample_files = {
         "book01": "book01_cormac_vane.md",
         "book02": "book02_fourteen_hour_barometer.md",
@@ -990,6 +1029,11 @@ async def upload_manuscript(
     STATE["custom_manuscripts"][book_id] = parsed
     STATE["active_book_id"] = book_id
     invalidate_pdf_cache(book_id)
+    
+    # Persist uploaded manuscript path to registry so it survives restarts
+    reg = load_manuscript_registry()
+    reg[book_id] = upload_path
+    save_manuscript_registry(reg)
     
     manifest = manifest_manager.get_book_manifest(book_id)
     settings = settings_manager.get_settings(book_id)

@@ -28,7 +28,10 @@ def generate_front_matter_data(
     
     title = cm.get("book_title") or meta.get("title") or profile["title"]
     subtitle = cm.get("book_subtitle") or meta.get("subtitle") or profile["subtitle"]
-    author = cm.get("author_name") or meta.get("author") or profile["author"]
+    meta_author = meta.get("author")
+    if meta_author in ["Argon Studio Author", "Untitled Author", None, ""]:
+        meta_author = None
+    author = cm.get("author_name") or meta_author or profile["author"]
     
     imprint = cm.get("publisher_imprint", "THE ARGON BOOK STUDIO • PRESS")
     city = cm.get("city", "London & San Francisco")

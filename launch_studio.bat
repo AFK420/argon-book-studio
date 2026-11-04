@@ -24,7 +24,7 @@ for /f "tokens=*" %%v in ('python --version') do set "PY_VER=%%v"
 echo [*] Detected: !PY_VER!
 
 echo [*] Checking publishing engine dependencies...
-python -c "import fastapi, uvicorn, PIL, docx, ebooklib" >nul 2>&1
+python -c "import fastapi, uvicorn, PIL, docx, ebooklib, httpx" >nul 2>&1
 if %ERRORLEVEL% neq 0 (
     echo [*] Installing missing dependencies from requirements.txt...
     python -m pip install -r requirements.txt
@@ -36,6 +36,16 @@ if %ERRORLEVEL% neq 0 (
     echo [*] Dependencies successfully installed!
 ) else (
     echo [*] All core publishing libraries verified.
+)
+
+echo [*] Checking Ollama Local AI Server...
+curl.exe -s http://127.0.0.1:11434/api/tags >nul 2>&1
+if %ERRORLEVEL% neq 0 (
+    echo [*] Starting Ollama local AI server in background...
+    start "" /B "ollama" serve
+    timeout /t 2 /nobreak >nul 2>&1
+) else (
+    echo [*] Ollama local AI server is active.
 )
 
 netstat -ano | findstr /R /C:":8000 .*LISTENING" >nul 2>&1
@@ -61,5 +71,10 @@ python run.py
 
 if %ERRORLEVEL% neq 0 (
     echo.
-    echo [INFO] Server stopped.
+    echo [ERROR] Server exited with code %ERRORLEVEL%.
+) else (
+    echo.
+    echo [INFO] Server stopped cleanly.
 )
+echo.
+pause

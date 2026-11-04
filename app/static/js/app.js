@@ -620,7 +620,6 @@ function renderStep3() {
   grid.innerHTML = filtered.map((asset, idx) => {
     const ready = isReady(asset);
     const pinCount = (asset.vector_callouts || []).length;
-    const cleanPrompt = (asset.prompt || "").replace(/"/g, '&quot;');
 
     return `
       <div class="queue-card" 
@@ -645,7 +644,7 @@ function renderStep3() {
 
         <div class="queue-prompt-box">
           <div class="queue-prompt-text">${asset.prompt || 'No prompt specified.'}</div>
-          <button class="btn-copy-prompt" onclick="copyPromptText('${cleanPrompt}', this)">
+          <button class="btn-copy-prompt" onclick="copyPromptFromBox(this)">
             📋 Copy Prompt
           </button>
         </div>
@@ -726,9 +725,62 @@ async function handleStep3BatchUpload(event) {
   }
 }
 
-function copyPromptText(text, btn) {
-  if (!text) return;
-  navigator.clipboard.writeText(text).then(() => {
+async function copyTextToClipboard(text, btn) {
+  if (!text) {
+    showToast("No prompt to copy", "warning");
+    return false;
+  }
+
+  let copied = false;
+
+  // 1. Try modern navigator.clipboard API if available and permitted
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    try {
+      await navigator.clipboard.writeText(text);
+      copied = true;
+    } catch (e) {
+      console.warn("navigator.clipboard.writeText blocked or failed, using textarea fallback:", e);
+    }
+  }
+
+  // 2. Robust fallback using a temporary hidden textarea + execCommand('copy')
+  if (!copied) {
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.top = "0";
+      textarea.style.left = "0";
+      textarea.style.width = "2em";
+      textarea.style.height = "2em";
+      textarea.style.padding = "0";
+      textarea.style.border = "none";
+      textarea.style.outline = "none";
+      textarea.style.boxShadow = "none";
+      textarea.style.background = "transparent";
+      textarea.setAttribute("readonly", "");
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+      copied = document.execCommand("copy");
+      document.body.removeChild(textarea);
+    } catch (err) {
+      console.warn("document.execCommand copy fallback failed:", err);
+    }
+  }
+
+  // 3. Last-resort fallback prompt
+  if (!copied) {
+    try {
+      window.prompt("Press Ctrl+C, Enter to copy prompt:", text);
+      copied = true;
+    } catch (e) {
+      copied = false;
+    }
+  }
+
+  if (copied) {
     showToast("✓ Copied prompt to clipboard!", "success");
     if (btn) {
       const orig = btn.innerHTML;
@@ -737,11 +789,65 @@ function copyPromptText(text, btn) {
       setTimeout(() => {
         btn.innerHTML = orig;
         btn.style.color = "";
-      }, 1500);
+      }, 1600);
     }
-  }).catch(() => {
+    return true;
+  } else {
     showToast("Failed to copy to clipboard", "error");
-  });
+    return false;
+  }
+}
+
+function copyPromptText(text, btn) {
+  return copyTextToClipboard(text, btn);
+}
+
+function copyPromptFromBox(btn) {
+  if (!btn) return;
+  const box = btn.closest(".queue-prompt-box");
+  const textEl = box ? box.querySelector(".queue-prompt-text") : null;
+  const text = textEl ? (textEl.innerText || textEl.textContent || "").trim() : "";
+  copyTextToClipboard(text, btn);
+}
+
+function copyAnchorFromCard(btn) {
+  if (!btn) return;
+  const card = btn.closest(".char-dossier-card");
+  const codeEl = card ? card.querySelector(".char-anchor-code") : null;
+  const text = codeEl ? (codeEl.innerText || codeEl.textContent || "").trim() : "";
+  copyTextToClipboard(text, btn);
+}
+
+function copyTurnaroundFromCard(btn, charIdx) {
+  let text = "";
+  if (state.lastAIBlueprint && state.lastAIBlueprint.character_dossiers && state.lastAIBlueprint.character_dossiers[charIdx]) {
+    text = state.lastAIBlueprint.character_dossiers[charIdx].turnaround_sheet_prompt || "";
+  }
+  if (!text && btn) {
+    const card = btn.closest(".char-dossier-card");
+    const codeEl = card ? card.querySelector(".char-anchor-code") : null;
+    const anchor = codeEl ? (codeEl.innerText || codeEl.textContent || "").trim() : "";
+    text = `Master 5-angle turnaround model sheet of ${anchor}, front view, 3/4 left, side profile, 3/4 right, back view. Neutral lighting, clean neutral studio gray background, ultra-consistent facial architecture, full body character sheet, line art drawing style.`;
+  }
+  copyTextToClipboard(text, btn);
+}
+
+function copyPlatePromptFromCard(btn, plateIdx) {
+  let text = "";
+  if (state.lastAIBlueprint && state.lastAIBlueprint.assets && state.lastAIBlueprint.assets[plateIdx]) {
+    text = state.lastAIBlueprint.assets[plateIdx].prompt || "";
+  }
+  if (!text && btn) {
+    const card = btn.closest(".ai-plate-card");
+    const promptEl = card ? card.querySelector(".ai-plate-prompt") : null;
+    if (promptEl) {
+      text = (promptEl.innerText || promptEl.textContent || "").trim();
+      if (text.startsWith('"') && text.endsWith('"')) {
+        text = text.substring(1, text.length - 1);
+      }
+    }
+  }
+  copyTextToClipboard(text, btn);
 }
 
 // --- STEP 4: SPREAD REVIEW & POLISH ---
@@ -3199,18 +3305,19 @@ async function uploadImageFile(assetId, file) {
 }
 
 function copyPrompt(assetId, btn) {
-  const asset = state.manifest.assets.find(a => a.id === assetId);
-  if (!asset || !asset.prompt) return;
-
-  navigator.clipboard.writeText(asset.prompt).then(() => {
-    const originalText = btn.innerHTML;
-    btn.innerHTML = "✓ Copied!";
-    btn.style.color = "#10B981";
-    setTimeout(() => {
-      btn.innerHTML = originalText;
-      btn.style.color = "var(--accent-cyan)";
-    }, 2000);
-  });
+  let text = "";
+  if (state.manifest && Array.isArray(state.manifest.assets)) {
+    const asset = state.manifest.assets.find(a => a.id === assetId);
+    if (asset && asset.prompt) text = asset.prompt;
+  }
+  if (!text && btn) {
+    const box = btn.closest(".asset-prompt-box");
+    if (box) {
+      const span = box.querySelector("span:last-child");
+      if (span) text = (span.innerText || span.textContent || "").trim();
+    }
+  }
+  copyTextToClipboard(text, btn);
 }
 
 function openAddSlotModal() {
@@ -3562,7 +3669,7 @@ function renderAIReview(blueprint) {
   `;
 
   // 3. Character Consistency Bible Pane
-  const characters = bp.character_dossiers || [];
+  const characters = blueprint.character_dossiers || [];
   const charCountEl = document.getElementById("ai-characters-count");
   if (charCountEl) charCountEl.textContent = characters.length;
 
@@ -3573,9 +3680,7 @@ function renderAIReview(blueprint) {
         <strong style="color:#38BDF8;">Locked Character Identity System:</strong> To keep character faces, hair, and clothing 100% identical across all illustrations, copy the <em>Locked Prompt Anchor</em> into your image prompts, or generate the <em>Master Turnaround Sheet</em> first to use as a Midjourney <code style="color:#FBBF24;">--cref</code> character reference.
       </div>
       <div class="ai-characters-grid">
-        ${characters.map((c) => {
-          const cleanAnchor = (c.locked_prompt_anchor || "").replace(/'/g, "\\'").replace(/"/g, '&quot;');
-          const cleanTurnaround = (c.turnaround_sheet_prompt || "").replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        ${characters.map((c, idx) => {
           return `
             <div class="char-dossier-card">
               <div class="char-dossier-header">
@@ -3601,10 +3706,10 @@ function renderAIReview(blueprint) {
                 <div class="char-anchor-title">🔒 Locked Prompt Anchor (Paste into every scene prompt):</div>
                 <div class="char-anchor-code">${c.locked_prompt_anchor}</div>
                 <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
-                  <button class="btn-copy-anchor" onclick="copyPromptText('${cleanAnchor}', this)">
+                  <button class="btn-copy-anchor" onclick="copyAnchorFromCard(this)">
                     📋 Copy Locked Anchor
                   </button>
-                  <button class="btn-copy-turnaround" onclick="copyPromptText('${cleanTurnaround}', this)">
+                  <button class="btn-copy-turnaround" onclick="copyTurnaroundFromCard(this, ${idx})">
                     🖼️ Copy Turnaround Sheet Prompt
                   </button>
                 </div>
@@ -3622,7 +3727,6 @@ function renderAIReview(blueprint) {
     platesPane.innerHTML = `
       <div class="ai-plate-grid">
         ${assets.map((a, i) => {
-          const cleanPrompt = (a.prompt || "").replace(/'/g, "\\'").replace(/"/g, '&quot;');
           return `
             <div class="ai-plate-card">
               <div class="ai-plate-header">
@@ -3637,7 +3741,7 @@ function renderAIReview(blueprint) {
               <div class="ai-plate-prompt">"${a.prompt}"</div>
               <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; flex-wrap:wrap; gap:6px;">
                 <span class="ai-plate-anchor">📍 Anchor: ${a.anchor}</span>
-                <button class="btn-copy-prompt" style="padding:3px 8px; font-size:0.75rem;" onclick="copyPromptText('${cleanPrompt}', this)">
+                <button class="btn-copy-prompt" style="padding:3px 8px; font-size:0.75rem;" onclick="copyPlatePromptFromCard(this, ${i})">
                   📋 Copy Prompt
                 </button>
               </div>
