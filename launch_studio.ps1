@@ -28,11 +28,8 @@ if (-not $ollamaCheck) {
 # Check port 8000
 $portInUse = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue
 if ($portInUse) {
-    Write-Host "[!] Port 8000 is occupied. Switching to port 8080." -ForegroundColor Yellow
-    $env:PORT = "8080"
-} else {
-    $env:PORT = "8000"
+    Write-Host "[!] Port 8000 is occupied. Launcher will automatically bind to the next available port." -ForegroundColor Yellow
 }
 
-Write-Host "[*] Launching Argon Book Studio on http://127.0.0.1:$($env:PORT) ..." -ForegroundColor Cyan
+Write-Host "[*] Launching Argon Book Studio..." -ForegroundColor Cyan
 python run.py

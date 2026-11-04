@@ -12,7 +12,34 @@ import webbrowser
 import subprocess
 import urllib.request
 import shutil
+import socket
 import uvicorn
+
+def is_port_free(port: int, host: str = "127.0.0.1") -> bool:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind((host, port))
+            return True
+    except OSError:
+        return False
+
+def find_available_port(preferred_port: int = 8000, host: str = "127.0.0.1") -> int:
+    if is_port_free(preferred_port, host):
+        return preferred_port
+    
+    candidate_ports = [8000, 8080, 8081, 8082, 8083, 8084, 8085, 8088, 8090, 8888]
+    for p in candidate_ports:
+        if is_port_free(p, host):
+            return p
+            
+    for p in range(8001, 8150):
+        if is_port_free(p, host):
+            return p
+            
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((host, 0))
+        return s.getsockname()[1]
 
 def is_ollama_running(url: str = "http://127.0.0.1:11434") -> bool:
     try:
@@ -60,8 +87,12 @@ def open_browser(url: str):
         pass
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
+    requested_port = int(os.environ.get("PORT", 8000))
     host = os.environ.get("HOST", "127.0.0.1")
+    port = find_available_port(preferred_port=requested_port, host=host)
+    if port != requested_port:
+        print(f"[!] Notice: Port {requested_port} is already in use.")
+        print(f"[*] Automatically selected next available port: {port}")
     url = f"http://{host}:{port}"
     
     print("=" * 74)

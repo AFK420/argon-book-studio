@@ -50,15 +50,13 @@ if %ERRORLEVEL% neq 0 (
 
 netstat -ano | findstr /R /C:":8000 .*LISTENING" >nul 2>&1
 if %ERRORLEVEL% equ 0 (
-    echo [!] Notice: Port 8000 is occupied. Using port 8080.
-    set "PORT=8080"
-) else (
-    set "PORT=8000"
+    echo [!] Notice: Port 8000 is currently occupied.
+    echo [*] Launcher will automatically bind to the next available port.
 )
 
 echo.
 echo ==============================================================================
-echo   STARTING PUBLISHING STUDIO SERVER (http://127.0.0.1:!PORT!)
+echo   STARTING PUBLISHING STUDIO SERVER
 echo   - 6x9 Mirrored Gutter Margins Active
 echo   - Live Geometry and Margin Inspector Ready
 echo   - Opening your default browser automatically...
