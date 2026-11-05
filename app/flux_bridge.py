@@ -59,7 +59,7 @@ DEFAULT_FLUX_CONFIG = {
     "sampler_name": "euler",
     "scheduler": "simple",
     "model_name": "flux1-schnell-fp8-e4m3fn.safetensors",
-    "timeout_sec": 120.0
+    "timeout_sec": 360.0
 }
 
 
@@ -254,17 +254,41 @@ class FluxBridgeManager:
             filename = None
             subfolder = ""
             while time.time() - poll_start < timeout:
-                await httpx.AsyncClient().get("http://localhost:8000/api/status") if False else None
-                h_res = await client.get(f"{url}/history/{prompt_id}")
-                if h_res.status_code == 200:
-                    h_data = h_res.json()
-                    if prompt_id in h_data:
-                        outputs = h_data[prompt_id].get("outputs", {})
-                        if "9" in outputs and "images" in outputs["9"]:
-                            img_info = outputs["9"]["images"][0]
-                            filename = img_info.get("filename")
-                            subfolder = img_info.get("subfolder", "")
-                            break
+                try:
+                    h_res = await client.get(f"{url}/history/{prompt_id}")
+                    if h_res.status_code == 200:
+                        h_data = h_res.json()
+                        if prompt_id in h_data:
+                            item = h_data[prompt_id]
+                            status = item.get("status", {})
+                            if status.get("status_str") == "error":
+                                logger.error(f"ComfyUI prompt execution failed: {status}")
+                                return None
+
+                            outputs = item.get("outputs", {})
+                            for node_id, node_out in outputs.items():
+                                if isinstance(node_out, dict) and "images" in node_out and len(node_out["images"]) > 0:
+                                    img_info = node_out["images"][0]
+                                    filename = img_info.get("filename")
+                                    subfolder = img_info.get("subfolder", "")
+                                    break
+                            if filename:
+                                break
+                except Exception:
+                    pass
+
+                # If still actively running, ensure we don't abort early
+                if time.time() - poll_start >= timeout - 15:
+                    try:
+                        q_res = await client.get(f"{url}/queue")
+                        if q_res.status_code == 200:
+                            q_data = q_res.json()
+                            running_ids = [q[1] for q in q_data.get("queue_running", []) if len(q) > 1]
+                            if prompt_id in running_ids:
+                                timeout += 60.0
+                    except Exception:
+                        pass
+
                 time.sleep(1.0)
                 
             if filename:
