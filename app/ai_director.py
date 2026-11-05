@@ -1346,7 +1346,7 @@ class AIDirectorManager:
             "   - 'signature_clothing': exact fabrics, garments, collar, coat, boots\n"
             "   - 'distinguishing_marks_or_tools': scars, spectacles, instruments, watches, rings\n"
             "2. 'setting_architecture': string describing exact materials, lighting sources, period era\n"
-            "3. 'art_medium_lock': string specifying exact print medium prefix for Flux.1"
+            "3. 'art_medium_lock': string specifying exact historical print style (e.g. '19th-century Victorian fine-press pen-and-ink engraving with intricate cross-hatching and stark chiaroscuro'). Never mention 'Flux' or 'paper plate'."
         )
 
         system_prompt = (
@@ -1378,10 +1378,12 @@ class AIDirectorManager:
                     if isinstance(parsed, dict) and "characters" in parsed:
                         chars = parsed.get("characters", {})
                         if isinstance(chars, dict) and len(chars) > 0:
+                            med = parsed.get("art_medium_lock") or "19th-century Victorian fine-press pen-and-ink engraving with intricate cross-hatching"
+                            med = re.sub(r'flux(\.1)?(_print_medium_prefix)?', 'Victorian fine-press pen-and-ink engraving', med, flags=re.IGNORECASE).strip()
                             return {
                                 "characters": chars,
                                 "setting_architecture": parsed.get("setting_architecture") or "1890s sub-polar basalt cliff port, riveted iron diving bells, gasoliers, frost-rimmed quartz",
-                                "art_medium_lock": parsed.get("art_medium_lock") or "19th-century Victorian cyanotype and copperplate intaglio engraving on heavy cotton rag paper"
+                                "art_medium_lock": med
                             }
         except Exception as e:
             logger.info(f"Ollama visual bible extraction unavailable ({e}), using high-fidelity text heuristics.")
@@ -1401,7 +1403,7 @@ class AIDirectorManager:
         return {
             "characters": chars_dict,
             "setting_architecture": "1890s sub-polar basalt cliff port, riveted iron diving bells, gasoliers, frost-rimmed quartz, deep chiaroscuro harbor mist",
-            "art_medium_lock": "19th-century Victorian cyanotype and copperplate intaglio engraving on heavy cotton rag paper with rich Prussian blue and bone-black ink wash"
+            "art_medium_lock": "19th-century Victorian fine-press pen-and-ink engraving with intricate cross-hatching and stark chiaroscuro"
         }
 
     def generate_flux_prompt_for_slot(
@@ -1439,13 +1441,13 @@ class AIDirectorManager:
         system_prompt = (
             "You are a Master Print Illustrator and Technical Art Director engineering prompts for the FLUX.1 T5-XXL diffusion model.\n"
             "FLUX.1 does NOT use short comma-separated tags. It requires a rich, hyper-specific 120-to-160-word natural-language paragraph organized in 5 strict visual layers:\n\n"
-            "MEDIUM & PRINT TECHNIQUE: Start with the exact historical print medium, line-work technique, ink texture, and tonal palette from the Visual Bible.\n\n"
-            "CAMERA & COMPOSITION: Specify exact framing (e.g., extreme close-up macro study, isometric architectural cross-section, low-angle dramatic full-page plate, or isolated centered vignette on pure white background for tailpieces).\n\n"
+            "MEDIUM & PRINT TECHNIQUE: Start with 'Masterful graphic pen-and-ink line art' and exact historical print style, ultra-dense steel-nib cross-hatching, and stark chiaroscuro. NEVER mention 'Flux', 'print medium', 'wove paper', or 'folio plate'.\n\n"
+            "CAMERA & COMPOSITION: Specify exact framing (e.g., cinematic eye-level narrative establishing shot, isometric architectural cross-section, or isolated centered vignette on pure white background for tailpieces). NEVER use extreme low angles from the floor.\n\n"
             "FOREGROUND & CHARACTER LOCK: If characters appear, describe their exact appearance, age, hair, clothing, and posture in complete, fluent grammatical sentences. "
-            "CRITICAL DIRECTIVE: If a character is deceased or an autopsy subject, describe them resting motionless and supine upon the mortuary slab with eyes peacefully closed in death and serene post-mortem composure under a linen shroud. Never describe a deceased cadaver gripping objects or smiling/grimacing. If living, describe their clothing and tools held with natural posture.\n\n"
+            "CRITICAL DIRECTIVE: If a character is deceased or an autopsy subject, describe them resting motionless and flat on their back upon an elevated waist-high zinc dissecting table, with eyes peacefully closed in death and serene post-mortem stillness under a linen shroud. Never describe a deceased cadaver gripping objects, standing, smiling, or grimacing. If living, describe their clothing and tools held with natural posture.\n\n"
             "MIDGROUND & LIGHTING PHYSICS: Describe the primary light source (gaslight, brass lantern, carbide lamp) and how light reflects or casts chiaroscuro shadows across wet stone, iron, or glass. Do not specify smoke or condensing steam as it causes unnatural plumes.\n\n"
             "BACKGROUND & NEGATIVE LOCK: Describe the surrounding architecture and end EVERY prompt with: "
-            "'Rendered with museum-grade intaglio cross-hatching and crisp etching lines. Strictly zero text, zero letters, zero numbers, zero watermarks, or typography anywhere inside the image.'\n\n"
+            "'Edge-to-edge full frame illustration, absolutely zero text, zero letters, zero numbers, zero signatures, zero watermarks, zero borders, zero margins, no typography.'\n\n"
             "Return a valid JSON object with:\n"
             "\"title\": Concise archival plate title (e.g. 'Plate II — The Ghost in Drydock Three')\n"
             "\"caption\": In-world museum/court caption for below the plate\n"
@@ -1486,8 +1488,9 @@ class AIDirectorManager:
                         parsed = json.loads(raw_str)
                         if isinstance(parsed, dict) and "flux_prompt" in parsed:
                             fp = parsed["flux_prompt"].strip()
+                            fp = re.sub(r'flux(\.1)?(_print_medium_prefix)?', 'Victorian fine-press pen-and-ink engraving', fp, flags=re.IGNORECASE)
                             # Ensure mandatory negative lock ending is preserved
-                            neg_lock = "Rendered with museum-grade intaglio cross-hatching and crisp etching lines. Strictly zero text, zero letters, zero numbers, zero watermarks, or typography anywhere inside the image."
+                            neg_lock = "Edge-to-edge full frame illustration. Strictly zero text, zero letters, zero numbers, zero watermarks, zero signatures, zero borders, zero margins, no typography."
                             if not fp.endswith(neg_lock):
                                 fp = fp.rstrip(".") + ". " + neg_lock
                             return {
@@ -1515,7 +1518,8 @@ class AIDirectorManager:
             matched_char_info = chars[matched_char_name]
 
         # 1. Medium & Print Technique
-        layer_1 = f"A museum-grade {medium_lock}, featuring ultra-dense steel-nib intaglio cross-hatching, velvety Prussian blue and carbon black shadow washes, and hand-pulled copperplate ink texture across heavy wove paper."
+        clean_medium = re.sub(r'flux(\.1)?(_print_medium_prefix)?', 'Victorian fine-press pen-and-ink engraving', medium_lock, flags=re.IGNORECASE).strip()
+        layer_1 = f"Masterful graphic pen-and-ink line art, {clean_medium}, featuring ultra-dense steel-nib cross-hatching and fine stippling, stark chiaroscuro shadows, pure black and white monochrome on clean background."
 
         # 2. Camera & Composition
         if aspect_ratio == "1:1":
@@ -1523,7 +1527,7 @@ class AIDirectorManager:
         elif "Diagram" in placement or aspect_ratio == "16:9":
             layer_2 = "Framed as an isometric forensic technical diagram and orthographic cross-section, revealing internal mechanical workings with architectural drafting precision."
         else:
-            layer_2 = "Framed as a dramatic low-angle full-page folio plate with strong vertical convergence, deep chiaroscuro depth of field, and classical golden-ratio staging."
+            layer_2 = "Framed as a cinematic eye-level narrative composition with classical golden-ratio staging, deep architectural depth of field, and full bleed artwork extending cleanly across the frame."
 
         # 3. Foreground & Character Lock
         if matched_char_info and "Diagram" not in placement:
@@ -1534,13 +1538,13 @@ class AIDirectorManager:
             marks = matched_char_info.get("distinguishing_marks_or_tools", "holding a calibrated brass caliper and stamped lead warrant")
 
             combined_ctx = f"{anchor_paragraph} {chapter_text} {wardrobe} {marks}".lower()
-            is_cadaver = any(w in combined_ctx for w in ["lying on zinc", "autopsy", "corpse", "cadaver", "dead", "ceased respiration", "lifeless", "post-mortem", "shroud"])
+            is_cadaver = any(w in combined_ctx for w in ["lying on zinc", "autopsy", "corpse", "cadaver", "dead", "deceased", "ceased respiration", "lifeless", "post-mortem", "shroud", "mortuary", "inquest", "slab", "between vespera"])
 
             if is_cadaver:
                 layer_3 = (
-                    f"In the foreground, resting motionless and supine upon a cold zinc mortuary table, lies the lifeless body of a {age}-year-old man. "
-                    f"His eyes are peacefully closed in death, his countenance somber in serene post-mortem repose, with {hair}. "
-                    f"He is draped in a simple linen mortuary shroud, with hands resting at his sides."
+                    f"In the center foreground, resting flat and motionless on his back upon an elevated waist-high zinc dissecting table, "
+                    f"lies the lifeless body of a deceased {age}-year-old man, eyes peacefully closed in death, countenance serene in post-mortem stillness, "
+                    f"draped in a simple white linen mortuary shroud up to his chest, with hands resting motionless at his sides."
                 )
             else:
                 clean_wardrobe = wardrobe
@@ -1550,21 +1554,22 @@ class AIDirectorManager:
                     clean_wardrobe = clean_wardrobe[8:]
 
                 layer_3 = f"In the foreground stands a {age}-year-old figure with {face}, {hair}, dressed in a {clean_wardrobe}. "
-                if any(w in marks.lower() for w in ["holding", "caliper", "lens", "glass", "instrument", "cane", "pen", "tool"]):
+                holding_tools = [w for w in ["caliper", "lens", "glass", "instrument", "cane", "pen", "tool", "lantern", "warrant"] if w in marks.lower()]
+                if holding_tools and not any(bad in marks.lower() for bad in ["contusion", "scar", "wound", "bruise", "ice", "frost"]):
                     layer_3 += f"They stand in a calm, analytical posture, holding {marks}."
                 else:
-                    layer_3 += "They stand with dignified composure."
+                    layer_3 += "They stand with dignified, watchful composure."
         else:
             layer_3 = "In the foreground rests a complex Victorian diving regulator and mercury manometer, constructed of knurled cast brass, vulcanized black rubber gaskets, and frost-rimmed quartz sight-tubes."
 
         # 4. Midground & Lighting Physics
-        layer_4 = "In the midground, flickering gasoliers and a hand-held brass lantern cast stark directional raking light, creating violent chiaroscuro specular highlights and deep dramatic shadows across cold wet flagstones."
+        layer_4 = "In the midground, flickering gasoliers and a hand-held brass lantern cast warm directional raking light, creating dramatic chiaroscuro highlights and deep shadows across cold flagstones and architectural arches."
 
         # 5. Background & Negative Lock
+        clean_setting = re.sub(r'flux(\.1)?', '', setting_arch, flags=re.IGNORECASE).strip()
         layer_5 = (
-            f"The background opens into {setting_arch}, with riveted bulkhead ironwork disappearing into cavernous fog. "
-            "Rendered with museum-grade intaglio cross-hatching and crisp etching lines. "
-            "Strictly zero text, zero letters, zero numbers, zero watermarks, or typography anywhere inside the image."
+            f"The background reveals {clean_setting}. "
+            "Edge-to-edge full frame illustration. Strictly zero text, zero letters, zero numbers, zero watermarks, zero signatures, zero borders, zero margins, no typography."
         )
 
         full_flux_prompt = f"{layer_1} {layer_2} {layer_3} {layer_4} {layer_5}"
