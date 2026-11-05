@@ -1441,8 +1441,9 @@ class AIDirectorManager:
             "FLUX.1 does NOT use short comma-separated tags. It requires a rich, hyper-specific 120-to-160-word natural-language paragraph organized in 5 strict visual layers:\n\n"
             "MEDIUM & PRINT TECHNIQUE: Start with the exact historical print medium, line-work technique, ink texture, and tonal palette from the Visual Bible.\n\n"
             "CAMERA & COMPOSITION: Specify exact framing (e.g., extreme close-up macro study, isometric architectural cross-section, low-angle dramatic full-page plate, or isolated centered vignette on pure white background for tailpieces).\n\n"
-            "FOREGROUND & CHARACTER LOCK: If characters appear, insert their EXACT physical description and clothing from the Visual Bible (never use character names alone—describe their exact face, age, hair, coat, and posture). Describe the exact mechanical or forensic object in their hands down to the material (brass, vulcanized rubber, bone, quartz).\n\n"
-            "MIDGROUND & LIGHTING PHYSICS: Describe the primary light source (gaslight, 365nm UV wand, bioluminescent hyphae, carbide lantern) and how light reflects or casts chiaroscuro shadows across wet stone, iron, or glass.\n\n"
+            "FOREGROUND & CHARACTER LOCK: If characters appear, describe their exact appearance, age, hair, clothing, and posture in complete, fluent grammatical sentences. "
+            "CRITICAL DIRECTIVE: If a character is deceased or an autopsy subject, describe them resting motionless and supine upon the mortuary slab with eyes peacefully closed in death and serene post-mortem composure under a linen shroud. Never describe a deceased cadaver gripping objects or smiling/grimacing. If living, describe their clothing and tools held with natural posture.\n\n"
+            "MIDGROUND & LIGHTING PHYSICS: Describe the primary light source (gaslight, brass lantern, carbide lamp) and how light reflects or casts chiaroscuro shadows across wet stone, iron, or glass. Do not specify smoke or condensing steam as it causes unnatural plumes.\n\n"
             "BACKGROUND & NEGATIVE LOCK: Describe the surrounding architecture and end EVERY prompt with: "
             "'Rendered with museum-grade intaglio cross-hatching and crisp etching lines. Strictly zero text, zero letters, zero numbers, zero watermarks, or typography anywhere inside the image.'\n\n"
             "Return a valid JSON object with:\n"
@@ -1531,15 +1532,33 @@ class AIDirectorManager:
             hair = matched_char_info.get("hair", "iron-gray wavy hair with silver-dusted temples")
             wardrobe = matched_char_info.get("signature_clothing", "tailored heavy wool frock coat with high wing collar and silk cravat")
             marks = matched_char_info.get("distinguishing_marks_or_tools", "holding a calibrated brass caliper and stamped lead warrant")
-            layer_3 = (
-                f"In the foreground, a {age}-year-old individual with {face}, {hair}, wearing a {wardrobe}. "
-                f"They are positioned in an analytical posture, their hands gripping {marks}."
-            )
+
+            combined_ctx = f"{anchor_paragraph} {chapter_text} {wardrobe} {marks}".lower()
+            is_cadaver = any(w in combined_ctx for w in ["lying on zinc", "autopsy", "corpse", "cadaver", "dead", "ceased respiration", "lifeless", "post-mortem", "shroud"])
+
+            if is_cadaver:
+                layer_3 = (
+                    f"In the foreground, resting motionless and supine upon a cold zinc mortuary table, lies the lifeless body of a {age}-year-old man. "
+                    f"His eyes are peacefully closed in death, his countenance somber in serene post-mortem repose, with {hair}. "
+                    f"He is draped in a simple linen mortuary shroud, with hands resting at his sides."
+                )
+            else:
+                clean_wardrobe = wardrobe
+                if clean_wardrobe.lower().startswith("wearing a "):
+                    clean_wardrobe = clean_wardrobe[10:]
+                elif clean_wardrobe.lower().startswith("wearing "):
+                    clean_wardrobe = clean_wardrobe[8:]
+
+                layer_3 = f"In the foreground stands a {age}-year-old figure with {face}, {hair}, dressed in a {clean_wardrobe}. "
+                if any(w in marks.lower() for w in ["holding", "caliper", "lens", "glass", "instrument", "cane", "pen", "tool"]):
+                    layer_3 += f"They stand in a calm, analytical posture, holding {marks}."
+                else:
+                    layer_3 += "They stand with dignified composure."
         else:
             layer_3 = "In the foreground rests a complex Victorian diving regulator and mercury manometer, constructed of knurled cast brass, vulcanized black rubber gaskets, and frost-rimmed quartz sight-tubes."
 
         # 4. Midground & Lighting Physics
-        layer_4 = "In the midground, flickering gasoliers and a hand-held carbide lantern cast stark directional raking light, creating violent chiaroscuro specular highlights across wet granite flagstones and condensing steam."
+        layer_4 = "In the midground, flickering gasoliers and a hand-held brass lantern cast stark directional raking light, creating violent chiaroscuro specular highlights and deep dramatic shadows across cold wet flagstones."
 
         # 5. Background & Negative Lock
         layer_5 = (
